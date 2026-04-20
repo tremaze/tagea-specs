@@ -28,8 +28,8 @@ These components are mounted at multiple routes with different modes. **One spec
 | ------------------ | -------------------- | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- | ------------- |
 | Appointment Detail | `appointment-detail` | `einrichtung/:id/staff/appointments/:id` (staff) · `teamspace/buchung/:id` (booker) · `client-portal/termine/:id` (client) | [appointment-detail](./features/appointment-detail/spec.md) | **P0** ✅     |
 | News Detail        | `news-detail`        | `teamspace/news/:id` · `client-portal/news/:id` (`data.context`)                                                           | [news-detail](./features/news-detail/spec.md)               | **P0** ✅     |
-| Knowledge Base     | `knowledge-base`     | `einrichtung/:id/knowledge-base/**` · `teamspace/knowledge-base/**`                                                        | ⏳                                                          | P2            |
-| Redaktion (Editor) | `redaktion`          | `einrichtung/:id/redaktion/**` · `teamspace/redaktion/**` · `einrichtung/:id/klienten-news/**`                             | ⏳                                                          | P2            |
+| Knowledge Base     | `knowledge-base`     | `einrichtung/:id/knowledge-base/**` · `teamspace/knowledge-base/**`                                                        | [knowledge-base](./features/knowledge-base/spec.md)         | **P2** ✅     |
+| Redaktion (Editor) | `redaktion`          | `einrichtung/:id/redaktion/**` · `teamspace/redaktion/**` · `einrichtung/:id/klienten-news/**`                             | [redaktion](./features/redaktion/spec.md)                   | **P2** ✅     |
 
 ## Public (Pre-Auth)
 
@@ -79,27 +79,27 @@ Gated by `activeEmployeeGuard`. Layout: `SecureMainComponent`.
 
 Gated by `institutionUrlGuard`. All child routes receive the active `institutionId`.
 
-| Feature                    | Slug                 | Route                        | Component                          | Permission                                    | Spec? | Port Priority |
-| -------------------------- | -------------------- | ---------------------------- | ---------------------------------- | --------------------------------------------- | ----- | ------------- |
-| Dashboard                  | `dashboard`          | `.../dashboard`              | `DashboardPageComponent`           | `dashboard.view`                              | ⏳    | P2            |
-| Tasks                      | `tasks`              | `.../tasks`                  | `TasksPageComponent`               | `institution.access` + `tasksFeatureGuard`    | ⏳    | P2            |
-| Appointment Detail (Staff) | `appointment-detail` | `.../staff/appointments/:id` | (see Cross-Cutting)                | `appointments.view` (mode: staff)             | ⏳    | (covered)     |
-| Calendar                   | `calendar`           | `.../calendar`               | `CalendarPageComponent`            | `appointments.view`                           | ⏳    | P2            |
-| Clients List               | `clients`            | `.../clients`                | `ClientsPageComponent`             | `clients.view`                                | ⏳    | P2            |
-| Bulk Messaging             | `bulk-messaging`     | `.../bulk-messaging`         | `BulkMessagingPageComponent`       | `clients.view` + `clientMessagesFeatureGuard` | ⏳    | P2            |
-| Cases List                 | `cases`              | `.../cases`                  | `CasesPageComponent`               | `cases.view` + `caseFeatureGuard`             | ⏳    | P2            |
-| Case Detail                | `case-detail`        | `.../cases/:id/**`           | `CaseDetailLayoutComponent` + tabs | `UnsavedChangesGuard`                         | ⏳    | P2            |
-| Employees List             | `employees`          | `.../employees`              | `EmployeesPageComponent`           | `employees.view`                              | ⏳    | P2            |
-| Pending Employees          | `pending-employees`  | `.../pending-employees`      | `PendingEmployeesPageComponent`    | `employees.edit`                              | ⏳    | P2            |
-| PEP                        | `pep`                | `.../pep`                    | `PepPageComponent`                 | `employees.view` + `pepFeatureGuard`          | ⏳    | P2            |
-| Billing                    | `billing`            | `.../billing`                | `BillingPageComponent`             | `cases.edit` + `billingFeatureGuard`          | ⏳    | ❌            |
-| Profile Detail             | `profile-detail`     | `.../profile/:id/**`         | `ProfileLayoutComponent` + tabs    | `clients.view`                                | ⏳    | P2            |
-| Reports                    | `reports`            | `.../reports`                | lazy `ReportsModule`               | `reports.view` + `reportsFeatureGuard`        | ⏳    | P2            |
-| Knowledge Base (Inst.)     | `knowledge-base`     | `.../knowledge-base/**`      | (see Cross-Cutting)                | —                                             | ⏳    | (covered)     |
-| Redaktion (Inst.)          | `redaktion`          | `.../redaktion/**`           | (see Cross-Cutting)                | `teamspaceEditorGuard`                        | ⏳    | (covered)     |
-| Klienten-News              | `klienten-news`      | `.../klienten-news/**`       | (see Cross-Cutting)                | `client_news.view`                            | ⏳    | (covered)     |
-| Files (Institution)        | `files-institution`  | `.../dateien`                | `FilesPageComponent`               | `fileStorageFeatureGuard`                     | ⏳    | P2            |
-| Tenant Debug               | `tenant-debug`       | `.../debug/tenant`           | `TenantDebugComponent`             | — (dev tool)                                  | ⏳    | ❌            |
+| Feature                    | Slug                 | Route                        | Component                          | Permission                                    | Spec?                                     | Port Priority |
+| -------------------------- | -------------------- | ---------------------------- | ---------------------------------- | --------------------------------------------- | ----------------------------------------- | ------------- |
+| Dashboard                  | `dashboard`          | `.../dashboard`              | `DashboardPageComponent`           | `dashboard.view`                              | [dashboard](./features/dashboard/spec.md) | **P2** ✅     |
+| Tasks                      | `tasks`              | `.../tasks`                  | `TasksPageComponent`               | `institution.access` + `tasksFeatureGuard`    | [tasks](./features/tasks/spec.md)         | **P2** ✅     |
+| Appointment Detail (Staff) | `appointment-detail` | `.../staff/appointments/:id` | (see Cross-Cutting)                | `appointments.view` (mode: staff)             | ⏳                                        | (covered)     |
+| Calendar                   | `calendar`           | `.../calendar`               | `CalendarPageComponent`            | `appointments.view`                           | [calendar](./features/calendar/spec.md)   | **P2** ✅     |
+| Clients List               | `clients`            | `.../clients`                | `ClientsPageComponent`             | `clients.view`                                | [clients](./features/clients/spec.md)     | **P2** ✅     |
+| Bulk Messaging             | `bulk-messaging`     | `.../bulk-messaging`         | `BulkMessagingPageComponent`       | `clients.view` + `clientMessagesFeatureGuard` | ⏳                                        | P2            |
+| Cases List                 | `cases`              | `.../cases`                  | `CasesPageComponent`               | `cases.view` + `caseFeatureGuard`             | [cases](./features/cases/spec.md)         | **P2** ✅     |
+| Case Detail                | `case-detail`        | `.../cases/:id/**`           | `CaseDetailLayoutComponent` + tabs | `UnsavedChangesGuard`                         | ⏳                                        | P2            |
+| Employees List             | `employees`          | `.../employees`              | `EmployeesPageComponent`           | `employees.view`                              | ⏳                                        | P2            |
+| Pending Employees          | `pending-employees`  | `.../pending-employees`      | `PendingEmployeesPageComponent`    | `employees.edit`                              | ⏳                                        | P2            |
+| PEP                        | `pep`                | `.../pep`                    | `PepPageComponent`                 | `employees.view` + `pepFeatureGuard`          | ⏳                                        | P2            |
+| Billing                    | `billing`            | `.../billing`                | `BillingPageComponent`             | `cases.edit` + `billingFeatureGuard`          | ⏳                                        | ❌            |
+| Profile Detail             | `profile-detail`     | `.../profile/:id/**`         | `ProfileLayoutComponent` + tabs    | `clients.view`                                | ⏳                                        | P2            |
+| Reports                    | `reports`            | `.../reports`                | lazy `ReportsModule`               | `reports.view` + `reportsFeatureGuard`        | ⏳                                        | P2            |
+| Knowledge Base (Inst.)     | `knowledge-base`     | `.../knowledge-base/**`      | (see Cross-Cutting)                | —                                             | ⏳                                        | (covered)     |
+| Redaktion (Inst.)          | `redaktion`          | `.../redaktion/**`           | (see Cross-Cutting)                | `teamspaceEditorGuard`                        | ⏳                                        | (covered)     |
+| Klienten-News              | `klienten-news`      | `.../klienten-news/**`       | (see Cross-Cutting)                | `client_news.view`                            | ⏳                                        | (covered)     |
+| Files (Institution)        | `files-institution`  | `.../dateien`                | `FilesPageComponent`               | `fileStorageFeatureGuard`                     | ⏳                                        | P2            |
+| Tenant Debug               | `tenant-debug`       | `.../debug/tenant`           | `TenantDebugComponent`             | — (dev tool)                                  | ⏳                                        | ❌            |
 
 #### Case Detail Tabs — `.../cases/:id/{tab}`
 
@@ -227,12 +227,12 @@ All gated by `superAdminGuard`. Tenant-management surfaces — **all non-goals f
 
 ## Priority Summary
 
-| Priority | Count | What it covers                                                                                                                     | Spec coverage |
-| -------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| **P0**   | 12    | Client Portal (7) + Auth (3: login ✅, callback ✅, session-expired ✅) + Cross-cutting (2: appointment-detail ✅, news-detail ✅) | **12/12 ✅**  |
-| **P1**   | ~18   | Auth-error surfaces (7) + Chat/AI (4) + Teamspace (7: home, news, submissions, lms, events, calendar, gehaltsnachweise)            | **18/~18 ✅** |
-| **P2**   | ~20   | Staff-facing institution/teamspace features                                                                                        | 0/20          |
-| **❌**   | ~40   | Admin/settings/super-admin surfaces — web-only                                                                                     | N/A           |
+| Priority | Count | What it covers                                                                                                                        | Spec coverage |
+| -------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| **P0**   | 12    | Client Portal (7) + Auth (3: login ✅, callback ✅, session-expired ✅) + Cross-cutting (2: appointment-detail ✅, news-detail ✅)    | **12/12 ✅**  |
+| **P1**   | ~18   | Auth-error surfaces (7) + Chat/AI (4) + Teamspace (7: home, news, submissions, lms, events, calendar, gehaltsnachweise)               | **18/~18 ✅** |
+| **P2**   | ~20   | Staff-facing institution/teamspace features — core 7 specced (dashboard, tasks, calendar, clients, cases + knowledge-base, redaktion) | **7/~20 ⏳**  |
+| **❌**   | ~40   | Admin/settings/super-admin surfaces — web-only                                                                                        | N/A           |
 
 ## Open Items
 

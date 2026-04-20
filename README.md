@@ -84,12 +84,24 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 | Teamspace Calendar    | ✅      | ⏳      | [teamspace-calendar/](./features/teamspace-calendar/spec.md)       |
 | Gehaltsnachweise      | ✅      | ⏳      | [gehaltsnachweise/](./features/gehaltsnachweise/spec.md)           |
 
+### Institution Staff (P2 — documentation only, Flutter non-goal)
+
+| Feature              | Angular | Flutter | Spec                                       |
+| -------------------- | ------- | ------- | ------------------------------------------ |
+| Dashboard            | ✅      | ❌      | [dashboard/](./features/dashboard/spec.md) |
+| Tasks                | ✅      | ❌      | [tasks/](./features/tasks/spec.md)         |
+| Institution Calendar | ✅      | ❌      | [calendar/](./features/calendar/spec.md)   |
+| Clients List         | ✅      | ❌      | [clients/](./features/clients/spec.md)     |
+| Cases List           | ✅      | ❌      | [cases/](./features/cases/spec.md)         |
+
 ### Cross-cutting
 
 | Feature            | Angular | Flutter | Spec                                                         |
 | ------------------ | ------- | ------- | ------------------------------------------------------------ |
 | Appointment Detail | ✅      | ⏳      | [appointment-detail/](./features/appointment-detail/spec.md) |
 | News Detail        | ✅      | ⏳      | [news-detail/](./features/news-detail/spec.md)               |
+| Knowledge Base     | ✅      | ❌      | [knowledge-base/](./features/knowledge-base/spec.md)         |
+| Redaktion          | ✅      | ❌      | [redaktion/](./features/redaktion/spec.md)                   |
 
 ## Scripts
 
