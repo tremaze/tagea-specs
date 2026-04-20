@@ -2,13 +2,14 @@
 
 ## When creating a new spec
 
-1. Copy `_templates/feature/` to `features/<feature-name>/`
+1. Copy `_templates/feature/` to `features/<feature-name>/` (or use `specs/_scripts/new-spec.sh <slug>`)
 2. Populate **spec.md** based on:
    - Angular code under `apps/tagea-frontend/src/app/...`
    - E2E tests under `apps/tagea-frontend-e2e/src/...` (they describe observable behavior — gold for spec extraction)
    - Backend contracts (DTOs, endpoints)
 3. Add the feature to the parity matrix in `specs/README.md`
 4. Link Angular paths from `parity.md`
+5. **Run `node specs/_scripts/verify-contracts.js <slug>`** before considering the spec ready. Any DRIFT lines indicate that a field / method / interface named in `contracts.md` does not exist in the Angular source — either a typo, a stale name, or a hallucination. Fix the spec or, if the shape is intentionally documentation-only, prefix the code block with a blockquote containing "Documentation-only shape." (or add `// documentation-only` inside the block). Flutter port notes can live in `dart` fenced blocks or under a "Flutter port note:" blockquote — those are skipped automatically.
 
 ## When reading a spec for a Flutter port
 

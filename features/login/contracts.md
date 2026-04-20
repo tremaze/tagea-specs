@@ -19,18 +19,21 @@ Login uses **Keycloak** as identity provider via the OIDC Authorization Code Flo
 
 ## Token Payload (JWT)
 
-> Relevant to the frontend after decoding:
+> **Documentation-only shape.** The Angular codebase does not declare an `AuthToken` TypeScript interface — the decoded JWT is consumed indirectly via `AuthService` / `UnifiedAuthService` signals. The shape below describes the Keycloak-issued claims relevant to the frontend, sourced from the realm config and backend contracts. Adjust if the realm changes.
 
 ```ts
-interface AuthToken {
+// Documentation shape only — no equivalent interface exists in the Angular source.
+// Mirror this in Flutter as a real typed class since flutter_appauth does not parse claims.
+interface JwtClaims {
   sub: string; // user id
   preferred_username: string;
   email: string;
   institution_id: string; // tenant context
   realm_access: {
+    // Keycloak-specific container
     roles: string[];
   };
-  exp: number; // expiry (unix)
+  exp: number; // expiry (unix seconds)
   iat: number;
 }
 ```

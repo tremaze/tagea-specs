@@ -6,7 +6,9 @@
 
 ## Vision (Elevator Pitch)
 
-Users authenticate via a Keycloak redirect. On startup the app checks whether a valid session exists; if not, it redirects to the identity provider. After a successful sign-in the user lands on their institution's dashboard.
+Users authenticate via a Keycloak redirect. On startup the app checks whether a valid session exists; if not, it routes the user to a public landing page from which the IdP redirect is initiated. After a successful sign-in the user lands on their institution's dashboard.
+
+> **Routing note:** There is no active `/login` route. The behavior described here is implemented by `rootRedirectGuard` (empty-path guard that routes authenticated users to the dashboard and unauthenticated users to `/welcome`), plus `LandingPageComponent` as the public landing page where the IdP redirect is initiated. The `LoginComponent` files under `pages/login/` and `components/login/` exist in the codebase but are not mounted by any route — they are vestigial.
 
 ## User Stories
 
@@ -54,7 +56,7 @@ Users authenticate via a Keycloak redirect. On startup the app checks whether a 
 
 ## Edge Cases
 
-- Token exists but is expired → Keycloak redirect for silent refresh.
+- Token exists but is expired → `checkAuthStatus()` returns false; the standard Keycloak redirect flow is triggered (no browser-specific silent-refresh semantics — the client doesn't implement an iframe-based refresh).
 - User has no institution assigned → dashboard route handles this (separate spec).
 - Deep link before login (`/some/protected/page`) → should land there after login, not on the dashboard (currently **not** implemented in Angular; tracked as an open item).
 - Multiple tabs: if login is in-flight in tab A, tab B must not trigger a duplicate redirect.
@@ -87,7 +89,10 @@ Users authenticate via a Keycloak redirect. On startup the app checks whether a 
 
 ## References
 
-- **Angular implementation:** [`apps/tagea-frontend/src/app/pages/login/login.component.ts`](../../../apps/tagea-frontend/src/app/pages/login/login.component.ts)
+- **Root redirect guard:** [`apps/tagea-frontend/src/app/guards/root-redirect.guard.ts`](../../../apps/tagea-frontend/src/app/guards/root-redirect.guard.ts) — decides between dashboard and `/welcome` on empty-path entry.
+- **Redirect-if-authenticated guard:** [`apps/tagea-frontend/src/app/guards/redirect-if-authenticated.guard.ts`](../../../apps/tagea-frontend/src/app/guards/redirect-if-authenticated.guard.ts) — wraps `PUBLIC_ROUTES`; has an `EXCLUDED_PATHS` list for error surfaces (`/session-expired`, etc.).
+- **Landing page (IdP redirect entry):** [`apps/tagea-frontend/src/app/pages/landing-page/landing-page.component.ts`](../../../apps/tagea-frontend/src/app/pages/landing-page/landing-page.component.ts)
 - **Auth service:** [`apps/tagea-frontend/src/app/services/unified-auth.service.ts`](../../../apps/tagea-frontend/src/app/services/unified-auth.service.ts)
+- **Vestigial login components (not mounted by any route):** `pages/login/login.component.ts`, `components/login/login.component.ts` — present in the tree but unreachable.
 - **E2E tests:** _(to be identified — add link)_
 - **Backend endpoints:** see [contracts.md](./contracts.md)
