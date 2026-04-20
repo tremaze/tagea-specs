@@ -35,30 +35,30 @@ These components are mounted at multiple routes with different modes. **One spec
 
 Routes under `PUBLIC_ROUTES`, no auth guard. Layout: `PublicMainComponent`.
 
-| Feature             | Slug                 | Route                                   | Component                      | Spec?                                                 | Port Priority |
-| ------------------- | -------------------- | --------------------------------------- | ------------------------------ | ----------------------------------------------------- | ------------- |
-| Login / Auth Entry  | `login`              | (implicit `/` → `rootRedirectGuard`)    | —                              | [login](./features/login/spec.md)                     | **P0** ✅     |
-| Auth Callback       | `auth-callback`      | `/auth/callback`                        | `AuthCallbackComponent`        | [auth-callback](./features/auth-callback/spec.md)     | **P0** ✅     |
-| Session Expired     | `session-expired`    | `/session-expired`                      | `SessionExpiredComponent`      | [session-expired](./features/session-expired/spec.md) | **P0** ✅     |
-| Auth Error          | `auth-error`         | `/auth-error`                           | `AuthErrorComponent`           | ⏳                                                    | P1            |
-| No Tenant           | `no-tenant`          | `/no-tenant`                            | `NoTenantComponent`            | ⏳                                                    | P1            |
-| Blocked Access      | `blocked-access`     | `/blocked-access`                       | `BlockedAccessComponent`       | ⏳                                                    | P1            |
-| Password Reset      | `password-reset`     | `/public/password-reset/:userId/:token` | `PublicPasswordSetupComponent` | ⏳                                                    | P1            |
-| Welcome / Landing   | `landing-page`       | `/welcome` (`/landing` redirects)       | `LandingPageComponent`         | ⏳                                                    | P2            |
-| Email Verified      | `email-verification` | `/public/email-verified`                | `EmailVerificationComponent`   | ⏳                                                    | P1            |
-| Public Booking      | `public-booking`     | `/booking`                              | `BookingPageComponent`         | ⏳                                                    | P2            |
-| Public Registration | `public-register`    | `/public/register`                      | `PublicRegisterPageComponent`  | ⏳                                                    | P1            |
-| Public Video Join   | `public-video-join`  | `/public/video/:token`                  | `PublicVideoJoinComponent`     | ⏳                                                    | P2            |
+| Feature             | Slug                 | Route                                   | Component                      | Spec?                                                       | Port Priority |
+| ------------------- | -------------------- | --------------------------------------- | ------------------------------ | ----------------------------------------------------------- | ------------- |
+| Login / Auth Entry  | `login`              | (implicit `/` → `rootRedirectGuard`)    | —                              | [login](./features/login/spec.md)                           | **P0** ✅     |
+| Auth Callback       | `auth-callback`      | `/auth/callback`                        | `AuthCallbackComponent`        | [auth-callback](./features/auth-callback/spec.md)           | **P0** ✅     |
+| Session Expired     | `session-expired`    | `/session-expired`                      | `SessionExpiredComponent`      | [session-expired](./features/session-expired/spec.md)       | **P0** ✅     |
+| Auth Error          | `auth-error`         | `/auth-error`                           | `AuthErrorComponent`           | [auth-error](./features/auth-error/spec.md)                 | **P1** ✅     |
+| No Tenant           | `no-tenant`          | `/no-tenant`                            | `NoTenantComponent`            | [no-tenant](./features/no-tenant/spec.md)                   | **P1** ✅     |
+| Blocked Access      | `blocked-access`     | `/blocked-access`                       | `BlockedAccessComponent`       | [blocked-access](./features/blocked-access/spec.md)         | **P1** ✅     |
+| Password Reset      | `password-reset`     | `/public/password-reset/:userId/:token` | `PublicPasswordSetupComponent` | [password-reset](./features/password-reset/spec.md)         | **P1** ✅     |
+| Welcome / Landing   | `landing-page`       | `/welcome` (`/landing` redirects)       | `LandingPageComponent`         | ⏳                                                          | P2            |
+| Email Verified      | `email-verification` | `/public/email-verified`                | `EmailVerificationComponent`   | [email-verification](./features/email-verification/spec.md) | **P1** ✅     |
+| Public Booking      | `public-booking`     | `/booking`                              | `BookingPageComponent`         | ⏳                                                          | P2            |
+| Public Registration | `public-register`    | `/public/register`                      | `PublicRegisterPageComponent`  | [public-register](./features/public-register/spec.md)       | **P1** ✅     |
+| Public Video Join   | `public-video-join`  | `/public/video/:token`                  | `PublicVideoJoinComponent`     | ⏳                                                          | P2            |
 
 ## Secure Shell (Auth Required, No Employee Approval)
 
 Gated by `AUTH_GUARD`. Layout: `SecureShellComponent`. These routes work even for pending employees.
 
-| Feature           | Slug                | Route                  | Component                           | Guards                                | Spec? | Port Priority |
-| ----------------- | ------------------- | ---------------------- | ----------------------------------- | ------------------------------------- | ----- | ------------- |
-| Awaiting Approval | `awaiting-approval` | `/awaiting-approval`   | `EmployeeAwaitingApprovalComponent` | `pendingEmployeeGuard`                | ⏳    | P1            |
-| Chat Room         | `chat-room`         | `/chat/room/:roomId`   | `CHAT_ROOM_ROUTE` (`@tagea/chat`)   | `permissionGuard`, `chatFeatureGuard` | ⏳    | P1            |
-| Chat Invite       | `chat-invite`       | `/chat/invite/:roomId` | `CHAT_INVITE_ROUTE` (`@tagea/chat`) | `permissionGuard`, `chatFeatureGuard` | ⏳    | P1            |
+| Feature           | Slug                | Route                  | Component                           | Guards                                | Spec?                                                     | Port Priority |
+| ----------------- | ------------------- | ---------------------- | ----------------------------------- | ------------------------------------- | --------------------------------------------------------- | ------------- |
+| Awaiting Approval | `awaiting-approval` | `/awaiting-approval`   | `EmployeeAwaitingApprovalComponent` | `pendingEmployeeGuard`                | [awaiting-approval](./features/awaiting-approval/spec.md) | **P1** ✅     |
+| Chat Room         | `chat-room`         | `/chat/room/:roomId`   | `CHAT_ROOM_ROUTE` (`@tagea/chat`)   | `permissionGuard`, `chatFeatureGuard` | [chat-room](./features/chat-room/spec.md)                 | **P1** ✅     |
+| Chat Invite       | `chat-invite`       | `/chat/invite/:roomId` | `CHAT_INVITE_ROUTE` (`@tagea/chat`) | `permissionGuard`, `chatFeatureGuard` | [chat-invite](./features/chat-invite/spec.md)             | **P1** ✅     |
 
 ## Secure Main (Employee Approved)
 
@@ -66,14 +66,14 @@ Gated by `activeEmployeeGuard`. Layout: `SecureMainComponent`.
 
 ### Top-Level
 
-| Feature              | Slug               | Route               | Component                                | Guards                                | Spec? | Port Priority       |
-| -------------------- | ------------------ | ------------------- | ---------------------------------------- | ------------------------------------- | ----- | ------------------- |
-| AI Chat              | `ai-chat`          | `/ai-chat`          | `AiChatPageComponent`                    | `aiChatFeatureGuard`                  | ⏳    | P1                  |
-| Chat                 | `chat`             | `/chat`             | `ChatPageComponent` (`CHAT_BASE_ROUTES`) | `permissionGuard`, `chatFeatureGuard` | ⏳    | P1                  |
-| Super Admin          | `super-admin`      | `/super-admin/**`   | lazy `SuperAdminModule`                  | `permissionGuard: admin.access`       | ⏳    | ❌                  |
-| Files (Global)       | `files-global`     | `/dateien`          | lazy `FILES_ROUTES`                      | `fileStorageFeatureGuard`             | ⏳    | P2                  |
-| Employee Profile     | `employee-profile` | `/employee-profile` | `EmployeeProfileComponent`               | `UnsavedChangesGuard`                 | ⏳    | P2                  |
-| Einstellungen (Root) | `einstellungen`    | `/einstellungen/**` | lazy `EINSTELLUNGEN_ROUTES`              | `einstellungenGuard`                  | ⏳    | (see sub-inventory) |
+| Feature              | Slug               | Route               | Component                                | Guards                                | Spec?                                 | Port Priority       |
+| -------------------- | ------------------ | ------------------- | ---------------------------------------- | ------------------------------------- | ------------------------------------- | ------------------- |
+| AI Chat              | `ai-chat`          | `/ai-chat`          | `AiChatPageComponent`                    | `aiChatFeatureGuard`                  | [ai-chat](./features/ai-chat/spec.md) | **P1** ✅           |
+| Chat                 | `chat`             | `/chat`             | `ChatPageComponent` (`CHAT_BASE_ROUTES`) | `permissionGuard`, `chatFeatureGuard` | [chat](./features/chat/spec.md)       | **P1** ✅           |
+| Super Admin          | `super-admin`      | `/super-admin/**`   | lazy `SuperAdminModule`                  | `permissionGuard: admin.access`       | ⏳                                    | ❌                  |
+| Files (Global)       | `files-global`     | `/dateien`          | lazy `FILES_ROUTES`                      | `fileStorageFeatureGuard`             | ⏳                                    | P2                  |
+| Employee Profile     | `employee-profile` | `/employee-profile` | `EmployeeProfileComponent`               | `UnsavedChangesGuard`                 | ⏳                                    | P2                  |
+| Einstellungen (Root) | `einstellungen`    | `/einstellungen/**` | lazy `EINSTELLUNGEN_ROUTES`              | `einstellungenGuard`                  | ⏳                                    | (see sub-inventory) |
 
 ### Institution Scope — `/einrichtung/:institutionId/*`
 
@@ -230,7 +230,7 @@ All gated by `superAdminGuard`. Tenant-management surfaces — **all non-goals f
 | Priority | Count | What it covers                                                                                                                     | Spec coverage |
 | -------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------- |
 | **P0**   | 12    | Client Portal (7) + Auth (3: login ✅, callback ✅, session-expired ✅) + Cross-cutting (2: appointment-detail ✅, news-detail ✅) | **12/12 ✅**  |
-| **P1**   | ~15   | Teamspace features, Chat, LMS user flows, foundational auth alternatives                                                           | 0/15          |
+| **P1**   | ~15   | Auth-error surfaces (7), Chat staff + AI (4), awaiting-approval — Teamspace/LMS still ⏳                                           | **11/~15 ✅** |
 | **P2**   | ~20   | Staff-facing institution/teamspace features                                                                                        | 0/20          |
 | **❌**   | ~40   | Admin/settings/super-admin surfaces — web-only                                                                                     | N/A           |
 

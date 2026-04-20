@@ -36,20 +36,48 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 
 ## Parity Matrix
 
-| Feature                            | Angular | Flutter | Spec                                                         |
-| ---------------------------------- | ------- | ------- | ------------------------------------------------------------ |
-| Login                              | ✅      | ⏳      | [login/](./features/login/spec.md)                           |
-| Auth Callback                      | ✅      | ⏳      | [auth-callback/](./features/auth-callback/spec.md)           |
-| Session Expired                    | ✅      | ⏳      | [session-expired/](./features/session-expired/spec.md)       |
-| Client Dashboard                   | ✅      | ⏳      | [client-dashboard/](./features/client-dashboard/spec.md)     |
-| Client Termine                     | ✅      | ⏳      | [client-termine/](./features/client-termine/spec.md)         |
-| Client Dokumente                   | ✅      | ⏳      | [client-dokumente/](./features/client-dokumente/spec.md)     |
-| Client News                        | ✅      | ⏳      | [client-news/](./features/client-news/spec.md)               |
-| Client Nachrichten                 | ✅      | ⏳      | [client-nachrichten/](./features/client-nachrichten/spec.md) |
-| Client Chat                        | ✅      | ⏳      | [client-chat/](./features/client-chat/spec.md)               |
-| Client Profile                     | ✅      | ⏳      | [client-profile/](./features/client-profile/spec.md)         |
-| Appointment Detail (cross-cutting) | ✅      | ⏳      | [appointment-detail/](./features/appointment-detail/spec.md) |
-| News Detail (cross-cutting)        | ✅      | ⏳      | [news-detail/](./features/news-detail/spec.md)               |
+### Auth flow
+
+| Feature            | Angular | Flutter | Spec                                                         |
+| ------------------ | ------- | ------- | ------------------------------------------------------------ |
+| Login              | ✅      | ⏳      | [login/](./features/login/spec.md)                           |
+| Auth Callback      | ✅      | ⏳      | [auth-callback/](./features/auth-callback/spec.md)           |
+| Session Expired    | ✅      | ⏳      | [session-expired/](./features/session-expired/spec.md)       |
+| Auth Error         | ✅      | ⏳      | [auth-error/](./features/auth-error/spec.md)                 |
+| No Tenant          | ✅      | ⏳      | [no-tenant/](./features/no-tenant/spec.md)                   |
+| Blocked Access     | ✅      | ⏳      | [blocked-access/](./features/blocked-access/spec.md)         |
+| Awaiting Approval  | ✅      | ⏳      | [awaiting-approval/](./features/awaiting-approval/spec.md)   |
+| Password Reset     | ✅      | ⏳      | [password-reset/](./features/password-reset/spec.md)         |
+| Email Verification | ✅      | ⏳      | [email-verification/](./features/email-verification/spec.md) |
+| Public Register    | ✅      | ⏳      | [public-register/](./features/public-register/spec.md)       |
+
+### Client Portal
+
+| Feature            | Angular | Flutter | Spec                                                         |
+| ------------------ | ------- | ------- | ------------------------------------------------------------ |
+| Client Dashboard   | ✅      | ⏳      | [client-dashboard/](./features/client-dashboard/spec.md)     |
+| Client Termine     | ✅      | ⏳      | [client-termine/](./features/client-termine/spec.md)         |
+| Client Dokumente   | ✅      | ⏳      | [client-dokumente/](./features/client-dokumente/spec.md)     |
+| Client News        | ✅      | ⏳      | [client-news/](./features/client-news/spec.md)               |
+| Client Nachrichten | ✅      | ⏳      | [client-nachrichten/](./features/client-nachrichten/spec.md) |
+| Client Chat        | ✅      | ⏳      | [client-chat/](./features/client-chat/spec.md)               |
+| Client Profile     | ✅      | ⏳      | [client-profile/](./features/client-profile/spec.md)         |
+
+### Chat & AI
+
+| Feature            | Angular | Flutter | Spec                                           |
+| ------------------ | ------- | ------- | ---------------------------------------------- |
+| Chat (staff)       | ✅      | ⏳      | [chat/](./features/chat/spec.md)               |
+| Chat Room          | ✅      | ⏳      | [chat-room/](./features/chat-room/spec.md)     |
+| Chat Invite        | ✅      | ⏳      | [chat-invite/](./features/chat-invite/spec.md) |
+| AI Chat (Tagea AI) | ✅      | ⏳      | [ai-chat/](./features/ai-chat/spec.md)         |
+
+### Cross-cutting
+
+| Feature            | Angular | Flutter | Spec                                                         |
+| ------------------ | ------- | ------- | ------------------------------------------------------------ |
+| Appointment Detail | ✅      | ⏳      | [appointment-detail/](./features/appointment-detail/spec.md) |
+| News Detail        | ✅      | ⏳      | [news-detail/](./features/news-detail/spec.md)               |
 
 ## Scripts
 
