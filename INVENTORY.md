@@ -227,12 +227,12 @@ All gated by `superAdminGuard`. Tenant-management surfaces — **all non-goals f
 
 ## Priority Summary
 
-| Priority | Count | What it covers                                                                                                                        | Spec coverage |
-| -------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| **P0**   | 12    | Client Portal (7) + Auth (3: login ✅, callback ✅, session-expired ✅) + Cross-cutting (2: appointment-detail ✅, news-detail ✅)    | **12/12 ✅**  |
-| **P1**   | ~18   | Auth-error surfaces (7) + Chat/AI (4) + Teamspace (7: home, news, submissions, lms, events, calendar, gehaltsnachweise)               | **18/~18 ✅** |
-| **P2**   | ~20   | Staff-facing institution/teamspace features — core 7 specced (dashboard, tasks, calendar, clients, cases + knowledge-base, redaktion) | **7/~20 ⏳**  |
-| **❌**   | ~40   | Admin/settings/super-admin surfaces — web-only                                                                                        | N/A           |
+| Priority | Count | What it covers                                                                                                                                                                                                                                                                                                | Spec coverage |
+| -------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| **P0**   | 12    | Client Portal (7) + Auth (3: login ✅, callback ✅, session-expired ✅) + Cross-cutting (2: appointment-detail ✅, news-detail ✅)                                                                                                                                                                            | **12/12 ✅**  |
+| **P1**   | ~18   | Auth-error surfaces (7) + Chat/AI (4) + Teamspace (7: home, news, submissions, lms, events, calendar, gehaltsnachweise)                                                                                                                                                                                       | **18/~18 ✅** |
+| **P2**   | ~20   | Staff-facing institution/teamspace + public pages — **all specced** (dashboard, tasks, calendar, clients, cases, employees, pending-employees, pep, bulk-messaging, reports, files×2, employee-profile, case-detail, profile-detail + knowledge-base, redaktion + landing, public-booking, public-video-join) | **20/~20 ✅** |
+| **❌**   | ~40   | Admin/settings/super-admin surfaces — web-only                                                                                                                                                                                                                                                                | N/A           |
 
 ## Open Items
 

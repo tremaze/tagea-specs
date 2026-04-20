@@ -86,13 +86,31 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 
 ### Institution Staff (P2 — documentation only, Flutter non-goal)
 
-| Feature              | Angular | Flutter | Spec                                       |
-| -------------------- | ------- | ------- | ------------------------------------------ |
-| Dashboard            | ✅      | ❌      | [dashboard/](./features/dashboard/spec.md) |
-| Tasks                | ✅      | ❌      | [tasks/](./features/tasks/spec.md)         |
-| Institution Calendar | ✅      | ❌      | [calendar/](./features/calendar/spec.md)   |
-| Clients List         | ✅      | ❌      | [clients/](./features/clients/spec.md)     |
-| Cases List           | ✅      | ❌      | [cases/](./features/cases/spec.md)         |
+| Feature                  | Angular | Flutter | Spec                                                       |
+| ------------------------ | ------- | ------- | ---------------------------------------------------------- |
+| Dashboard                | ✅      | ❌      | [dashboard/](./features/dashboard/spec.md)                 |
+| Tasks                    | ✅      | ❌      | [tasks/](./features/tasks/spec.md)                         |
+| Institution Calendar     | ✅      | ❌      | [calendar/](./features/calendar/spec.md)                   |
+| Clients List             | ✅      | ❌      | [clients/](./features/clients/spec.md)                     |
+| Cases List               | ✅      | ❌      | [cases/](./features/cases/spec.md)                         |
+| Case Detail (7 tabs)     | ✅      | ❌      | [case-detail/](./features/case-detail/spec.md)             |
+| Profile Detail (11 tabs) | ✅      | ❌      | [profile-detail/](./features/profile-detail/spec.md)       |
+| Employees List           | ✅      | ❌      | [employees/](./features/employees/spec.md)                 |
+| Pending Employees        | ✅      | ❌      | [pending-employees/](./features/pending-employees/spec.md) |
+| PEP                      | ✅      | ❌      | [pep/](./features/pep/spec.md)                             |
+| Bulk Messaging           | ✅      | ❌      | [bulk-messaging/](./features/bulk-messaging/spec.md)       |
+| Reports                  | ✅      | ❌      | [reports/](./features/reports/spec.md)                     |
+| Files (Institution)      | ✅      | ❌      | [files-institution/](./features/files-institution/spec.md) |
+| Files (Global)           | ✅      | ❌      | [files-global/](./features/files-global/spec.md)           |
+| Employee Profile (Own)   | ✅      | ❌      | [employee-profile/](./features/employee-profile/spec.md)   |
+
+### Public (P2)
+
+| Feature           | Angular | Flutter | Spec                                                       |
+| ----------------- | ------- | ------- | ---------------------------------------------------------- |
+| Welcome / Landing | ✅      | ❌      | [landing-page/](./features/landing-page/spec.md)           |
+| Public Booking    | ✅      | ❌      | [public-booking/](./features/public-booking/spec.md)       |
+| Public Video Join | ✅      | ❌      | [public-video-join/](./features/public-video-join/spec.md) |
 
 ### Cross-cutting
 
