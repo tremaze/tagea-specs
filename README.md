@@ -72,6 +72,18 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 | Chat Invite        | ✅      | ⏳      | [chat-invite/](./features/chat-invite/spec.md) |
 | AI Chat (Tagea AI) | ✅      | ⏳      | [ai-chat/](./features/ai-chat/spec.md)         |
 
+### Teamspace
+
+| Feature               | Angular | Flutter | Spec                                                               |
+| --------------------- | ------- | ------- | ------------------------------------------------------------------ |
+| Teamspace Home        | ✅      | ⏳      | [teamspace-home/](./features/teamspace-home/spec.md)               |
+| Teamspace News        | ✅      | ⏳      | [teamspace-news/](./features/teamspace-news/spec.md)               |
+| Teamspace Submissions | ✅      | ⏳      | [teamspace-submissions/](./features/teamspace-submissions/spec.md) |
+| Teamspace LMS         | ✅      | ⏳      | [teamspace-lms/](./features/teamspace-lms/spec.md)                 |
+| Teamspace Events      | ✅      | ⏳      | [teamspace-events/](./features/teamspace-events/spec.md)           |
+| Teamspace Calendar    | ✅      | ⏳      | [teamspace-calendar/](./features/teamspace-calendar/spec.md)       |
+| Gehaltsnachweise      | ✅      | ⏳      | [gehaltsnachweise/](./features/gehaltsnachweise/spec.md)           |
+
 ### Cross-cutting
 
 | Feature            | Angular | Flutter | Spec                                                         |
