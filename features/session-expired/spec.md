@@ -19,7 +19,7 @@ A dedicated landing page the app lands on when a user's session has expired or t
 - [ ] **Given** the user's session has expired (auth token rejected or token TTL reached), **When** the app redirects, **Then** they land on `/session-expired`.
 - [ ] **Given** the user is on `/session-expired`, **When** the page renders, **Then** a lock icon, title, and explanation text are visible, plus two actions ("log in again" and "home").
 - [ ] **Given** the user clicks "log in again", **When** `login()` runs, **Then** the OIDC login flow starts (`AuthService.login()`).
-- [ ] **Given** the IdP login completes (native platforms: same page continues; web: page redirects externally), **When** `isAuthenticated` becomes true, **Then** navigate to `/{institutionId}/dashboard` with `replaceUrl: true`.
+- [ ] **Given** the IdP login completes (native platforms: same page continues; web: page redirects externally), **When** `isAuthenticated` becomes true, **Then** navigate to `/einrichtung/{institutionId}/dashboard` with `replaceUrl: true` (via the `institutionRoute(id, 'dashboard')` helper). When `institutionId` is null, the helper returns `['/', 'dashboard']` — see Edge Cases.
 - [ ] **Given** the user clicks "home", **When** the link resolves, **Then** navigate to `/welcome`.
 
 ## UI States
@@ -49,7 +49,7 @@ AuthService    /welcome
 (if isAuthenticated)
    │
    ▼
-/{institutionId}/dashboard
+/einrichtung/{institutionId}/dashboard
 ```
 
 ## Non-Goals

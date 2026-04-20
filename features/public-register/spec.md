@@ -36,7 +36,7 @@ Public self-registration form for new clients. Collects first name, last name, e
 ### Navigation
 
 - [ ] **Given** the user clicks "Back", **When** the action fires, **Then** navigate to `/booking`.
-- [ ] **Given** the user clicks "Already have an account" (or equivalent), **When** the action fires, **Then** navigate to `/login` (which is a redirect to `/auth/callback`; see [login spec](../login/spec.md)).
+- [ ] **Given** the user clicks "Already have an account" (or equivalent), **When** `navigateToLogin()` fires, **Then** `this.router.navigate(['/login'])` runs. `/login` is defined in `PUBLIC_ROUTES` as a `redirectTo: 'auth/callback'` entry, so the effective destination is `/auth/callback` (no `LoginComponent` renders — see the [login spec routing note](../login/spec.md)).
 
 ### Tenant resolution (sent to backend)
 

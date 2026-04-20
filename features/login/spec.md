@@ -8,7 +8,7 @@
 
 Users authenticate via a Keycloak redirect. On startup the app checks whether a valid session exists; if not, it routes the user to a public landing page from which the IdP redirect is initiated. After a successful sign-in the user lands on their institution's dashboard.
 
-> **Routing note:** There is no active `/login` route. The behavior described here is implemented by `rootRedirectGuard` (empty-path guard that routes authenticated users to the dashboard and unauthenticated users to `/welcome`), plus `LandingPageComponent` as the public landing page where the IdP redirect is initiated. The `LoginComponent` files under `pages/login/` and `components/login/` exist in the codebase but are not mounted by any route — they are vestigial.
+> **Routing note:** The `/login` path **does** exist in `PUBLIC_ROUTES` but only as a redirect to `/auth/callback` — no component renders at `/login`. The authoritative entry-decision logic lives in `rootRedirectGuard` (on the empty-path route), and the public landing page where users initiate an explicit IdP login is `/welcome` → `LandingPageComponent`. The two `LoginComponent` files under `pages/login/` and `components/login/` exist in the codebase but are not mounted by any route — they are vestigial.
 
 ## User Stories
 
@@ -18,12 +18,16 @@ Users authenticate via a Keycloak redirect. On startup the app checks whether a 
 
 ## Acceptance Criteria
 
-- [ ] **Given** no auth token is present, **When** the login page loads, **Then** redirect to Keycloak after a ~1s delay.
-- [ ] **Given** a valid auth token is present, **When** the login page loads, **Then** navigate directly to `/{institutionId}/dashboard` without an IdP redirect.
-- [ ] **Given** the query param `invitation=true`, **When** the login page loads, **Then** redirect to Keycloak immediately (no delay, no onboarding message).
-- [ ] **Given** the query param `onboarding=complete`, **When** the login page loads, **Then** show a success message for 3s, then run the normal auth check.
-- [ ] **Given** a successful IdP sign-in, **When** the user returns to `/auth/callback`, **Then** persist the tokens and navigate to the institution-scoped dashboard.
-- [ ] **Given** the user aborts the IdP sign-in, **When** they return, **Then** the login page is shown again without an error flash.
+The authoritative "login" behavior lives in `rootRedirectGuard` (on the empty-path route `/`):
+
+- [ ] **Given** the user hits `/` while **already authenticated** (`AuthService.isAuthenticated === true`), **When** the guard runs, **Then** `router.createUrlTree(['/dashboard'])` is returned. The URL is `/dashboard` — **not** institution-scoped at this step; institution context is resolved downstream.
+- [ ] **Given** the user hits `/` with **no active session but a refresh token** (`AuthService.hasRefreshToken() === true`), **When** the guard calls `AuthService.ensureAuthenticated()` and it returns `true`, **Then** route to `/dashboard` (silent re-auth succeeded — user never sees the landing page).
+- [ ] **Given** the user hits `/` with **no refresh token**, **When** the guard calls `AuthService.trySilentLogin()` and it returns `true`, **Then** route to `/dashboard` (SSO session detected).
+- [ ] **Given** all three checks above fail, **When** the guard resolves, **Then** route to `/welcome` where the user can initiate an explicit IdP login.
+
+Query-param entry points via `/login` (which is a route redirect, not a component mount — see Routing Note above):
+
+- [ ] **Given** a request hits `/login`, **When** the router processes it, **Then** a `redirectTo: 'auth/callback'` redirect fires (defined in `PUBLIC_ROUTES`). This is the only way `/login` is reachable; no component renders there.
 
 ## UI States
 
@@ -37,15 +41,40 @@ Users authenticate via a Keycloak redirect. On startup the app checks whether a 
 ## Flows
 
 ```
-┌────────────┐    no token      ┌──────────┐  success   ┌──────────────┐
-│ /login     │ ─────────────────▶│ Keycloak │ ──────────▶│ /auth/callback│
-└────────────┘                   └──────────┘             └───────┬──────┘
-      │                                                           │
-      │ token present                                             ▼
-      │                                               ┌──────────────────┐
-      └──────────────────────────────────────────────▶│ /{inst}/dashboard│
-                                                      └──────────────────┘
+User hits /
+    │
+    ▼
+rootRedirectGuard.canActivate
+    │
+    ├── isAuthenticated ─────────────▶ /dashboard
+    ├── hasRefreshToken
+    │    └── ensureAuthenticated? ──▶ /dashboard
+    ├── trySilentLogin? (SSO) ──────▶ /dashboard
+    └── else ───────────────────────▶ /welcome
+                                         │
+                            user initiates IdP redirect
+                                         │
+                                         ▼
+                                     Keycloak
+                                         │
+                                     success
+                                         ▼
+                                  /auth/callback ──▶ (see auth-callback spec)
+                                         │
+                                         ▼
+                              /               (post-bootstrap)
+                                         │
+                              rootRedirectGuard again ──▶ /dashboard
+                                         │
+                              defaultModeRedirectGuard (on ** wildcard)
+                                         │
+                                         ▼
+                              /einrichtung/{institutionId}/dashboard
+                              (or /teamspace, /client-portal, /blocked-access
+                              per tenant features + assignments)
 ```
+
+> `/dashboard` (no prefix) is the initial target from the guard. Downstream resolution happens in `defaultModeRedirectGuard` (mounted on the `**` wildcard route inside the secure shell): it inspects tenant features + the user's institution assignments and ultimately navigates to `/einrichtung/{institutionId}/dashboard` (counseling), `/teamspace` (teamspace-only users), `/client-portal` (clients), or `/blocked-access` (no access at all). The `institutionRoute` helper is **not** involved in this path; it is used elsewhere (e.g. [session-expired](../session-expired/spec.md)) for direct post-action navigation.
 
 ## Non-Goals
 

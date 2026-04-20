@@ -19,7 +19,8 @@ Staff learning platform: browse available courses, view progress on enrolled one
 
 ### LMS Home (`/teamspace/lms`)
 
-- [ ] **Given** the user opens LMS, **When** `CatalogService` + `LearningFacade` + `CertificateService` resolve, **Then** the page renders: header with course count, a single unified course grid (enrolled + not-enrolled courses in one list, with progress bars rendered per card where an enrollment exists), and a certificates / history section below.
+- [ ] **Given** the user opens LMS, **When** `CatalogService` + `LearningFacade` + `CertificateService` resolve, **Then** the page renders: header with course count, a **stats grid** (completed / in-progress / not-started / overall-progress%), a single unified course grid (enrolled + not-enrolled courses in one list, with progress bars rendered per card where an enrollment exists), and a certificates / history section below.
+- [ ] **Given** the stats grid renders, **When** computed signals resolve, **Then** it shows four tiles: `completedCourses()`, `inProgressCourses()`, `notStartedCourses()`, and `overallProgress()` (percentage across all enrolments).
 - [ ] **Given** `hasVerwaltungPermission()` is true (the current user is a **superAdmin, tenantAdmin, or schulungAdmin**), **When** the header renders, **Then** a "Verwaltung" button is visible that routes to `/teamspace/lms/verwaltung`. The underlying `schulungAdminGuard` only gates the child route, so the button visibility is broader than the route gate.
 - [ ] **Given** a course card is tapped, **When** navigation resolves, **Then** open `/teamspace/lms/kurse/:courseId` (overview).
 
@@ -41,13 +42,13 @@ Staff learning platform: browse available courses, view progress on enrolled one
 
 ## UI States
 
-| State                | When?                            | What does the user see?                       | A11y notes      |
-| -------------------- | -------------------------------- | --------------------------------------------- | --------------- |
-| Loading              | Initial fetch                    | Spinner with localized label                  | `role="status"` |
-| Error                | Fetch failure                    | Error panel + retry                           | `role="alert"`  |
-| Empty (no courses)   | No enrolled + no available       | Empty state with encouragement                | —               |
-| Populated            | Courses rendered                 | Sections: enrolled → available → certificates | —               |
-| Admin (extra button) | `hasVerwaltungPermission()` true | "Verwaltung" button in header                 | —               |
+| State                | When?                            | What does the user see?                                                    | A11y notes      |
+| -------------------- | -------------------------------- | -------------------------------------------------------------------------- | --------------- |
+| Loading              | Initial fetch                    | Spinner with localized label                                               | `role="status"` |
+| Error                | Fetch failure                    | Error panel + retry                                                        | `role="alert"`  |
+| Empty (no courses)   | No enrolled + no available       | Empty state with encouragement                                             | —               |
+| Populated            | Courses rendered                 | Header → stats grid (4 tiles) → unified course grid → certificates/history | —               |
+| Admin (extra button) | `hasVerwaltungPermission()` true | "Verwaltung" button in header                                              | —               |
 
 ## Non-Goals
 
