@@ -17,7 +17,7 @@
 | Topic          | Angular                       | Flutter                                      |
 | -------------- | ----------------------------- | -------------------------------------------- |
 | Background     | CSS gradient                  | `Container` with `LinearGradient` decoration |
-| Retry handler  | `UnifiedAuthService.logout()` | `ref.read(authRepositoryProvider).logout()`  |
+| Retry handler  | `UnifiedAuthService.logout()` | `context.read<AuthRepository>().logout()` (or `context.read<AuthCubit>().logout()`) |
 | Support footer | Static text block             | Same — static; or omit if not essential      |
 
 ## Port Log

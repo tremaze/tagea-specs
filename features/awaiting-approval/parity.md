@@ -14,13 +14,13 @@
 
 ## Known Divergences
 
-| Topic                    | Angular                             | Flutter                                                  |
-| ------------------------ | ----------------------------------- | -------------------------------------------------------- |
-| Poll mechanism           | RxJS `interval(5000)` + `switchMap` | `Stream.periodic` or Riverpod `StreamProvider`           |
-| Teardown                 | `destroy$` subject                  | Widget `dispose()` cancels subscription                  |
-| Error handling           | None (stream dies on error)         | Add `.handleError` + retry with backoff                  |
-| Success delay            | RxJS `delay(2000)`                  | `Future.delayed(Duration(seconds: 2))` before navigation |
-| Notification on approval | Polling only                        | Consider FCM push as primary, polling as fallback        |
+| Topic                    | Angular                             | Flutter                                                      |
+| ------------------------ | ----------------------------------- | ------------------------------------------------------------ |
+| Poll mechanism           | RxJS `interval(5000)` + `switchMap` | `Cubit`/`Bloc` driving `Timer.periodic` or `Stream.periodic` |
+| Teardown                 | `destroy$` subject                  | `Cubit`/`Bloc` cancels subscription in `close()` override    |
+| Error handling           | None (stream dies on error)         | Add `.handleError` + retry with backoff                      |
+| Success delay            | RxJS `delay(2000)`                  | `Future.delayed(Duration(seconds: 2))` before navigation     |
+| Notification on approval | Polling only                        | Consider FCM push as primary, polling as fallback            |
 
 ## Port Log
 

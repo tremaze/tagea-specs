@@ -17,7 +17,7 @@
 
 | Topic                | Angular                                                                     | Flutter                                        |
 | -------------------- | --------------------------------------------------------------------------- | ---------------------------------------------- |
-| Local + global merge | `combineLatest` of two observables                                          | Riverpod combined `StreamProvider`             |
+| Local + global merge | `combineLatest` of two observables                                          | `Bloc` subscribing to both streams via `rxdart`'s `Rx.combineLatest2`, emitting the merged list on every update |
 | Category hierarchy   | Recursive `CategoryWithIcon`                                                | Same shape; render via recursive widget        |
 | Mobile filters sheet | `KBSimpleFiltersBottomSheetComponent`                                       | `showModalBottomSheet` with the same filter UI |
 | Navigation after tap | `institutionRoute(id, 'knowledge-base', 'article', :id)` vs teamspace route | Dart router — one function per context         |

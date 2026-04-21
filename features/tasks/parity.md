@@ -14,7 +14,7 @@
 
 | Topic                             | Angular                        | Flutter (if ported)                             |
 | --------------------------------- | ------------------------------ | ----------------------------------------------- |
-| Filter persistence                | Uses service + component state | Riverpod `StateProvider` per filter + search    |
+| Filter persistence                | Uses service + component state | `TaskFilterCubit` (single cubit holding `{ filter, searchText }` in state) |
 | Table (desktop) vs cards (mobile) | `MatTable` + sort / card list  | `DataTable` vs `ListView.builder` by breakpoint |
 
 ## Port Log

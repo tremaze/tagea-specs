@@ -17,7 +17,7 @@
 
 | Topic    | Angular                                           | Flutter                                              |
 | -------- | ------------------------------------------------- | ---------------------------------------------------- |
-| Grouping | Component-local `MonthGroup[]` computation        | Riverpod selector that groups raw documents by month |
+| Grouping | Component-local `MonthGroup[]` computation        | Derived state in the Cubit: compute grouped months and emit via `state.copyWith(groupedByMonth: ...)` (or expose as a computed getter on the state class) |
 | Preview  | `MatDialog` with `DocumentPreviewDialogComponent` | Shared Flutter preview widget                        |
 | Download | Browser download                                  | Save via `path_provider` + open via `open_file`      |
 

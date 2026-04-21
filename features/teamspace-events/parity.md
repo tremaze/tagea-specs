@@ -21,7 +21,7 @@
 | Topic            | Angular                                             | Flutter                                   |
 | ---------------- | --------------------------------------------------- | ----------------------------------------- |
 | Verwaltung guard | Commented-out TODO                                  | **Enforce from day one**                  |
-| Context reload   | Angular `effect()` on `ContextChangeService` signal | Riverpod `ref.listen` on context provider |
+| Context reload   | Angular `effect()` on `ContextChangeService` signal | `BlocListener<ContextCubit, ContextState>` reacting to context changes |
 | Card             | `EventArticleCardComponent`                         | Shared `EventCard` widget                 |
 | RSVP state       | UI updates via service method response              | Same — backend-authoritative              |
 

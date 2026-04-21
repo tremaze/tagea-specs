@@ -22,7 +22,7 @@
 | Tenant resolution           | `X-Tenant-ID` header when available, else `?domain=` fallback                   | Header only (no `window.location.hostname`)                     |
 | Password policy shape       | Mixed — `requireUppercase / hasUppercase` depending on endpoint (see contracts) | Normalize client-side to one enum-friendly shape                |
 | Password mismatch validator | `passwordMismatch` group error                                                  | Cross-field validation via `reactive_forms` or manual           |
-| Submit button loading state | `submitting()` signal + inline spinner                                          | `AsyncValue` from Riverpod + `ElevatedButton` with loading slot |
+| Submit button loading state | `submitting()` signal + inline spinner                                          | `BlocBuilder<RegisterCubit, RegisterState>` driving `ElevatedButton` with loading slot when `state is Submitting` (sealed `RegisterState`: `Initial \| Submitting \| Success \| Failure(error)`) |
 
 ## Port Log
 

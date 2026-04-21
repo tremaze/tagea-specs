@@ -17,7 +17,7 @@
 | Topic                   | Angular                        | Flutter                                                                 |
 | ----------------------- | ------------------------------ | ----------------------------------------------------------------------- |
 | Wrapper shape           | Thin `<router-outlet>` wrapper | Thin widget embedding the shared chat widget                            |
-| Feature-flag redirect   | Angular `effect()`             | Riverpod `ref.listen` or `BlocListener`                                 |
+| Feature-flag redirect   | Angular `effect()`             | `BlocListener`                                                          |
 | Safe-area preset        | `CHAT_CONTAINER_CONFIG` via DI | Widget parameter / provider                                             |
 | Manual `connect()` call | Commented out; not invoked     | Don't add it on the Flutter side either — defer to the widget lifecycle |
 

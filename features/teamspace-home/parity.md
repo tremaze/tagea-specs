@@ -12,7 +12,7 @@
 - **Status:** ⏳ Planned
 - **Suggested path:** `lib/features/teamspace/home/teamspace_home_page.dart`
 - **Sub-widgets:** `feed_list.dart`, `teamspace_sidebar.dart`, `teamspace_mobile_sheet.dart`
-- **State management:** Riverpod providers per data source (feed, teamspaces, unread counts, appointments, submissions)
+- **State management:** One `Cubit` per data source (feed, teamspaces, unread counts, appointments, submissions), each composed under a `MultiBlocProvider` at the home route
 - **Integration tests:** `integration_test/teamspace_home_test.dart`
 
 ## Known Divergences

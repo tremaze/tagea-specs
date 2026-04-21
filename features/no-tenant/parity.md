@@ -17,7 +17,7 @@
 | Topic        | Angular                               | Flutter                                                |
 | ------------ | ------------------------------------- | ------------------------------------------------------ |
 | Localization | Hardcoded German strings in template  | Introduce proper `intl` / `flutter_localizations` keys |
-| Email source | `UnifiedAuthService.userEmail` signal | Riverpod provider backed by JWT claim                  |
+| Email source | `UnifiedAuthService.userEmail` signal | `AuthCubit` state field exposing the email from the JWT claim |
 
 ## Port Log
 
