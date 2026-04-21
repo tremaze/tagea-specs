@@ -1,5 +1,14 @@
 # Instructions for Claude when working with specs
 
+## Spec-First Development (authoritative)
+
+**For new features, or any change to observable behavior, write/update the spec FIRST — then the code.**
+
+- Applies to: new features, changed user-facing behavior, new/changed API contracts
+- Does NOT apply to: bug fixes, internal refactors, performance work, or other changes with no observable behavior shift
+- When unsure whether a change is "observable": ask the user before writing code
+- The spec is source of truth. When Angular/Flutter code and spec disagree: fix the spec or the code in the same PR — never leave them out of sync
+
 ## When creating a new spec
 
 1. Copy `_templates/feature/` to `features/<feature-name>/` (or use `specs/_scripts/new-spec.sh <slug>`)
