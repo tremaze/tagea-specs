@@ -31,6 +31,30 @@ These components are mounted at multiple routes with different modes. **One spec
 | Knowledge Base     | `knowledge-base`     | `einrichtung/:id/knowledge-base/**` · `teamspace/knowledge-base/**`                                                        | [knowledge-base](./features/knowledge-base/spec.md)         | **P2** ✅     |
 | Redaktion (Editor) | `redaktion`          | `einrichtung/:id/redaktion/**` · `teamspace/redaktion/**` · `einrichtung/:id/klienten-news/**`                             | [redaktion](./features/redaktion/spec.md)                   | **P2** ✅     |
 
+## App Shell (Layout, Navigation, Header)
+
+These bundles describe the app's chrome — the persistent UI around feature pages. Live under `specs/shell/<slug>/` rather than `specs/features/`.
+
+| Bundle              | Slug                  | Scope                                                                                  | Spec?                                                      | Port Priority |
+| ------------------- | --------------------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------------- |
+| App Shell           | `app-shell`           | 3-tier layout (PublicMain, SecureShell, SecureMain) and which routes nest in which     | [app-shell](./shell/app-shell/spec.md)                     | **P0** ✅     |
+| Main Navigation     | `main-navigation`     | NavRail + NavDrawer + Bottom-Nav: 33 nav items, visibility filter pipeline, badges     | [main-navigation](./shell/main-navigation/spec.md)         | **P0** ✅     |
+| Top Bar             | `top-bar`             | Header: logo, mode toggle, tenant/institution/language switchers, patch-notes, profile | [top-bar](./shell/top-bar/spec.md)                         | **P0** ✅     |
+| Notification Center | `notification-center` | In-app notification bell + overlay (distinct from FCM push)                            | [notification-center](./shell/notification-center/spec.md) | **P0** ✅     |
+| Mode Toggle         | `mode-toggle`         | Einrichtung ↔ Teamspace state machine + persistence + URL auto-sync                    | [mode-toggle](./shell/mode-toggle/spec.md)                 | **P0** ✅     |
+
+## Cross-Cutting Platform
+
+Behaviors that span every feature. Live under `specs/cross-cutting/<slug>/` rather than `specs/features/`.
+
+| Bundle             | Slug                 | Scope                                                                                   | Spec?                                                            | Port Priority |
+| ------------------ | -------------------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ------------- |
+| Routing & Guards   | `routing-and-guards` | Full route tree + ~32 guard catalogue + entry-redirect logic                            | [routing-and-guards](./cross-cutting/routing-and-guards/spec.md) | **P0** ✅     |
+| HTTP Interceptors  | `http-interceptors`  | Auth/tenant/sentry interceptor chain + headers + race-protection                        | [http-interceptors](./cross-cutting/http-interceptors/spec.md)   | **P0** ✅     |
+| Context Resolution | `context-resolution` | Tenant/Institution/Employee/Permission state services + bootstrap + switch flows        | [context-resolution](./cross-cutting/context-resolution/spec.md) | **P0** ✅     |
+| i18n & Theming     | `i18n-and-theming`   | Transloco (16 languages, RTL) + Material M3 + per-tenant brand colors                   | [i18n-and-theming](./cross-cutting/i18n-and-theming/spec.md)     | **P0** ✅     |
+| Bootstrap & Push   | `bootstrap-and-push` | App bootstrap chain + FCM/APNs registration + cold-start route capture + Service Worker | [bootstrap-and-push](./cross-cutting/bootstrap-and-push/spec.md) | **P0** ✅     |
+
 ## Public (Pre-Auth)
 
 Routes under `PUBLIC_ROUTES`, no auth guard. Layout: `PublicMainComponent`.

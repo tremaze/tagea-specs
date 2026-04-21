@@ -112,7 +112,7 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 | Public Booking    | ✅      | ❌      | [public-booking/](./features/public-booking/spec.md)       |
 | Public Video Join | ✅      | ❌      | [public-video-join/](./features/public-video-join/spec.md) |
 
-### Cross-cutting
+### Cross-cutting features
 
 | Feature            | Angular | Flutter | Spec                                                         |
 | ------------------ | ------- | ------- | ------------------------------------------------------------ |
@@ -120,6 +120,30 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 | News Detail        | ✅      | ⏳      | [news-detail/](./features/news-detail/spec.md)               |
 | Knowledge Base     | ✅      | ❌      | [knowledge-base/](./features/knowledge-base/spec.md)         |
 | Redaktion          | ✅      | ❌      | [redaktion/](./features/redaktion/spec.md)                   |
+
+### App Shell
+
+These bundles describe the app's chrome (layout, navigation, header, overlays) — everything around the per-feature pages.
+
+| Bundle              | Angular | Flutter | Spec                                                        |
+| ------------------- | ------- | ------- | ----------------------------------------------------------- |
+| App Shell           | ✅      | ⏳      | [app-shell/](./shell/app-shell/spec.md)                     |
+| Main Navigation     | ✅      | ⏳      | [main-navigation/](./shell/main-navigation/spec.md)         |
+| Top Bar             | ✅      | ⏳      | [top-bar/](./shell/top-bar/spec.md)                         |
+| Notification Center | ✅      | ⏳      | [notification-center/](./shell/notification-center/spec.md) |
+| Mode Toggle         | ✅      | ⏳      | [mode-toggle/](./shell/mode-toggle/spec.md)                 |
+
+### Cross-cutting platform
+
+These bundles describe behavior that spans every feature — routing, HTTP, auth/tenant state, i18n/theming, bootstrap.
+
+| Bundle             | Angular | Flutter | Spec                                                              |
+| ------------------ | ------- | ------- | ----------------------------------------------------------------- |
+| Routing & Guards   | ✅      | ⏳      | [routing-and-guards/](./cross-cutting/routing-and-guards/spec.md) |
+| HTTP Interceptors  | ✅      | ⏳      | [http-interceptors/](./cross-cutting/http-interceptors/spec.md)   |
+| Context Resolution | ✅      | ⏳      | [context-resolution/](./cross-cutting/context-resolution/spec.md) |
+| i18n & Theming     | ✅      | ⏳      | [i18n-and-theming/](./cross-cutting/i18n-and-theming/spec.md)     |
+| Bootstrap & Push   | ✅      | ⏳      | [bootstrap-and-push/](./cross-cutting/bootstrap-and-push/spec.md) |
 
 ## Scripts
 

@@ -31,7 +31,12 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
-const SPECS_DIR = path.join(REPO_ROOT, 'specs', 'features');
+const SPECS_ROOT = path.join(REPO_ROOT, 'specs');
+// Directories under specs/ that contain spec bundles. Each direct subdirectory
+// of these is one bundle (its name is the slug). "features/" holds per-route
+// feature specs; "shell/" holds app-chrome/layout specs; "cross-cutting/" holds
+// cross-feature behavior specs.
+const SPEC_CATEGORIES = ['features', 'shell', 'cross-cutting'];
 const SRC_DIR = path.join(REPO_ROOT, 'apps', 'tagea-frontend', 'src');
 
 // Identifiers that are too generic to grep reliably.
@@ -251,8 +256,21 @@ function existsInSource(identifier) {
 
 // --- Verification ---
 
+function resolveSlugDir(slug) {
+  // Returns the absolute path to specs/<category>/<slug>/ for whichever
+  // category contains the slug, or null if not found. Slugs are globally
+  // unique across categories.
+  for (const cat of SPEC_CATEGORIES) {
+    const dir = path.join(SPECS_ROOT, cat, slug);
+    if (fs.existsSync(dir)) return dir;
+  }
+  return null;
+}
+
 function verifyFeature(slug) {
-  const contractsPath = path.join(SPECS_DIR, slug, 'contracts.md');
+  const slugDir = resolveSlugDir(slug);
+  if (!slugDir) return null;
+  const contractsPath = path.join(slugDir, 'contracts.md');
   if (!fs.existsSync(contractsPath)) return null;
 
   const md = fs.readFileSync(contractsPath, 'utf-8');
@@ -280,10 +298,17 @@ function verifyFeature(slug) {
 // --- Main ---
 
 function listFeatureSlugs() {
-  return fs
-    .readdirSync(SPECS_DIR, { withFileTypes: true })
-    .filter((d) => d.isDirectory())
-    .map((d) => d.name);
+  // Collect slugs from all spec categories. Returned sorted so output order is
+  // deterministic regardless of which category a slug lives in.
+  const slugs = [];
+  for (const cat of SPEC_CATEGORIES) {
+    const catDir = path.join(SPECS_ROOT, cat);
+    if (!fs.existsSync(catDir)) continue;
+    for (const entry of fs.readdirSync(catDir, { withFileTypes: true })) {
+      if (entry.isDirectory()) slugs.push(entry.name);
+    }
+  }
+  return slugs.sort();
 }
 
 function main() {
