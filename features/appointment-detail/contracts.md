@@ -111,10 +111,11 @@ interface ClientAppointment {
 | Load appointment (staff or client via DI) | `IAppointmentDetailsService.getAppointmentDetails(id)`                                                                                  |
 | Update details (staff only)               | `IAppointmentDetailsService.updateAppointment(id, dto)`                                                                                 |
 | Cancel (client)                           | `IAppointmentDetailsService.cancelAppointment(id, cancelData, managedClientId?)` — hits `POST /appointments/my-appointments/:id/cancel` |
-| RSVP staff invitation                     | `AppointmentParticipantsService.respondToInvitation(appointmentId, response)`                                                           |
+| Manage participants (staff save)          | `AppointmentParticipantsService.manageAppointmentParticipants(appointmentId, { employees, clients })`                                   |
+| RSVP via participant patch                | `AppointmentParticipantsService.updateParticipant(participantId, { response_status })` — hits `PATCH /appointment-participants/:id`     |
 | Load custom field definitions             | `CustomFieldsService.getFieldDefinitions(entityType)` (with `entityType = 'appointment'`)                                               |
-| Create financial support record           | `FinancialSupportService.create(appointmentId, record)`                                                                                 |
-| Join video session                        | `VideoSessionService.join(sessionId)`                                                                                                   |
+| Create financial support record           | `FinancialSupportService.createFinancialSupport(request)`                                                                               |
+| Start video session                       | `VideoSessionService.startSession(appointmentId)`                                                                                       |
 
 ## Timezone Handling
 

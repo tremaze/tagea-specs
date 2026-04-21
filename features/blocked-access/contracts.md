@@ -5,7 +5,12 @@
 This page makes no backend calls. It is a destination reached via redirect from:
 
 - `/auth/callback` with `?reason=email-not-verified` on `EMAIL_NOT_VERIFIED` error (see [auth-callback/contracts.md](../auth-callback/contracts.md))
-- Permission/institution guards elsewhere in the app that redirect authenticated users with no institution assignment
+- Route guards that redirect authenticated users with no institution assignment:
+  - `permissionGuard` (`apps/tagea-frontend/src/app/guards/permission.guard.ts`)
+  - `defaultModeRedirectGuard` (`apps/tagea-frontend/src/app/guards/default-mode-redirect.guard.ts`)
+  - `teamspaceFeatureGuard` (`apps/tagea-frontend/src/app/guards/teamspace-feature.guard.ts`)
+  - `tenantPermissionGuard` (`apps/tagea-frontend/src/app/guards/tenant-permission.guard.ts`)
+  - `institutionUrlGuard` (`apps/tagea-frontend/src/app/guards/institution-url.guard.ts`)
 
 ## Actions
 

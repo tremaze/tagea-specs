@@ -137,7 +137,7 @@ loadFeedContent()  (resets pagination + dedup, reloads active sources)
 
 ## Notifications (Push / In-App)
 
-- **In-app unread counts** (`ClientPortalService.getAllUnreadCounts()`) drive the filter chip badges.
+- **In-app unread counts** (`ClientPortalService.getAllUnreadCounts()` → `GET /client-portal/unread-counts`) drive the filter chip badges. The response shape is `{ messages, news, knowledge, appointments }` on the frontend type (backend additionally returns `inquiryReplies`); this dashboard only consumes `messages`, `news`, and `appointments` and hardcodes `documents` to 0.
 - **Auto-mark-as-seen** on scroll persists via:
   - `ClientNewsService.markAsSeen(id)` for news
   - `ClientMessagesService.markAsSeen(id)` for messages

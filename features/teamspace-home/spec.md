@@ -41,12 +41,13 @@ Teamspace landing page — an aggregated feed of news, events, submissions, and 
 ### Recent submissions (sidebar)
 
 - [ ] **Given** `CurrentEmployeeService.getCurrentEmployeeId()` is null, **When** the submissions load fires, **Then** the call is short-circuited — the sidebar shows empty (no error, no spinner).
-- [ ] **Given** the employee id resolves, **When** `SubmissionsService` returns, **Then** the sidebar lists up to N recent submissions (verify exact cap) mapped via `mapSubmissionToItemData`.
-- [ ] **Given** a submission is clicked, **When** navigation resolves, **Then** the user goes to `/teamspace/submissions/:id`.
+- [ ] **Given** the employee id resolves, **When** `SubmissionsService.getAllSubmissions({ teamspace_id, employeeId })` returns, **Then** the sidebar lists up to **4** most recent submissions (sorted by `submittedAt` desc) mapped via `mapSubmissionToItemData`.
+- [ ] **Given** a submission is clicked, **When** navigation resolves, **Then** the user goes to `/teamspace/submissions/:id` with `teamspaceId` as a query param (derived from the submission).
 
 ### Quick links + external content
 
-- [ ] **Given** the employee's teamspaces have external content configured, **When** `ExternalContentsService` resolves, **Then** the sidebar shows a quick-links list.
+- [ ] **Given** tenant-wide external contents are configured, **When** `ExternalContentsService.getAll()` resolves, **Then** the sidebar shows a quick-links list. Entries with `image_s3_key` are resolved to presigned URLs via a single `getBulkImageUrls(ids)` call.
+- [ ] **Given** an external content entry is clicked, **When** the click handler fires, **Then** `content.url` opens in a new tab with `noopener,noreferrer`.
 
 ### Mobile
 

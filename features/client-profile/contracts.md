@@ -2,30 +2,56 @@
 
 ## Endpoints Consumed
 
-| Action                   | Service / Method (approximate)                                              | Notes                                                                                                                                                                    |
-| ------------------------ | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Load profile             | `UnifiedAuthService.employee()` signal + backend `/api/users/me`            | Profile data mirrors the `Client` model                                                                                                                                  |
-| Update profile           | `HttpClient.patch('/api/clients/me')` (verify path via `ApiConfigService`)  | Body: `Partial<Client>`                                                                                                                                                  |
-| Load password policy     | Backend endpoint — verify path                                              | Returns `PasswordPolicy`                                                                                                                                                 |
-| Change password          | Backend endpoint — verify path                                              | Body: `{ currentPassword, newPassword }`                                                                                                                                 |
-| Load custom fields       | `CustomFieldsV2Service.getCustomFieldsV2(entityId, entityType, mode)`       | Returns mode-dependent shape; `FieldGroupingService` converts to `FieldGroup[]`                                                                                          |
-| Save custom field values | `CustomFieldsV2Service.saveAllCustomFieldsV2(entityId, entityType, values)` | Body: `Record<string, unknown>`                                                                                                                                          |
-| Load managed clients     | `GET /api/client-portal/managed-clients`                                    | Returns `ManagedClient[]` — only relationships with `can_manage: true` and `is_deleted: false`. See DTO below for the wire shape and the reverse-relationship semantics. |
+| Action                    | Service / Method                                                                                                                                   | Notes                                                                                                                                                                                                          |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Load profile              | `GET /api/clients/me` via `HttpClient.get` + `ApiConfigService.getApiUrl('clients/me')`                                                            | Returns a full `Client` entity. Handled by `ClientPortalController.getMyProfile` in `apps/tagea-backend/src/clients/client-portal.controller.ts`.                                                              |
+| Update profile            | `PATCH /api/clients/me` via `HttpClient.patch('clients/me', updateDto)`                                                                            | Body matches `UpdateClientDto` (frontend sends a subset: `first_name`, `last_name`, `phone`). Backend strips protected fields (`status`, `category`, `login_enabled`, `email_verified`, `authProviderUserId`). |
+| Update chat notifications | `PATCH /api/clients/me` with body `{ chat_notifications: boolean }`                                                                                | Same endpoint as Update profile; passed through `UpdateClientDto`'s `personal_info`-adjacent fields and persisted.                                                                                             |
+| Delete own account        | `DELETE /api/clients/me`                                                                                                                           | Deactivates the Keycloak account; client record stays. Triggers frontend `logout()` and redirect to `/`.                                                                                                       |
+| Load password policy      | `GET /api/auth/password-policy` (public)                                                                                                           | Returns `PasswordPolicyResponse` from Keycloak realm policy. Frontend uses the subset `{ minLength, minUpperCase, minLowerCase, minDigits, minSpecialChars }`.                                                 |
+| Change password           | `POST /api/auth/me/change-password`                                                                                                                | Body: `ChangePasswordDto` = `{ currentPassword, newPassword }`. No forced sign-out.                                                                                                                            |
+| Load custom fields        | `CustomFieldsService.getFieldDefinitions('client', true)` (V1) + `CustomFieldsV2Service.getCustomFieldsV2(entityId, entityType, mode)` (V2 values) | Definitions are grouped by `FieldGroupingService.groupFieldsByCategory(definitions)` into `FieldGroup[]`. Values load with `mode = 'cache'`.                                                                   |
+| Save custom field values  | `CustomFieldsV2Service.bulkUpdateCustomFieldsV2(entityId, entityType, values)`                                                                     | Wire: `PUT …/custom-fields/v2/bulk` with body `{ fields: Record<string, unknown> }`. Returns `{ success, updated_count }`.                                                                                     |
+| Load managed clients      | `GET /api/client-portal/managed-clients`                                                                                                           | Returns `ManagedClientResponseDto[]` — only relationships with `can_manage: true` and `is_deleted: false`. See DTO below for the wire shape and the reverse-relationship semantics.                            |
+
+> **Note:** In the current build, the Custom Fields tab is gated out (`loadCustomFields()` is commented out in `ngOnInit`) pending the `visible_in_client_portal` / `editable_in_client_portal` flags on `CustomFieldDefinition`. The endpoints are wired but not invoked yet.
 
 ## Data Models
 
+> Documentation-only shape. Mirrors `apps/tagea-frontend/src/app/models/client.model.ts` — the `Client` interface there is the authoritative frontend type.
+
 ```ts
+// Source of truth: apps/tagea-frontend/src/app/models/client.model.ts
+// Address fields are flat columns, not a nested object.
 interface Client {
   id: string;
   first_name: string;
   last_name: string;
-  email: string;
+  category: 'client' | 'related_person' | 'contact';
+  email?: string;
   phone?: string;
-  address?: { street; zip; city; country };
-  institution_id: string;
-  // + additional fields
+  dateOfBirth?: Date | string;
+  gender?: string;
+  street?: string;
+  postal_code?: string;
+  city?: string;
+  nationality?: string;
+  important_note?: string;
+  personal_info?: { notes?: string; [key: string]: unknown };
+  authProviderUserId?: string;
+  login_enabled?: boolean;
+  status?: string;
+  version: number;
+  department_id?: string | null;
+  interface_language?: string;
+  last_contact_date?: string | null;
+  invalid_fields?: number;
+  created_at: Date | string;
+  updated_at: Date | string;
 }
+```
 
+```ts
 // Source of truth: apps/tagea-backend/src/client-portal/dto/managed-client.dto.ts
 // (Wire response from GET /api/client-portal/managed-clients)
 interface ManagedClient {
@@ -37,7 +63,11 @@ interface ManagedClient {
   login_enabled: boolean; // whether the managed client can log into the portal themselves
   relationship_type: string; // free-form, tenant-configurable; see "Relationship semantics" below
 }
+```
 
+```ts
+// Frontend interface in client-profile.component.ts — a subset of the backend
+// PasswordPolicyResponse from apps/tagea-backend/src/auth/services/user-management.service.ts
 interface PasswordPolicy {
   minLength: number;
   minUpperCase: number;

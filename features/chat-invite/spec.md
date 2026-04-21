@@ -16,9 +16,9 @@ Fullscreen preview of a chat invitation — shown when a user is invited to a Ma
 ## Acceptance Criteria
 
 - [ ] **Given** the URL is `/chat/invite/:roomId`, **When** the route activates, **Then** the secure-shell layout wraps the page (auth required) but the secure-main navigation is bypassed (fullscreen).
-- [ ] **Given** `InvitePreviewComponent` renders, **When** the invitation is resolved, **Then** preview content (room name, description, inviter) and accept/decline actions are shown (library-owned UI).
-- [ ] **Given** the user accepts, **When** the library completes the join, **Then** typical handling transitions to `/chat/room/:roomId` (library-owned navigation — verify).
-- [ ] **Given** the user declines, **When** the library completes the reject, **Then** the user is returned to a sensible destination (library-owned — verify, likely `/chat` or `/`).
+- [ ] **Given** `InvitePreviewComponent` renders, **When** the invitation is resolved, **Then** the room avatar, room name, direct-vs-group info line (with member count for groups), a static description, and accept/decline buttons are shown.
+- [ ] **Given** the user accepts, **When** `ConversationsService.acceptInvite(roomId)` resolves, **Then** the active room is set via `ActiveConversationService.selectRoom(roomId)` and the router navigates to `['room', roomId]` relative to the parent route.
+- [ ] **Given** the user declines, **When** `ConversationsService.declineInvite(roomId)` resolves, **Then** the active invite highlight is cleared via `ActiveConversationService.clearInvite()` and the router navigates to `[]` relative to the parent route.
 
 ## UI States
 
@@ -46,20 +46,21 @@ Push notification tap ──▶ /chat/invite/:roomId
                     accept       decline
                        │           │
                        ▼           ▼
-                   /chat/room/:roomId   (library-determined exit)
+           router.navigate(['room', roomId],   router.navigate([],
+             {relativeTo: parent})              {relativeTo: parent})
 ```
 
 ## Non-Goals
 
-- **Group invite UI** (sending invitations to multiple users) — handled inside `ChatContainerComponent`; this page is for receiving/acting on a single invite.
+- **Group invite UI** (sending invitations to multiple users) — separate library flow; this page is for receiving/acting on a single invite.
 - **Room creation** — separate library flow.
 
 ## Edge Cases
 
-- **Invite already accepted elsewhere** — library detects and typically redirects to the room.
-- **Invite revoked/expired** — library shows an explanation; verify exact behavior against `InvitePreviewComponent`.
-- **User was never invited to the room** — permission/invite check fails; library handles.
-- **Deep link while unauthenticated** — `AUTH_GUARD` forces login first, then re-targets the invite URL.
+- **`roomId` is missing from the URL** — `currentRoomId()` is undefined and the template renders nothing (`@if (currentRoomId()`).
+- **Room not present in `pendingInvites`** — `memberCount` falls back to `0` and `isDirect` to `false`; the static description still renders.
+- **Accept/decline RPC fails** — error is logged to console via `console.error` and the user stays on the invite route (no navigation occurs).
+- **Deep link while unauthenticated** — `AUTH_GUARD` on the parent secure-shell forces login first, then re-targets the invite URL.
 
 ## Permissions & Tenant/Institution
 

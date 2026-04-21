@@ -4,12 +4,21 @@
 
 Methods relevant to this page (exact signatures in [`events.service.ts`](../../../apps/tagea-frontend/src/app/services/events.service.ts)):
 
-| Method                                                   | Purpose                        |
-| -------------------------------------------------------- | ------------------------------ |
-| `getForTeamspaces({ teamspaceIds?, search? })`           | Paginated events list          |
-| `getById(id)`                                            | Single event for detail        |
-| `register(eventId)` / `deregister(eventId)`              | RSVP operations                |
-| `create(payload)` / `update(id, payload)` / `delete(id)` | Editor operations (verwaltung) |
+| Method                                                                     | Purpose                                                                 |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `getEvents(filter?, sort?)` / `getEventsPaginated(filter?, sort?)`         | Events list (flat or paginated). Uses `EventFilter.teamspace_ids`       |
+| `getEditorialEvents(filter?, sort?)`                                       | Events visible for REDAKTEUR+ roles — used by verwaltung                |
+| `getEventById(id)`                                                         | Single event for detail                                                 |
+| `registerForEvent(eventId, customFieldValues?)`                            | RSVP register (POST `events/:eventId/register`)                         |
+| `cancelRegistration(eventId, participantId, cancellationReason)`           | RSVP cancel (POST `events/:eventId/participants/:participantId/cancel`) |
+| `createEvent(event, customFieldDefinitions?, customFieldValues?)`          | Create (POST `events`)                                                  |
+| `updateEvent(id, updates)` / `deleteEvent(id)`                             | Update / delete (PATCH / DELETE `events/:id`)                           |
+| `getParticipants(eventId)`                                                 | List participants for verwaltung                                        |
+| `translateEvent(eventId, language, force?)` / `getTranslationStatuses(id)` | Event translation                                                       |
+
+### Payload mapping (service <-> backend)
+
+The frontend model uses `start_date` / `end_date`; the backend expects `start_datetime` / `end_datetime`. The service maps these on the way in and out. Custom-field payload on create goes as `custom_fields_summary` (values) + `custom_field_definitions`.
 
 ## Data Models
 
@@ -36,7 +45,6 @@ interface Event {
   institution_id?: string;
   teamspace_id?: string;
   teamspace?: Teamspace;
-  custom_fields?: Record<string, unknown>;
   custom_field_values?: Record<string, unknown>;
   attachments?: string[];
   image_url?: string;
@@ -62,7 +70,33 @@ interface EventRegistration {
   event_id: string;
   employee_id: string;
   employee_name: string;
-  // + more fields (waitlist_position?, status, etc.)
+  registration_status: RegistrationStatus;
+  registration_date: Date;
+  cancellation_date?: Date;
+  attendance_status?: AttendanceStatus;
+  notes?: string;
+  custom_field_values?: Record<string, unknown>;
+  is_waitlisted?: boolean;
+  waitlist_position?: number;
+}
+
+type LocationType = 'onsite' | 'online' | 'hybrid' | 'office';
+type EventStatus = 'draft' | 'published' | 'cancelled' | 'completed';
+type RegistrationStatus = 'pending' | 'approved' | 'rejected' | 'cancelled' | 'waitlist';
+type AttendanceStatus = 'present' | 'absent' | 'excused';
+
+interface EventFilter {
+  status?: EventStatus | 'all';
+  location_type?: LocationType;
+  searchTerm?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+  teamspace_id?: string;
+  teamspace_ids?: string[];
+  lang?: string;
+  page?: number;
+  limit?: number;
+  include_participants?: boolean;
 }
 ```
 

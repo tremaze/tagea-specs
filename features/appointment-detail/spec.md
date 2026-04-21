@@ -59,7 +59,7 @@ The component reads `route.data.mode` (`'staff' | 'booker' | 'client'`) and bran
 
 - [ ] **Given** the appointment is `scheduled` **or** `confirmed` and in the future, **When** the client views it, **Then** a "Cancel" action is visible. (Both statuses represent a bookable/active appointment in the client-facing shape — see [contracts.md](./contracts.md) for the full `ClientAppointment.status` union.)
 - [ ] **Given** the client cancels, **When** they confirm in the dialog, **Then** the backend marks the appointment as cancelled, and the UI updates to the cancelled state.
-- [ ] **Given** the appointment has a video session configured, **When** the start time is within join window, **Then** a "Join video" button is shown (uses `VideoSessionService`).
+- [ ] **Given** `is_video_meeting === true` and the `videoMeeting` tenant feature is enabled, **When** the current time is within the join window (15 min before start until 30 min after end), **Then** a "Join video" button is shown and invokes `VideoSessionService.startSession(appointmentId)`.
 
 ### Booker Mode
 
@@ -67,19 +67,21 @@ The component reads `route.data.mode` (`'staff' | 'booker' | 'client'`) and bran
 
 ### RSVP (Staff Invited)
 
-- [ ] **Given** the user is listed as a staff participant with `invited` status, **When** they click "Accept" / "Decline", **Then** `AppointmentParticipantsService` persists the RSVP, and the UI updates in place.
-- [ ] **Given** the user is an RSVP'd participant, **When** they open the detail again, **Then** their current RSVP status is shown and can be changed.
+> **Current Angular implementation:** RSVP Accept / Decline is surfaced in the in-app notification center (`NotificationCenterComponent`), not on the appointment detail page. The detail page shows participant `response_status` read-only. RSVP persists by `PATCH /appointment-participants/:id` with `{ response_status }` ('confirmed' | 'no_show_with_notice').
+
+- [ ] **Given** the user is listed as a staff participant, **When** the detail renders, **Then** each participant's current `response_status` ('pending' | 'accepted' | 'declined' | 'tentative' | 'confirmed') is visible.
+- [ ] **Given** the user received an `appointment_invitation` notification, **When** they click Accept / Decline in the notification center, **Then** the backend patches the participant record and the notification is dismissed.
 
 ## UI States
 
-| State              | When?                            | Rendering                                       | A11y notes                 |
-| ------------------ | -------------------------------- | ----------------------------------------------- | -------------------------- |
-| Loading            | Initial fetch                    | Full-page spinner                               | `role="status"`            |
-| Loaded (active)    | `status === 'scheduled'`         | Normal detail layout                            | —                          |
-| Loaded (cancelled) | `status === 'cancelled'`         | "Cancelled" banner + reason + read-only content | Banner uses `role="alert"` |
-| Saving             | Edit action in-flight            | Progress bar + disabled form                    | —                          |
-| RSVP changing      | Accept/decline request in-flight | Buttons disabled with inline spinner            | `aria-busy`                |
-| Error              | Fetch/save error                 | Snackbar + retry affordance                     | `role="alert"`             |
+| State              | When?                                                                                                                                       | Rendering                                       | A11y notes                 |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | -------------------------- |
+| Loading            | Initial fetch                                                                                                                               | Full-page spinner                               | `role="status"`            |
+| Loaded (active)    | `status` is `'scheduled'` or `'confirmed'` (client shape)                                                                                   | Normal detail layout                            | —                          |
+| Loaded (cancelled) | `status ∈ { 'cancelled', 'cancelled_by_client', 'cancelled_by_counselor', 'partially_cancelled' }` (union spans both staff + client shapes) | "Cancelled" banner + reason + read-only content | Banner uses `role="alert"` |
+| Saving             | Edit action in-flight                                                                                                                       | Progress bar + disabled form                    | —                          |
+| RSVP changing      | Accept/decline request in-flight                                                                                                            | Buttons disabled with inline spinner            | `aria-busy`                |
+| Error              | Fetch/save error                                                                                                                            | Snackbar + retry affordance                     | `role="alert"`             |
 
 ## Flows
 
@@ -91,24 +93,21 @@ route.data.mode ──┬── 'staff' / 'booker'  ──▶ AppointmentDetailS
                   └── 'client'             ──▶ AppointmentDetailClientViewComponent
 ```
 
-### Staff participant RSVP
+### Staff participant RSVP (via notification center, not detail page)
 
 ```
-Open detail
-    │
-    ▼
-isStaffInvited?  ── yes ──▶ show Accept / Decline buttons
-    │                           │
-    │                           ▼
-    │                     user clicks
-    │                           │
-    │                           ▼
-    │                     appointmentParticipantsService.respondToInvitation()
-    │                           │
-    │                           ▼
-    │                     UI reflects new status
-    │
-    └── no ──▶ normal staff view
+appointment_invitation notification
+            │
+            ▼
+user clicks Accept / Decline in NotificationCenterComponent
+            │
+            ▼
+PATCH /appointment-participants/:participantId
+{ response_status: 'confirmed' | 'no_show_with_notice' }
+            │
+            ▼
+notification dismissed; next time the detail loads, the updated
+response_status is reflected read-only in the participants list
 ```
 
 ## Non-Goals
@@ -161,9 +160,9 @@ Owned by component templates + child view components. Full list should be compil
 - **Client view:** `AppointmentDetailClientViewComponent`
 - **Services:**
   - `APPOINTMENT_DETAILS_SERVICE` interface — injected `AppointmentsService` or `ClientAppointmentsService`
-  - `AppointmentParticipantsService` — RSVP
+  - `AppointmentParticipantsService` — participant CRUD (`manageAppointmentParticipants` during staff save; `updateParticipant` is what RSVP ends up patching)
   - `AppointmentTimeService`, `AppointmentFormService`, `CustomFieldsService`, `FinancialSupportService`
-  - `VideoSessionService` — join video
+  - `VideoSessionService` — `startSession(appointmentId)` opens the pre-join dialog and shows the floating video widget
 - **Related commits of interest:**
   - `c3d6ab66c` — timezone fix for reminders (`Europe/Berlin`)
   - `78d19fd6a` — non-organizer read-only view

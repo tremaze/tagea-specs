@@ -36,18 +36,16 @@ interface NewsArticleWithMeta extends HelpArticle {
 
 interface NewsFilter {
   status?: NewsStatus | 'all';
-  type?: ArticleType;
-  category?: ArticleCategory;
+  category_id?: string;
   searchTerm?: string;
+  author?: string;
   dateFrom?: Date;
   dateTo?: Date;
-  teamspaceId?: string;
-  targetAudience?: 'staff' | 'clients';
-  // + other filter fields
+  teamspace_id?: string;
 }
 
 interface NewsSortOptions {
-  field: 'createdAt' | 'updatedAt' | 'publishedAt' | 'title';
+  field: 'title' | 'createdAt' | 'publishedAt' | 'views' | 'likes' | 'status';
   direction: 'asc' | 'desc';
 }
 ```

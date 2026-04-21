@@ -26,8 +26,8 @@ Public page reached via an emailed reset link (`/public/password-reset/:userId/:
 
 ### Requirements load
 
-- [ ] **Given** the token is valid, **When** `GET /public/password-reset/:userId/:token/requirements` is called, **Then** a `PasswordRequirements` payload is returned.
-- [ ] **Given** the requirements call fails, **When** the catch branch runs, **Then** a sensible default is applied (`minLength: 8, hasUppercase: true, hasLowercase: true, hasNumber: true, hasSymbol: false`) and the form still renders.
+- [ ] **Given** the token is valid, **When** `GET /public/password-reset/:userId/:code/requirements` is called, **Then** a `PasswordRequirements` payload is returned (derived from the Keycloak password policy; see `OnboardingController.requirements`).
+- [ ] **Given** the requirements call fails, **When** the catch branch runs, **Then** a sensible default is applied (`minLength: 8, hasUppercase: true, hasLowercase: true, hasNumber: true, hasSymbol: false`) and the form still renders. (The backend applies the same fallback when reading the Keycloak policy fails, so the client fallback is a belt-and-braces measure.)
 
 ### Strength indicator
 
@@ -36,7 +36,7 @@ Public page reached via an emailed reset link (`/public/password-reset/:userId/:
 
 ### Submit
 
-- [ ] **Given** the form is valid, **When** Submit is pressed, **Then** `POST /public/password-reset/:userId/:token/set-password` is called with `{ password }`.
+- [ ] **Given** the form is valid, **When** Submit is pressed, **Then** `POST /public/password-reset/:userId/:code/set-password` is called with `{ password }`.
 - [ ] **Given** the response is `{ success: true, redirectUrl }`, **When** the response resolves, **Then** a success snackbar appears for 3s and after 2s the browser hard-navigates to `redirectUrl` (`window.location.href = redirectUrl`).
 - [ ] **Given** the response indicates the token is now consumed (error message includes "already used"), **When** the error is parsed, **Then** the token state flips to `already_used` and the error snackbar explains it.
 - [ ] **Given** the response indicates the token has expired, **When** the error is parsed, **Then** the token state flips to `expired`.
@@ -70,9 +70,9 @@ Public page reached via an emailed reset link (`/public/password-reset/:userId/:
 
 ## Permissions & Tenant/Institution
 
-- **Required roles:** none (public pre-auth).
-- **Institution context:** server-resolved from the `userId` path param.
-- **Backend access checks:** token validity and single-use enforcement live in the backend.
+- **Required roles:** none (public pre-auth). Controller is decorated with `@Public()` in `apps/tagea-backend/src/public-api/onboarding.controller.ts`.
+- **Institution context:** the backend looks up the token by `authUserId + code` in the meta database (`OnboardingToken` entity). The token row carries the `tenantId` used for post-activation side-effects.
+- **Backend access checks:** token validity and single-use enforcement live in `OnboardingService.complete`. On success the service also (a) sets the password via Keycloak, (b) marks the Keycloak user `enabled + emailVerified`, (c) marks the token `consumedAt`, and (d) flips the matching `Employee` (if `PENDING_ACTIVATION`) and/or `Client` record to `ACTIVE` in the tenant DB. The `redirectUrl` points to the Keycloak login page with `login_hint=<email>`.
 
 ## Notifications (Push / In-App)
 
@@ -100,6 +100,10 @@ Public page reached via an emailed reset link (`/public/password-reset/:userId/:
 ## References
 
 - **Angular implementation:** [`apps/tagea-frontend/src/app/pages/password-setup/public-password-setup.component.ts`](../../../apps/tagea-frontend/src/app/pages/password-setup/public-password-setup.component.ts)
+- **Angular route:** [`apps/tagea-frontend/src/app/routes/public.routes.ts`](../../../apps/tagea-frontend/src/app/routes/public.routes.ts) — `public/password-reset/:userId/:token`
 - **Environment:** `environment.apiUrl` (base URL for `/public/password-reset/*`)
+- **Backend controller:** [`apps/tagea-backend/src/public-api/onboarding.controller.ts`](../../../apps/tagea-backend/src/public-api/onboarding.controller.ts)
+- **Backend service:** [`apps/tagea-backend/src/public-api/onboarding.service.ts`](../../../apps/tagea-backend/src/public-api/onboarding.service.ts)
+- **Token entity:** [`apps/tagea-backend/src/auth/entities/onboarding-token.entity.ts`](../../../apps/tagea-backend/src/auth/entities/onboarding-token.entity.ts)
 - **E2E tests:** _(to be identified)_
 - **Backend endpoints:** see [contracts.md](./contracts.md)

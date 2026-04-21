@@ -15,21 +15,24 @@ Public booking page at `/booking` (no auth required). Allows guests or clients t
 
 ## Acceptance Criteria
 
-- [ ] **Given** the user opens `/booking`, **When** `GuestBookingService` (or similar — verify) resolves available categories, **Then** a category picker renders.
-- [ ] **Given** a category is selected, **When** available slots resolve, **Then** slot picker renders.
-- [ ] **Given** a slot is picked + contact form is filled, **When** Submit fires, **Then** the booking is persisted and a confirmation screen renders.
-- [ ] **Given** `LocationBottomSheetComponent` is invoked (e.g. multiple locations offered), **When** the sheet opens, **Then** location choice is captured.
+- [ ] **Given** the user opens `/booking`, **When** the page loads, **Then** a hardcoded service-category picker renders and `PublicTenantGroupService.getGroupInstitutions(slug)` resolves the list of institutions for the configured group.
+- [ ] **Given** a category + location filter are applied, **When** the user picks an institution, **Then** `PublicTenantGroupService.getInstitutionTemplates(...)` resolves bookable appointment templates.
+- [ ] **Given** a template is selected, **When** `PublicTenantGroupService.getTemplateSlots(...)` returns slots, **Then** a day-grouped slot picker renders.
+- [ ] **Given** a slot is picked + setting chosen + contact form filled, **When** `GuestBookingService.createGuestBooking(...)` fires, **Then** the booking is persisted and a confirmation screen renders.
+- [ ] **Given** `LocationBottomSheetComponent` is invoked on mobile, **When** the sheet opens, **Then** location choice is captured.
 
 ## UI States
 
-| State           | When?            | Rendering                     |
-| --------------- | ---------------- | ----------------------------- |
-| Category picker | Initial          | List of bookable categories   |
-| Slot picker     | Category chosen  | Available-slots calendar/list |
-| Form            | Slot chosen      | Contact details form          |
-| Submitting      | Submit in-flight | Spinner + disabled form       |
-| Success         | Booking saved    | Confirmation screen           |
-| Error           | Any failure      | Error text + retry            |
+| State           | When?            | Rendering                                   |
+| --------------- | ---------------- | ------------------------------------------- |
+| Category picker | Initial          | Hardcoded service-category list             |
+| Location search | Category chosen  | Location input + filter chips + results     |
+| Institution     | Center picked    | Details, settings, template list            |
+| Slot picker     | Template chosen  | Day-grouped slot grid                       |
+| Form            | Slot chosen      | Guest contact form (first/last/email/phone) |
+| Submitting      | Submit in-flight | Spinner + disabled form                     |
+| Success         | Booking saved    | Confirmation screen                         |
+| Error           | Any failure      | Error text + retry                          |
 
 ## Non-Goals
 
@@ -38,19 +41,20 @@ Public booking page at `/booking` (no auth required). Allows guests or clients t
 
 ## Edge Cases
 
-- **Slot no longer available by submit time** — backend rejects; UI returns to slot-picker with refreshed availability.
-- **Tenant-resolution from domain** — applies the same `TenantResolutionService` header/query pattern as [public-register](../public-register/contracts.md).
+- **Slot no longer available by submit time** — backend rejects; UI surfaces the error and the user can pick another slot.
+- **Rate-limited** — backend caps guest bookings at 5 per IP per hour; subsequent attempts surface a German error message in the error banner.
 
 ## Permissions & Tenant/Institution
 
-- **Required roles:** none (public pre-auth).
-- **Tenant context:** resolved from domain.
+- **Required roles:** none (public pre-auth). Controller uses the `@Public()` decorator.
+- **Tenant context:** passed explicitly in the request — `groupSlug` in URL paths, `tenantId` / `institutionId` in the booking body. No `X-Tenant-ID` header, no `TenantResolutionService`.
 - **`showHeader: true`** is set in route `data` — the public layout renders with a visible header.
 
 ## References
 
 - **Angular implementation:** [`apps/tagea-frontend/src/app/pages/booking/booking-page.component.ts`](../../../apps/tagea-frontend/src/app/pages/booking/booking-page.component.ts)
 - **Location sheet:** [`location-bottom-sheet.component.ts`](../../../apps/tagea-frontend/src/app/pages/booking/location-bottom-sheet.component.ts)
-- **Service:** `GuestBookingService` (verify exact name — see component imports)
+- **Services:** `PublicTenantGroupService` (institutions/templates/slots) and `GuestBookingService` (booking + video token)
+- **Backend controller:** [`apps/tagea-backend/src/public-api/guest-booking.controller.ts`](../../../apps/tagea-backend/src/public-api/guest-booking.controller.ts)
 - **Related:** [public-register](../public-register/spec.md)
 - **Backend endpoints:** see [contracts.md](./contracts.md)

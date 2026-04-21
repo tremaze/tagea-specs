@@ -5,7 +5,8 @@
 This page makes no authenticated backend calls. It is a destination reached via redirect from:
 
 - `/auth/callback` → generic profile-load error or 120s timeout (see [auth-callback/contracts.md](../auth-callback/contracts.md))
-- HTTP interceptor fallbacks when a fatal auth error is detected
+- `UnifiedAuthService` profile-load-error effect — any `_profileLoadError` value other than `NO_TENANT_ASSIGNMENT` or `SESSION_EXPIRED` routes here
+- `clientPortalGuard` — redirects here when profile load failed for a client-portal route
 
 ## Actions from this page
 

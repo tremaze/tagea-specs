@@ -33,7 +33,7 @@ Staff learning platform: browse available courses, view progress on enrolled one
 
 - [ ] **Given** the player loads, **When** lessons render, **Then** the user can advance through video / PDF / quiz lessons in order.
 - [ ] **Given** a PDF lesson is entered, **When** the user opens it, **Then** navigate to `/teamspace/lms/kurse/:courseId/lesson/:lessonId/pdf`.
-- [ ] **Given** a lesson is completed, **When** progress is persisted, **Then** the enrolment's percentage updates and is reflected on next visit to LMS Home.
+- [ ] **Given** a lesson is completed, **When** progress is persisted (`POST /lms/progress`), **Then** the backend response updates `enrollmentStatus`, `completedAt`, and `certificateUrl`; the client recomputes the enrolment's percentage from `progressSummary.completedLessons / progressSummary.totalLessons` so it is reflected on next visit to LMS Home.
 
 ### PDF Viewer (`/teamspace/lms/kurse/:courseId/lesson/:lessonId/pdf`)
 

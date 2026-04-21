@@ -21,9 +21,9 @@ Terminal error page the app lands on when authentication fails, a token is inval
 
 ## UI States
 
-| State   | When?  | What does the user see?                                                                     | A11y notes                         |
-| ------- | ------ | ------------------------------------------------------------------------------------------- | ---------------------------------- |
-| Default | Always | Error icon, title, main message, info box, instruction list, "Retry" button, support footer | `role="alert"` on the main message |
+| State   | When?  | What does the user see?                                                                     | A11y notes                                                   |
+| ------- | ------ | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| Default | Always | Error icon, title, main message, info box, instruction list, "Retry" button, support footer | Semantic `<h1>` / `<h2>` headings, Material icons decorative |
 
 ## Non-Goals
 

@@ -28,16 +28,16 @@ A combined inbox for clients: broadcast messages from the institution and inquir
 
 ### Broadcast Detail (`/client-portal/nachrichten/:id`)
 
-- [ ] **Given** the detail loads, **When** it renders, **Then** the broadcast body + sender + date + attachments (if any) are shown read-only.
-- [ ] **Given** the detail opens from an unread message, **When** the view renders, **Then** the message is marked as seen (`ClientMessagesService.markAsSeen(id)`).
+- [ ] **Given** the detail loads, **When** it renders, **Then** the broadcast `content` + `sender_name` + `sent_at` are shown read-only (no attachment support in v1).
+- [ ] **Given** the detail opens from an unread message, **When** the view renders, **Then** the message is marked as read (`ClientMessagesService.markAsRead(id)` — sets `read_at`). Seen tracking via `markAsSeen(id)` is a separate signal driven by the dashboard feed.
 
 ### Inquiry Detail (Dialog — `ClientInquiryViewDialogComponent`)
 
 > An inquiry detail route (`/client-portal/nachrichten/anfrage/:id`) exists in `client-portal.routes.ts` but the list page opens the inquiry as a **dialog in place**. Both surfaces should render the same content; the list's preferred entry is the dialog.
 
-- [ ] **Given** the inquiry dialog opens, **When** it renders, **Then** the original question, any staff replies, current status, and supporting attachments are shown.
-- [ ] **Given** an inquiry is `new` / `read` / `replied` / `in_progress`, **When** the client has a follow-up, **Then** they can post an additional message (subject to backend support — verify). Note: `replied` is deprecated but still appears on historical records — the Flutter port must handle it in the follow-up-allowed set.
-- [ ] **Given** the user navigates directly to `/client-portal/nachrichten/anfrage/:id`, **When** the detail route loads, **Then** the same content is rendered via `ClientInquiryDetailComponent` (route-based fallback).
+- [ ] **Given** the inquiry dialog opens, **When** it renders, **Then** the original question (`content`), any staff follow-ups (`messages: InquiryMessage[]`), and current `status` are shown. (Attachments are not part of v1.)
+- [ ] **Given** an inquiry is `new` / `read` / `replied` / `in_progress`, **When** the client has a follow-up, **Then** they can post an additional message via `addMyInquiryMessage(id, { content })` → `POST /client-portal/inquiries/:id/messages`. Note: `replied` is deprecated but still appears on historical records — the Flutter port must handle it in the follow-up-allowed set.
+- [ ] **Given** the user navigates directly to `/client-portal/nachrichten/anfrage/:id`, **When** the detail route loads, **Then** the same content is rendered via `ClientInquiryDetailComponent` (route-based fallback) using `ClientMessagesService.getMyInquiry(id)`.
 
 ## UI States
 
@@ -57,9 +57,10 @@ A combined inbox for clients: broadcast messages from the institution and inquir
 ## Edge Cases
 
 - **Only broadcasts, no inquiries:** Inquiries filter chip still shown but selecting it yields empty state.
-- **Inquiry attachments:** submitted via the inquiry form; size/type limits enforced by backend.
+- **Attachments:** not supported in v1 — neither `ClientMessage` nor `ClientInquiry` carries an attachments array. Inquiry form submits subject + content only.
 - **Type discrimination:** items are a union `{ type: 'message'; data: ClientMessage } | { type: 'inquiry'; data: ClientInquiry }`; navigation + rendering branches on `type`.
-- **Unread counts:** driven by `ClientMessagesService.getUnreadCount()` (or similar) — same source as dashboard badge.
+- **Unread counts:** broadcast unread via `getUnreadCount()` (→ `GET /client-portal/messages/unread-count`); inquiry unread-reply badge via `getInquiryUnreadRepliesCount()` (→ `GET /client-portal/inquiries/unread-replies-count`). Dashboard badge reuses the same endpoints.
+- **Managed clients:** if the user has managed clients (e.g. legal-guardian relationship), `createInquiry(dto)` may include `sender_client_id` to submit on behalf of a managed client.
 
 ## Permissions & Tenant/Institution
 
@@ -87,15 +88,16 @@ A combined inbox for clients: broadcast messages from the institution and inquir
 **Flutter-specific:**
 
 - Cached list offline; submitting a new inquiry requires online (or queue + flush — decide during port).
-- Attachments can be prepared offline but uploaded on reconnect.
+- No attachment flow in v1; revisit when the backend exposes inquiry attachments.
 
 ## References
 
 - **Angular implementation (list):** [`apps/tagea-frontend/src/app/pages/client-portal/client-messages-page.component.ts`](../../../apps/tagea-frontend/src/app/pages/client-portal/client-messages-page.component.ts)
 - **Broadcast detail:** [`client-message-detail.component.ts`](../../../apps/tagea-frontend/src/app/pages/client-portal/client-message-detail.component.ts)
-- **Inquiry detail:** [`client-inquiry-detail.component.ts`](../../../apps/tagea-frontend/src/app/pages/client-portal/client-inquiry-detail.component.ts)
-- **Inquiry form:** `ClientInquiryFormComponent`, `ClientInquiryViewDialogComponent`
-- **Service:** `ClientMessagesService`
-- **Models:** `ClientMessage`, `ClientInquiry`, `ClientInquiryStatus`
+- **Inquiry detail (route):** [`client-inquiry-detail.component.ts`](../../../apps/tagea-frontend/src/app/pages/client-portal/client-inquiry-detail.component.ts)
+- **Inquiry form / view dialog:** `ClientInquiryFormComponent`, `ClientInquiryViewDialogComponent`
+- **Service:** `ClientMessagesService` ([`client-messages.service.ts`](../../../apps/tagea-frontend/src/app/services/client-messages.service.ts))
+- **Models:** `ClientMessage`, `ClientInquiry`, `InquiryMessage`, `ClientInquiryStatus`
+- **Routes:** [`client-portal.routes.ts`](../../../apps/tagea-frontend/src/app/routes/client-portal.routes.ts) — `nachrichten` with parent `clientMessagesFeatureGuard`; children `''`, `anfrage/:id`, `:id`.
+- **Backend:** `ClientPortalController` (`@Controller('client-portal')`) — see [contracts.md](./contracts.md) for route table.
 - **E2E tests:** _(to be identified)_
-- **Backend endpoints:** see [contracts.md](./contracts.md)

@@ -6,7 +6,7 @@
 
 ## Vision (Elevator Pitch)
 
-Terminal page shown to an authenticated user whose account is not assigned to any tenant (Keycloak user exists but backend has no matching employee/tenant record). Explains the situation, shows the currently-logged-in email, and provides only a "Logout" action.
+Terminal page shown to an authenticated user whose backend employee record exists but has no `tenantId` assignment (Keycloak authentication succeeds, profile load throws `NO_TENANT_ASSIGNMENT`). Explains the situation, shows the currently-logged-in email, and provides only a "Logout" action.
 
 ## User Stories
 
@@ -15,9 +15,9 @@ Terminal page shown to an authenticated user whose account is not assigned to an
 
 ## Acceptance Criteria
 
-- [ ] **Given** the profile load returned `NO_TENANT_ASSIGNMENT`, **When** the user lands on `/no-tenant`, **Then** a warning icon, title "Kein Mandant zugeordnet", explanatory text, and (if available) the authenticated email are shown.
-- [ ] **Given** the `UnifiedAuthService.userEmail` signal has a value, **When** the page renders, **Then** a "Angemeldet als: <email>" info block appears.
-- [ ] **Given** the `userEmail` signal is empty/null, **When** the page renders, **Then** the info block is hidden.
+- [ ] **Given** the profile load returned `NO_TENANT_ASSIGNMENT`, **When** the user lands on `/no-tenant`, **Then** a warning icon, title "Kein Mandant zugeordnet", two explanatory paragraphs ("Ihr Benutzerkonto ist keinem Mandanten zugeordnet." and "Bitte wenden Sie sich an Ihren Administrator, um Zugriff zu erhalten."), and (if available) the authenticated email are shown.
+- [ ] **Given** the `UnifiedAuthService.userEmail` computed signal has a non-empty value, **When** the page renders, **Then** a "Angemeldet als: <email>" info block appears.
+- [ ] **Given** `userEmail()` is the empty string (no employee and no OIDC email/preferred_username claim), **When** the page renders, **Then** the info block is hidden.
 - [ ] **Given** the user clicks "Abmelden", **When** the click fires, **Then** `UnifiedAuthService.logout()` runs.
 
 ## UI States
@@ -35,13 +35,13 @@ Terminal page shown to an authenticated user whose account is not assigned to an
 ## Edge Cases
 
 - **Email changes mid-session** — unlikely (requires re-login) but the signal-driven rendering handles it: page re-renders with the new value.
-- **Direct deep-link access** — same rendering; no guard prevents reaching it without being authenticated.
+- **Direct deep-link access** — same rendering; the path is listed in `redirectIfAuthenticatedGuard`'s `EXCLUDED_PATHS`, so no redirect is applied regardless of auth state.
 
 ## Permissions & Tenant/Institution
 
-- **Required roles:** authenticated (reached via auth-callback redirect); no specific permission.
+- **Required roles:** none. The route lives in `PUBLIC_ROUTES` and is listed in `redirectIfAuthenticatedGuard`'s `EXCLUDED_PATHS`, so both authenticated and unauthenticated visitors render the page.
 - **Institution context:** by definition, none — that's why the user is here.
-- **Backend access checks:** the profile-load endpoint already returned `NO_TENANT_ASSIGNMENT`; no further calls on this page.
+- **Backend access checks:** none on this page. The upstream `NO_TENANT_ASSIGNMENT` is set inside `UnifiedAuthService.loadUserProfile` when the loaded `employee.tenantId` is falsy (see `unified-auth.service.ts` around line 517).
 
 ## Notifications (Push / In-App)
 

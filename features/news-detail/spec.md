@@ -50,7 +50,8 @@ The component reads `route.data.context: NewsDetailContext` and dispatches to th
 
 ### Read Status
 
-- [ ] **Given** the detail loads, **When** the article is unread, **Then** it is marked as read via `ContentReadStatusService` (or `ClientNewsService.markAsSeen` in client context).
+- [ ] **Given** the detail loads in teamspace, **When** the article is unread, **Then** it is marked as read via `ContentReadStatusService.markAsRead('article', articleId)`.
+- [ ] **Given** the detail loads in client-portal, **When** the article is unread, **Then** it is marked as seen via `ClientNewsService.markAsSeen(articleId)`.
 
 ## UI States
 
@@ -107,10 +108,10 @@ Owned by `ArticleDetailShellComponent` + comment form template. Full inventory t
 - **Shell:** [`ArticleDetailShellComponent`](../../../apps/tagea-frontend/src/app/shared/articles/article-detail-shell/article-detail-shell.component.ts)
 - **Attachments display:** [`ArticleAttachmentsDisplayComponent`](../../../apps/tagea-frontend/src/app/shared/articles/article-attachments-display/article-attachments-display.component.ts)
 - **Services:**
-  - `ArticleService` (teamspace / institution)
-  - `ClientNewsService` (client portal)
-  - `CommentsService` / `ClientCommentsService`
-  - `ContentReadStatusService`
+  - `ArticleService` — `getArticle`, `toggleLike`, `toggleAcknowledgment`, `getAttachments` (teamspace)
+  - `ClientNewsService` — `getNewsArticle`, `likeArticle`, `acknowledgeArticle`, `markAsSeen` (client portal)
+  - `CommentsService` / `ClientCommentsService` — `getCommentsByArticle`, `createComment`, `updateComment`, `deleteComment`, `likeComment`, `unlikeComment`
+  - `ContentReadStatusService` — `markAsRead('article', id)` (teamspace)
   - `SecureImageService` (indirectly, for images)
 - **Type:** `NewsDetailContext = 'teamspace' | 'client-portal'`
 - **E2E tests:** _(to be identified)_

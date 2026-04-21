@@ -40,7 +40,7 @@ Staff-facing AI chat interface with conversation history, SSE-streamed responses
 - [ ] **Given** the stream emits `type: 'done'`, **When** the event resolves, **Then** `data.full_content` becomes the final assistant message (with a fresh `crypto.randomUUID()` id and `data.sources` attached), `streamingContent` clears, `loading` flips off, and the conversation list reloads so a newly-created conversation appears with its generated title.
 - [ ] **Given** the stream emits `type: 'error'`, **When** the event resolves, **Then** `error()` is set to `data.error || 'Ein Fehler ist aufgetreten'`, streaming clears, and loading flips off.
 - [ ] **Given** the SSE connection errors with 401 (or the `prepare` call throws 401), **When** the error is caught, **Then** `error()` is set to "Sitzung abgelaufen. Bitte Seite neu laden." so the user knows to reload.
-- [ ] **Given** the `StreamData` interface documents `user_message_saved` / `assistant_message_saved` variants, **When** such events arrive, **Then** they are ignored by the current handler (only `token`, `done`, and `error` are acted on). Flutter port should either mirror (ignore) or start consuming them if the backend sends them.
+- [ ] **Given** the backend emits `heartbeat` (keep-alive every 30s) and an ad-hoc `assistant_message_saved` frame after persisting, **When** such events arrive, **Then** the current Angular handler ignores them (only `token`, `done`, and `error` drive UI state). The `user_message_saved` branch in the component's local `StreamData` is dead code — the backend never emits it. Flutter port should omit `user_message_saved` and either ignore `heartbeat`/`assistant_message_saved` or start consuming them.
 
 ### Attachments: images
 
@@ -101,7 +101,7 @@ EventSource GET /ai-chat/conversations/:id/stream?message_id=<id>&...
     └── type='error'       → show error, clear streaming, loading=false
 ```
 
-> `StreamData` declares `user_message_saved` and `assistant_message_saved` variants but the current handler does not act on them.
+> The backend also emits `heartbeat` (keep-alive, every 30s) and ad-hoc `assistant_message_saved` frames. The Angular handler ignores both. `user_message_saved` appears in the component's local union but is never emitted by the backend (dead code).
 
 ### Document upload
 
@@ -138,10 +138,11 @@ POST /ai-chat/conversations/:id/documents { documentBase64, filename }
 
 ## Permissions & Tenant/Institution
 
-- **Required roles:** `aiChatFeatureGuard` at route level.
+- **Frontend guard:** `aiChatFeatureGuard` at route level — redirects to `/` when the feature flag is off.
+- **Backend auth:** `@Auth({ scope: 'authenticated', allowedUserTypes: [UserType.EMPLOYEE] })` on `AiChatController` — staff only. Guarded additionally by `FeatureGuard` + `@RequireFeature('aiChat')`.
 - **Tenant feature flags:**
-  - `ai_chat` — gates the whole feature (redirect to `/` if off).
-  - `knowledge_mode_only` — forces RAG; hides the toggle.
+  - `aiChat` — gates the whole feature (redirect to `/` if off; backend 403 otherwise).
+  - `aiChat.knowledgeModeOnly` — forces RAG; hides the toggle. Enforced on both `POST /messages` and the SSE stream (backend re-applies `useKnowledgeSearch = true`).
 - **Institution context:** resolved server-side per conversation (the backend scopes RAG sources to the user's institution).
 
 ## Notifications (Push / In-App)

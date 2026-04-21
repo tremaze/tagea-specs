@@ -4,7 +4,7 @@
 
 - **Status:** ✅ Implemented
 - **Path:** [`apps/tagea-frontend/src/app/pages/calendar-page/calendar-page.component.ts`](../../../apps/tagea-frontend/src/app/pages/calendar-page/calendar-page.component.ts)
-- **E2E:** _(to be identified)_
+- **E2E:** [`apps/tagea-frontend-e2e/src/tests/calendar-agenda-view.spec.ts`](../../../apps/tagea-frontend-e2e/src/tests/calendar-agenda-view.spec.ts)
 
 ## Flutter
 

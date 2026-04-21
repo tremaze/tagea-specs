@@ -30,7 +30,7 @@ Full institution-scoped calendar at `/einrichtung/:institutionId/calendar`. Full
 
 ### Drag-drop / resize
 
-- [ ] **Given** the user drags an event to a new time (`EventDropArg`), **When** dropped, **Then** the appointment is rescheduled via `AppointmentsService.update(...)`; series appointments prompt `SeriesActionDialogComponent`.
+- [ ] **Given** the user drags an event to a new time (`EventDropArg`), **When** dropped, **Then** the appointment is rescheduled via `AppointmentsService.updateAppointment(...)`; series appointments prompt `SeriesActionDialogComponent`.
 - [ ] **Given** an event is resized (`EventResizeDoneArg`), **When** resize fires, **Then** duration updates accordingly (series handling identical).
 
 ### Click behavior
@@ -63,7 +63,7 @@ Full institution-scoped calendar at `/einrichtung/:institutionId/calendar`. Full
 
 ## Edge Cases
 
-- **Virtual series occurrences** — `VirtualOccurrenceResponse` represents non-materialized occurrences generated from an RRULE; UI renders them distinctly from materialized appointments.
+- **Virtual series occurrences** — `VirtualOccurrenceResponse` (`isVirtual`, `appointment`, `anchorId`, `occurrenceDate`) represents non-materialized occurrences generated from an RRULE; UI renders them distinctly from materialized appointments and materializes on edit via the backend `/occurrences/:date/materialize` endpoint.
 - **Timezone:** `Europe/Berlin` (tenant-wide — same as [teamspace-calendar](../teamspace-calendar/spec.md)).
 - **Client / Employee cache** — `ClientCacheService`, `EmployeeCacheService` keep these in-memory to avoid re-fetching for tooltip rendering.
 - **Outlook sync conflicts** — verify `OutlookSyncService` conflict-resolution semantics (last-write-wins? prompt?).
@@ -96,5 +96,5 @@ Full institution-scoped calendar at `/einrichtung/:institutionId/calendar`. Full
 - **Sub-components:** `CalendarToolbarComponent`, `CalendarSidebarComponent`, `MobileCalendarComponent`
 - **Models:** `Appointment`, `CalendarEvent`, `CalendarEventClickPayload`, `VirtualOccurrenceResponse`, `PersonalPreferences`, `CalendarViewType`, `EmployeeAvailability`, `WeeklyAvailabilityResponse`
 - **Utilities:** `getEmployeeColor`
-- **E2E tests:** _(to be identified)_
+- **E2E tests:** [`apps/tagea-frontend-e2e/src/tests/calendar-agenda-view.spec.ts`](../../../apps/tagea-frontend-e2e/src/tests/calendar-agenda-view.spec.ts)
 - **Backend endpoints:** see [contracts.md](./contracts.md)

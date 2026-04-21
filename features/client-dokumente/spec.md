@@ -23,7 +23,7 @@ Clients can view, download, upload, and sign their documents. Pending signature 
 - [ ] **Given** the client has pending signature documents, **When** the page renders, **Then** a separate "Pending signatures" section is shown at the top with a count.
 - [ ] **Given** a pending-signature card is clicked or its "Sign" button pressed, **When** the action fires, **Then** the preview dialog opens with signature UI.
 - [ ] **Given** filter chips are shown, **When** a chip is selected (single-select), **Then** the grid filters by document category.
-- [ ] **Given** a document is an image type, **When** the card renders, **Then** a thumbnail is shown (lazy-loaded) instead of the generic file icon.
+- [ ] **Given** a document is an image type, **When** the card renders, **Then** a thumbnail is shown (lazy-loaded via a short-lived signed URL) instead of the generic file icon.
 - [ ] **Given** a document is signed, **When** the card renders, **Then** a "signed" badge overlays the thumbnail with a tooltip showing the signing timestamp.
 - [ ] **Given** "Download" is pressed, **When** the request resolves, **Then** the file downloads to the platform default location.
 - [ ] **Given** a document was uploaded by the client (`doc.uploaded_by === 'client'`), **When** the card renders, **Then** a "Delete" action is available; pressing it shows a confirmation, and on confirm the document is deleted, the list refreshes, and a snackbar confirms success.
@@ -31,12 +31,13 @@ Clients can view, download, upload, and sign their documents. Pending signature 
 
 ### Preview (dialog, not a route)
 
-- [ ] **Given** a document card is clicked, **When** the dialog opens, **Then** the file is rendered inline (PDF in iframe, image inline, generic types as "download to view").
-- [ ] **Given** the document requires a signature, **When** the signature step is reached, **Then** a drawable signature pad is shown; submitting completes the signature and marks the document as signed.
+- [ ] **Given** a document card is clicked, **When** the dialog opens, **Then** a signed URL is requested via `getSignedUrl(id, 3600)` and the file is rendered inline (PDF in iframe, image inline, generic types as "download to view").
+- [ ] **Given** the document `requires_signature` is true, **When** the signature step is reached, **Then** `getSignatureFields(id)` is called to resolve the target field, a drawable signature pad is shown, and submitting posts `{ fieldName, signature }` (base64 PNG) via `signDocument(id, ...)`.
 
 ### Upload (dialog)
 
-- [ ] **Given** the upload dialog is open, **When** the user picks a file, **Then** its name, size, and a category selector are shown.
+- [ ] **Given** the upload dialog is open, **When** the user picks one or more files, **Then** each file's name + size and a category selector are shown (multi-file upload is supported via `uploadDocuments`).
+- [ ] **Given** the dialog mounts, **When** it initializes, **Then** it calls `getContext()` to resolve the client's institutions/cases; the chosen `institution_id` is required for the upload request.
 - [ ] **Given** a category is chosen and the upload button is pressed, **When** the upload succeeds, **Then** close the dialog, refresh the list, and show a success snackbar.
 - [ ] **Given** the upload fails, **When** the error returns, **Then** show an error snackbar and keep the dialog open.
 
@@ -60,15 +61,16 @@ Clients can view, download, upload, and sign their documents. Pending signature 
 Page open
     │
     ▼
-load all docs + pending signatures (parallel)
+getDocuments({ limit: 100 })  +  getPendingSignatureTasks()   (parallel)
     │
     ▼
 render pending section (if any) + filter chips + doc grid
     │
-    ├── card click → preview dialog
-    ├── "Download" → binary fetch + platform save
-    ├── FAB click → upload dialog → (success) refresh list
-    └── sign action → signature dialog → (success) refresh + toast
+    ├── card click → getSignedUrl(id, 3600) → preview dialog (inline)
+    ├── "Download" → downloadDocument(id) → NativeFileDownloadService → platform save
+    ├── FAB click → upload dialog → getContext() → uploadDocuments(files, { institution_id, ... }) → refresh list
+    ├── delete (own uploads) → deleteDocument(id) → refresh list
+    └── sign action → getSignatureFields(id) → signature dialog → signDocument(id, { fieldName, signature }) → refresh + toast
 ```
 
 ## Non-Goals
@@ -87,9 +89,9 @@ render pending section (if any) + filter chips + doc grid
 
 ## Permissions & Tenant/Institution
 
-- **Required roles:** Client (gated by `clientPortalGuard`).
-- **Institution context:** resolved server-side.
-- **Backend access checks:** `ClientDocumentService` only returns documents the client has access to; upload respects tenant file storage limits.
+- **Required roles:** Client (gated by `clientPortalGuard` applied at the `/client-portal` base route via `CLIENT_PORTAL_BASE_GUARDS`; Angular does not inherit sibling `canActivate` guards, so this works only because the guard is declared on the parent route).
+- **Institution context:** resolved on the frontend via `getContext()` (returns the client's institutions + cases); the chosen `institution_id` is required on upload and enforced server-side.
+- **Backend access checks:** the client-portal controller (`@Controller('client-portal')`) only returns documents the client has access to; upload respects tenant file storage limits.
 
 ## Notifications (Push / In-App)
 

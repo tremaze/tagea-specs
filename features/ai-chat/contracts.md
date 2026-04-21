@@ -4,23 +4,31 @@
 
 Base path is resolved via `ApiConfigService.getApiUrl(path)`.
 
-| Method      | Path                                                                                                             | Purpose                                                                                          |
-| ----------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `GET`       | `ai-chat/conversations`                                                                                          | List conversations (summary)                                                                     |
-| `POST`      | `ai-chat/conversations`                                                                                          | Create a new empty conversation (lazy — only used when a document is uploaded before first send) |
-| `GET`       | `ai-chat/conversations/:id`                                                                                      | Load a conversation's full messages                                                              |
-| `DELETE`    | `ai-chat/conversations/:id`                                                                                      | Delete a conversation                                                                            |
-| `POST`      | `ai-chat/conversations/:id/documents`                                                                            | Upload a document (base64 body)                                                                  |
-| `GET`       | `ai-chat/conversations/:id/documents`                                                                            | Poll document status                                                                             |
-| `POST`      | `ai-chat/conversations/:id/messages/prepare`                                                                     | Prepare a message — uploads content + image base64 + document IDs; returns `{ messageId }`       |
-| `GET` (SSE) | `ai-chat/conversations/:id/stream?message_id=<id>&use_knowledge_search=<bool>&access_token=<jwt>&tenant_id=<id>` | Open an SSE stream keyed by the prepared `messageId`; emits `StreamData` events                  |
+| Method      | Path                                                                                                             | Purpose                                                                                           |
+| ----------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `GET`       | `ai-chat/conversations`                                                                                          | List conversations (summary). Supports `?limit=<n>` (default 50) and `?offset=<n>`                |
+| `POST`      | `ai-chat/conversations`                                                                                          | Create a new empty conversation (lazy — only used when a document is uploaded before first send)  |
+| `GET`       | `ai-chat/conversations/:id`                                                                                      | Load a conversation's full messages                                                               |
+| `DELETE`    | `ai-chat/conversations/:id`                                                                                      | Delete a conversation                                                                             |
+| `POST`      | `ai-chat/conversations/:id/messages`                                                                             | Non-streaming send (exists server-side but unused by the Angular client; kept for parity/tooling) |
+| `POST`      | `ai-chat/conversations/:id/documents`                                                                            | Upload a document (base64 body)                                                                   |
+| `GET`       | `ai-chat/conversations/:id/documents`                                                                            | Poll document status                                                                              |
+| `DELETE`    | `ai-chat/conversations/:id/documents/:documentId`                                                                | Remove a document from the conversation                                                           |
+| `POST`      | `ai-chat/conversations/:id/messages/prepare`                                                                     | Prepare a message — uploads content + image base64 + document IDs; returns `{ messageId }`        |
+| `GET` (SSE) | `ai-chat/conversations/:id/stream?message_id=<id>&use_knowledge_search=<bool>&access_token=<jwt>&tenant_id=<id>` | Open an SSE stream keyed by the prepared `messageId`; emits `StreamData` events                   |
 
 > The send flow is **two-step**: `prepare` uploads the payload (including large image base64) via a normal POST, then `stream` runs over SSE where URL-size constraints prevent inline attachments. The `access_token` and `tenant_id` travel in the query string because `EventSource` cannot set headers.
 
 ## Data Models
 
 ```ts
-// Component-local (source: ai-chat-page.component.ts)
+// Component-local type (source: ai-chat-page.component.ts).
+// NOTE: backend DTO StreamMessageDto authoritative union is
+//   'token' | 'done' | 'error' | 'heartbeat'.
+// The backend controller additionally emits an ad-hoc
+// `assistant_message_saved` frame inline (not part of the DTO enum).
+// The component's local type lists `user_message_saved` too, but the
+// backend never emits that event — treat as dead code.
 interface StreamData {
   type: 'token' | 'done' | 'error' | 'user_message_saved' | 'assistant_message_saved';
   content?: string;
@@ -37,19 +45,22 @@ interface ConversationResponse {
   created_at: string;
   updated_at: string;
   message_count?: number;
+  // Backend DTO also returns `last_message?: string` (preview of the last message),
+  // but the Angular client does not consume it today.
 }
 
 interface ConversationDetail extends ConversationResponse {
   messages: MessageResponse[];
-  system_prompt: string | null;
+  system_prompt?: string | null;
 }
 
 interface MessageResponse {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  image_data: string | null;
-  image_mime_type: string | null;
+  token_count?: number | null;
+  image_data?: string | null;
+  image_mime_type?: string | null;
   created_at: string;
   documents?: MessageDocumentResponse[];
   sources?: SourceReference[];
@@ -63,9 +74,11 @@ interface MessageDocumentResponse {
 
 interface DocumentResponse {
   id: string;
+  conversation_id: string;
   filename: string;
   mime_type: string;
   file_size: number;
+  page_count: number | null;
   status: 'processing' | 'ready' | 'failed';
   error_message: string | null;
   created_at: string;
@@ -101,16 +114,18 @@ const maxAttempts = 60; // 2 min total
 
 Uses a shared `SseService.createEventSource<StreamData>(url, { preventReconnect: true })`. Each send opens a stream that emits `StreamData` events with progressive token assembly.
 
-### Events currently consumed by the component
+### Events emitted by the backend
 
-| Event type | Handling                                                                                                       |
-| ---------- | -------------------------------------------------------------------------------------------------------------- | --- | ---------------------------------------------- |
-| `token`    | Append `data.content` to `streamingContent`                                                                    |
-| `done`     | Persist assistant message from `data.full_content` + `data.sources`; clear streaming; reload conversation list |
-| `error`    | Show `data.error                                                                                               |     | 'Ein Fehler ist aufgetreten'`; clear streaming |
+| Event type                | Source                                                     | Consumed by the Angular component?                        |
+| ------------------------- | ---------------------------------------------------------- | --------------------------------------------------------- | ---------------------------------------------- |
+| `token`                   | `ChatStreamService` (per delta)                            | Yes — append `data.content` to `streamingContent`         |
+| `done`                    | `ChatStreamService` (final event, enriched with `sources`) | Yes — persist assistant message; reload conversation list |
+| `error`                   | `AiChatController.streamMessage` on thrown error           | Yes — show `data.error                                    | 'Ein Fehler ist aufgetreten'`; clear streaming |
+| `heartbeat`               | `ChatStreamService` (keep-alive every 30s)                 | No — currently ignored by the switch                      |
+| `assistant_message_saved` | `AiChatController.handleStreamMessage` after persisting    | No — emitted ad-hoc, not part of `StreamMessageDto` enum  |
 
-### Events declared in `StreamData` but not consumed
+### Hallucinated event in the component's local type
 
-`user_message_saved` and `assistant_message_saved` are part of the declared union but the current handler's switch does not branch on them. Treat as a future/contract hint but do not rely on them for UI state.
+The component's `StreamData` union lists `user_message_saved`, but the backend never emits it. This branch is dead code in the Angular handler. Flutter port should omit it.
 
 > **Flutter port note:** use `flutter_client_sse` or `dio` with `ResponseType.stream`. Keep the consumed event names (`token`, `done`, `error`) verbatim to preserve backend compatibility. Preserve the `?message_id=...&access_token=...` query-param auth pattern since native SSE clients also cannot set headers on the GET.

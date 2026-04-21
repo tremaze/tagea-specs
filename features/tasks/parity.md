@@ -4,7 +4,7 @@
 
 - **Status:** ✅ Implemented
 - **Path:** [`apps/tagea-frontend/src/app/pages/tasks-page/tasks-page.ts`](../../../apps/tagea-frontend/src/app/pages/tasks-page/tasks-page.ts)
-- **E2E:** _(to be identified)_
+- **E2E:** none under `apps/tagea-frontend-e2e/src/` as of 2026-04-21
 
 ## Flutter
 

@@ -2,49 +2,78 @@
 
 ## Service: `ClientMessagesService`
 
-Same service used by [client-nachrichten](../client-nachrichten/contracts.md) on the client side. Staff-facing methods (indicative — verify signatures in the service file):
+Same service used by [client-nachrichten](../client-nachrichten/contracts.md) on the client side. Staff-facing methods used by `BulkMessagingPageComponent`:
 
-- List broadcasts with `BroadcastMessageFilters`
-- Create broadcast (cohort targeting + content)
-- List inquiries with `ClientInquiryFilters`
-- Respond to inquiry / transition status
+- `getBroadcasts(filters: BroadcastMessageFilters)` — paginated list of broadcasts
+- `getInquiries(filters: ClientInquiryFilters)` — paginated list of inquiries
+- `getNewInquiriesCount()` — returns `{ new_count: number }` (drives the "Incoming" tab badge)
+- `triggerInquiriesRefresh()` — notifies subscribers after staff actions on an inquiry
+- Broadcast creation happens via `ClientMessageDialogComponent` (mode `'bulk'`) which internally calls the service
+- Inquiry response flow happens via `ClientInquiryDialogComponent`
 
 ## Data Models
 
 ```ts
 // apps/tagea-frontend/src/app/models/client-message.model.ts
-interface BroadcastMessage {
+export enum BroadcastMessageStatus {
+  DRAFT = 'draft',
+  SENT = 'sent',
+  ARCHIVED = 'archived',
+}
+
+export interface BroadcastMessage {
   id: string;
   subject: string;
   content: string;
-  sent_at: string;
-  // + status, cohort, recipient counts, acknowledgment tracking
+  sender_employee_id: string;
+  sender_name: string;
+  institution_id: string;
+  status: BroadcastMessageStatus;
+  sent_at?: Date | null;
+  recipients_count: number;
+  seen_count: number;
+  created_at: Date;
+  updated_at: Date;
 }
 
-interface BroadcastMessageFilters {
+export interface BroadcastMessageFilters {
   status?: BroadcastMessageStatus;
-  searchTerm?: string;
-  dateFrom?: Date;
-  dateTo?: Date;
+  search?: string;
+  page?: number;
+  limit?: number;
 }
 
-type BroadcastMessageStatus =
-  | 'draft'
-  | 'sending'
-  | 'sent'
-  | 'partial_failure'
-  | /* verify */;
+export interface PaginatedBroadcastMessages {
+  data: BroadcastMessage[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+```
 
+```ts
 // apps/tagea-frontend/src/app/models/client-inquiry.model.ts
-// Full enum: see client-nachrichten/contracts.md
-interface ClientInquiryFilters {
+// ClientInquiryStatus enum — see client-nachrichten/contracts.md for full definition.
+
+export interface ClientInquiryFilters {
+  page?: number;
+  limit?: number;
+  search?: string;
   status?: ClientInquiryStatus;
-  // + other filter fields
+  sender_client_id?: string;
+  initiated_by?: 'client' | 'employee';
+  sort_by?: 'created_at' | 'subject' | 'status';
+  sort_order?: 'ASC' | 'DESC';
+}
+
+export interface NewInquiriesCountResponse {
+  new_count: number;
 }
 ```
 
 ## Dialogs
 
-- `ClientMessageDialogComponent` — compose a broadcast (cohort picker + editor)
-- `BroadcastMessageDetailDialogComponent` — inspect a sent broadcast (per-recipient status)
-- `ClientInquiryDialogComponent` — staff response to an inquiry
+- `ClientMessageDialogComponent` — compose a broadcast; opened with `ClientMessageDialogData { mode: 'bulk' }` (recipient picker + editor).
+- `BroadcastMessageDetailDialogComponent` — inspect a sent broadcast (per-recipient seen status); opened with `BroadcastMessageDetailDialogData { messageId, messageType: 'broadcast' }`.
+- `ClientInquiryDialogComponent` — staff response flow for an inquiry; opened with `{ inquiry }`.

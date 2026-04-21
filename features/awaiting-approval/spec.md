@@ -53,9 +53,10 @@ Holding page for newly-registered employees whose account is `PENDING_APPROVAL`.
 
 ## Permissions & Tenant/Institution
 
-- **Required roles:** `pendingEmployeeGuard` — only mountable for employees with pending status.
-- **Institution context:** not yet assigned; not relevant.
-- **Backend access checks:** `getCurrentEmployee()` must work for pending employees (verify backend allowlist).
+- **Route guard:** `pendingEmployeeGuard` (`apps/tagea-frontend/src/app/guards/employee-approval.guard.ts`). Waits for auth to resolve; redirects unauthenticated users to `/welcome`, clients to `/client-portal`, and any non-pending employee to `/dashboard`. Only `status === 'pending_approval'` may stay.
+- **Sibling guard:** `activeEmployeeGuard` protects the rest of the secure shell and redirects `pending_approval` employees here (`/awaiting-approval`).
+- **Institution context:** not applicable — the page runs before institution assignment.
+- **Backend access checks:** `GET /employees/me` is declared `@Auth({ scope: 'authenticated' })` on `EmployeeSelfServiceController`, so any authenticated (including pending) user can poll it.
 
 ## Notifications (Push / In-App)
 
@@ -75,7 +76,9 @@ Holding page for newly-registered employees whose account is `PENDING_APPROVAL`.
 ## References
 
 - **Angular implementation:** [`apps/tagea-frontend/src/app/pages/employee-awaiting-approval/employee-awaiting-approval.component.ts`](../../../apps/tagea-frontend/src/app/pages/employee-awaiting-approval/employee-awaiting-approval.component.ts)
-- **Guard:** `pendingEmployeeGuard`
-- **Service:** `EmployeesService.getCurrentEmployee()`
+- **Route registration:** `apps/tagea-frontend/src/app/app.routes.ts` (child of the `AUTH_GUARD`-protected secure shell, path `awaiting-approval`, guarded by `pendingEmployeeGuard`).
+- **Guards:** `pendingEmployeeGuard` and `activeEmployeeGuard` in `apps/tagea-frontend/src/app/guards/employee-approval.guard.ts`.
+- **Service:** `EmployeesService.getCurrentEmployee()` (`apps/tagea-frontend/src/app/services/employees.service.ts`) → `GET /employees/me`.
+- **Backend:** `EmployeeSelfServiceController` (`apps/tagea-backend/src/users/controllers/employee-self-service.controller.ts`); status enum in `apps/tagea-backend/src/common/types/user-principal.types.ts` (`UserStatus`).
 - **E2E tests:** _(to be identified)_
 - **Backend endpoints:** see [contracts.md](./contracts.md)

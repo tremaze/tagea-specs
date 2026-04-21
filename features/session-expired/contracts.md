@@ -2,12 +2,20 @@
 
 ## Triggers for Navigating to this Page
 
-The page itself calls no backend endpoints. It is a destination, typically reached via:
+The page itself calls no backend endpoints. It is a destination, reached exclusively via `UnifiedAuthService.handleSessionExpired(reason)` which runs when any of these conditions fire:
 
-- HTTP interceptor on 401 responses → `router.navigateByUrl('/session-expired')`
-- Token TTL expiry detected by a scheduler → same redirect
+- `AuthService.tokenRefreshError$` emits (refresh token rejected) — unless `isLoggingOut` is true
+- A native-auth handler surfaces `error === 'SESSION_EXPIRED'`
+- `checkSessionOnWebResume()` detects an invalid refresh token after the tab becomes visible again
 
-> The interceptor/scheduler that decides to route here is owned by the auth plumbing (see the auth-bootstrap spec).
+`handleSessionExpired` is idempotent (guarded by `isHandlingSessionExpiry`) and performs:
+
+1. `draggableOverlayService.closeAll()`
+2. `authService.clearSession()` — clears tokens and timers to prevent `redirectIfAuthenticatedGuard` from re-triggering `ensureAuthenticated()`
+3. `sessionStorage.setItem('session_expired_reason', reason)`
+4. `router.navigate(['/session-expired'], { replaceUrl: true })`
+
+> The auth plumbing owning these triggers lives in `UnifiedAuthService` (see also the auth-bootstrap spec). This page is a passive destination — it does not listen for trigger events itself.
 
 ## Actions from this Page
 

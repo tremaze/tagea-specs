@@ -12,6 +12,7 @@
 
 ## Port Log
 
-| Date       | Who      | What                              |
-| ---------- | -------- | --------------------------------- |
-| 2026-04-20 | ltoenjes | Spec created (documentation only) |
+| Date       | Who      | What                                                             |
+| ---------- | -------- | ---------------------------------------------------------------- |
+| 2026-04-20 | ltoenjes | Spec created (documentation only)                                |
+| 2026-04-21 | ltoenjes | Audit: corrected tab order, real model fields, backend endpoints |

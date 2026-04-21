@@ -15,21 +15,27 @@ Public landing for a video-meeting invite at `/public/video/:token`. Guest users
 
 ## Acceptance Criteria
 
-- [ ] **Given** the user opens `/public/video/:token`, **When** `GuestBookingService` validates the token, **Then** token-resolved metadata (`VideoCallToken`) is loaded.
-- [ ] **Given** validation fails, **When** the error is observed, **Then** the error state renders (localized text + error icon).
-- [ ] **Given** validation succeeds, **When** pre-join UI shows, **Then** `VideoPreJoinComponent` lets the user choose display name + camera/mic preferences (`VideoPreJoinPrefs`).
-- [ ] **Given** the user confirms pre-join, **When** the connect action fires, **Then** either `JitsiService` or `LivekitService` is engaged depending on the platform indicated by the token.
-- [ ] **Given** the video connection drops / the meeting ends, **When** the user returns to the page, **Then** a farewell screen renders.
+- [ ] **Given** the user opens `/public/video/:token?tenantId=...`, **When** `GuestBookingService.getVideoToken(token, tenantId)` validates the token, **Then** token-resolved metadata (`VideoCallToken`) is loaded.
+- [ ] **Given** either the `token` path param or the `tenantId` query param is missing, **When** the component initializes, **Then** an error message prompts the user to check the link in their confirmation e-mail (no backend call is made).
+- [ ] **Given** validation fails, **When** the error is observed, **Then** the error state renders (localized text + error icon) using `err.error.message` when available.
+- [ ] **Given** validation succeeds, **When** pre-join UI shows, **Then** `VideoPreJoinComponent` displays the backend-provided `displayName` and lets the user toggle camera / mic / background-blur (`VideoPreJoinPreferences`).
+- [ ] **Given** the user confirms pre-join, **When** the connect action fires, **Then** either `JitsiService` or `LivekitService` is engaged depending on the `provider` (`'JITSI' | 'LIVEKIT'`) returned by the backend.
+- [ ] **Given** the provider reports `state() === 'lobby_waiting'`, **When** the view renders, **Then** a lobby waiting screen is shown (moderator must approve).
+- [ ] **Given** the provider reports `state() === 'lobby_rejected'`, **When** the view renders, **Then** a rejection screen is shown.
+- [ ] **Given** the video connection drops (`state() === 'disconnected'`) after a successful join, **When** the user returns to the page, **Then** a farewell screen renders.
 
 ## UI States
 
-| State    | When?                       | Rendering                                            |
-| -------- | --------------------------- | ---------------------------------------------------- |
-| Loading  | Token validation in-flight  | Spinner + "Video-Termin wird vorbereitet..."         |
-| Error    | Token invalid / expired     | Error icon + message                                 |
-| Pre-join | Token valid, not yet joined | `VideoPreJoinComponent` with name + device selection |
-| In-call  | User joined                 | Embedded video UI (Jitsi or LiveKit)                 |
-| Ended    | Connection closed           | Farewell screen                                      |
+| State          | When?                                                   | Rendering                                                                              |
+| -------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Loading        | Token validation in-flight                              | Spinner + "Video-Termin wird vorbereitet..."                                           |
+| Fetch Error    | Token / tenantId missing, or `getVideoToken` fails      | Error icon + "Video-Termin nicht verfügbar" + backend message                          |
+| Pre-join       | Token valid, not yet joined                             | `VideoPreJoinComponent` with device toggles (audio / video / blur) + "Jetzt beitreten" |
+| Lobby waiting  | Provider state = `lobby_waiting`                        | Spinner + "Der Moderator wurde benachrichtigt."                                        |
+| Lobby rejected | Provider state = `lobby_rejected`                       | Block icon + "Ihr Beitritt wurde abgelehnt."                                           |
+| Connection err | Provider state = `error`                                | Error icon + "Verbindungsfehler" + provider error                                      |
+| In-call        | User joined (fallthrough state)                         | Remote video grid + PiP self-preview + control bar (mic / cam / screen / blur / end)   |
+| Ended          | Provider state = `disconnected` after a successful join | Call-end icon + "Termin beendet"                                                       |
 
 ## Non-Goals
 
@@ -44,13 +50,14 @@ Public landing for a video-meeting invite at `/public/video/:token`. Guest users
 
 ## Permissions & Tenant/Institution
 
-- **Required roles:** none (public pre-auth, token-gated).
-- **Tenant context:** resolved from the token.
+- **Required roles:** none (public pre-auth, token-gated — backend endpoint is decorated with `@Public()`).
+- **Tenant context:** the `tenantId` is passed as a query string parameter (`?tenantId=<uuid>`) alongside the token path param. Both are validated by the backend (`UUID_REGEX` for `tenantId`, `/^[0-9a-f-]{36}$/` for `token`). The frontend refuses to call the backend if either is missing.
 
 ## References
 
 - **Angular implementation:** [`apps/tagea-frontend/src/app/pages/public-video-join/public-video-join.component.ts`](../../../apps/tagea-frontend/src/app/pages/public-video-join/public-video-join.component.ts)
 - **Pre-join:** [`apps/tagea-frontend/src/app/components/video-pre-join/video-pre-join.component.ts`](../../../apps/tagea-frontend/src/app/components/video-pre-join/video-pre-join.component.ts)
 - **Services:** `GuestBookingService`, `JitsiService`, `LivekitService`
-- **Models:** `VideoCallToken`, `VideoPreJoinPrefs`, `VideoPreJoinPreferences`
-- **Backend endpoints:** see [contracts.md](./contracts.md)
+- **Models:** `VideoCallToken`, `VideoPreJoinPrefs` (in `models/jitsi.model.ts`), `VideoPreJoinPreferences` (exported from `video-pre-join.component.ts`)
+- **Backend controller:** [`apps/tagea-backend/src/public-api/guest-booking.controller.ts`](../../../apps/tagea-backend/src/public-api/guest-booking.controller.ts)
+- **Backend endpoints & contracts:** see [contracts.md](./contracts.md)

@@ -16,7 +16,7 @@ A dedicated landing page the app lands on when a user's session has expired or t
 
 ## Acceptance Criteria
 
-- [ ] **Given** the user's session has expired (auth token rejected or token TTL reached), **When** the app redirects, **Then** they land on `/session-expired`.
+- [ ] **Given** the user's session has expired (token refresh fails, or a `SESSION_EXPIRED` error surfaces during native auth, or a tab-visibility resume check detects an invalid refresh token), **When** `UnifiedAuthService.handleSessionExpired()` runs, **Then** tokens are cleared via `AuthService.clearSession()`, a reason is written to `sessionStorage['session_expired_reason']`, and the router navigates to `/session-expired` with `replaceUrl: true`.
 - [ ] **Given** the user is on `/session-expired`, **When** the page renders, **Then** a lock icon, title, and explanation text are visible, plus two actions ("log in again" and "home").
 - [ ] **Given** the user clicks "log in again", **When** `login()` runs, **Then** the OIDC login flow starts (`AuthService.login()`).
 - [ ] **Given** the IdP login completes (native platforms: same page continues; web: page redirects externally), **When** `isAuthenticated` becomes true, **Then** navigate to `/einrichtung/{institutionId}/dashboard` with `replaceUrl: true` (via the `institutionRoute(id, 'dashboard')` helper). When `institutionId` is null, the helper returns `['/', 'dashboard']` — see Edge Cases.
@@ -31,10 +31,16 @@ A dedicated landing page the app lands on when a user's session has expired or t
 ## Flows
 
 ```
-(session expires, e.g. 401 from backend)
+(tokenRefreshError OR SESSION_EXPIRED OR resume-check detects invalid refresh token)
           │
           ▼
-  /session-expired
+UnifiedAuthService.handleSessionExpired()
+  - draggableOverlayService.closeAll()
+  - authService.clearSession()
+  - sessionStorage['session_expired_reason'] = reason
+          │
+          ▼
+  /session-expired  (replaceUrl: true)
           │
    ┌──────┴──────┐
    │             │
@@ -54,13 +60,13 @@ AuthService    /welcome
 
 ## Non-Goals
 
-- **Silent token refresh** — handled elsewhere (auth service + HTTP interceptor). This page exists for the unrecoverable case.
+- **Silent token refresh** — handled inside `AuthService` / `UnifiedAuthService`. This page exists only for the unrecoverable case where refresh has already failed.
 - **Saving the pre-expiry route** to deep-link back after re-login — not implemented; user lands on dashboard after re-login.
 - **Automatic re-login on page load** — intentional: surface the expiry to the user rather than silently re-auth.
 
 ## Edge Cases
 
-- **Login succeeds but `institutionId()` is null** → `institutionRoute(null, 'dashboard')` is called; target route may be malformed. Worth verifying in the auth service that the post-login bootstrap finishes before navigation fires.
+- **Login succeeds but `institutionId()` is null** → `institutionRoute(null, 'dashboard')` returns `['/', 'dashboard']`, which resolves via the root redirect guard chain rather than an institution-scoped path. Worth verifying in the auth service that the post-login bootstrap (employee + institution context load) finishes before navigation fires.
 - **Native platform cancels login** — after `login()` resolves, `isAuthenticated` is false → user stays on `/session-expired` (acceptable; they can retry).
 - **User reloads `/session-expired` after a successful re-login elsewhere** — page still renders. `PUBLIC_ROUTES` is wrapped by `redirectIfAuthenticatedGuard`, but that guard's `EXCLUDED_PATHS` list contains `/session-expired` explicitly. Intentional: handles the case where the session was already renewed in another tab and the user wants to consciously re-authenticate.
 

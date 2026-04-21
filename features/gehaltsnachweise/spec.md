@@ -56,9 +56,16 @@ Staff landing page for salary documents (payslips). Lists the employee's payslip
 
 ## Permissions & Tenant/Institution
 
-- **Required permission:** `tenantPermissionGuard` with `requiredTenantPermission: 'teamspace_home.view'`.
-- **Feature guards:** `teamspaceFeatureGuard`, `proofOfSalaryFeatureGuard`.
-- **Institution context:** server-resolved per authenticated employee.
+- **Frontend route guards** (in order): `tenantPermissionGuard`, `teamspaceFeatureGuard`, `proofOfSalaryFeatureGuard`.
+- **Required tenant permission:** `teamspace_home.view` (via route `data.requiredTenantPermission`).
+- **Backend access chain** (both endpoints):
+  1. `@Auth({ scope: 'authenticated', allowedUserTypes: [UserType.EMPLOYEE] })` — employees only.
+  2. Tenant feature flag `proofOfSalary.enabled` must be true.
+  3. Employee record found by JWT `authUserId`.
+  4. Employee column `access_proof_of_salary` must be true.
+  5. Employee column `personnel_number` must be set.
+     Any failure yields `403 Forbidden`.
+- **Institution context:** server-resolved per authenticated employee (documents come from d.velop d.3 DMS keyed by the employee's personnel number).
 
 ## Notifications (Push / In-App)
 

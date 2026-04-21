@@ -3,8 +3,12 @@
 ## Angular
 
 - **Status:** ✅ Implemented
-- **Path:** [`apps/tagea-frontend/src/app/pages/login/`](../../../apps/tagea-frontend/src/app/pages/login/)
-- **Auth service:** [`apps/tagea-frontend/src/app/services/unified-auth.service.ts`](../../../apps/tagea-frontend/src/app/services/unified-auth.service.ts)
+- **Entry guard:** [`apps/tagea-frontend/src/app/guards/root-redirect.guard.ts`](../../../apps/tagea-frontend/src/app/guards/root-redirect.guard.ts)
+- **Public routes (`/login` redirect, `/welcome`, `/auth/callback`):** [`apps/tagea-frontend/src/app/routes/public.routes.ts`](../../../apps/tagea-frontend/src/app/routes/public.routes.ts)
+- **Landing page (IdP redirect entry):** [`apps/tagea-frontend/src/app/pages/landing-page/landing-page.component.ts`](../../../apps/tagea-frontend/src/app/pages/landing-page/landing-page.component.ts)
+- **Auth service (OIDC primitives):** [`packages/auth/src/lib/services/auth.service.ts`](../../../packages/auth/src/lib/services/auth.service.ts) (`@tagea/auth`)
+- **App-level auth orchestration:** [`apps/tagea-frontend/src/app/services/unified-auth.service.ts`](../../../apps/tagea-frontend/src/app/services/unified-auth.service.ts)
+- **Vestigial (not mounted by any route):** `apps/tagea-frontend/src/app/pages/login/` and `apps/tagea-frontend/src/app/components/login/`
 - **E2E:** _(not yet identified — add link)_
 
 ## Flutter

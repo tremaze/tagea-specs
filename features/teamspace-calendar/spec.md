@@ -21,15 +21,16 @@ Personal calendar for staff appointments. Desktop uses FullCalendar with month/w
 
 - [ ] **Given** the viewport is desktop, **When** the page renders, **Then** FullCalendar displays month/week/day views with plugins `dayGrid`, `timeGrid`, `interaction`.
 - [ ] **Given** the viewport is mobile, **When** `isMobile()` is true, **Then** the desktop calendar is replaced by `app-mobile-calendar` with `[myAppointmentsOnly]="true"` and infinite scroll.
-- [ ] **Given** the user navigates months/weeks, **When** `DatesSetArg` fires, **Then** appointments for the visible range load via `AppointmentsService`.
+- [ ] **Given** the user navigates months/weeks, **When** `DatesSetArg` fires, **Then** appointments for the visible range load via `AppointmentsService.getCalendarEvents(start, end, employeeId, true)`.
 - [ ] **Given** the user clicks an event (desktop), **When** the handler fires, **Then** `AppointmentDialogV2Component` opens with edit/RSVP affordances.
 - [ ] **Given** the user clicks an event (mobile), **When** the handler fires, **Then** navigate to `/teamspace/kalender/:id`.
 - [ ] **Given** the user presses "Neuer Termin", **When** action fires, **Then** navigate to `/teamspace/kalender/neu` (`TermineNeuComponent`).
 
 ### Recurring series
 
-- [ ] **Given** an event belongs to a recurring series, **When** the user attempts to edit or delete, **Then** `SeriesActionDialogComponent` prompts for scope: "this occurrence" / "this and following" / "all in series".
+- [ ] **Given** an event belongs to a recurring series, **When** the user attempts to edit or delete, **Then** `SeriesActionDialogComponent` prompts for scope: `single` / `this_and_following` / `series` (plus `cancel`).
 - [ ] **Given** the user picks a scope, **When** the action executes, **Then** the backend receives the series-scoped instruction and the calendar reloads.
+- [ ] **Given** the occurrence is the first in the series (`occurrenceDate == anchorStartDate`), **When** the dialog renders, **Then** the `this_and_following` option is hidden (it would be equivalent to `series`).
 
 ### Detail (`/teamspace/kalender/:id`)
 
@@ -58,8 +59,8 @@ Personal calendar for staff appointments. Desktop uses FullCalendar with month/w
 ## Edge Cases
 
 - **Timezone:** all times rendered in `Europe/Berlin` (tenant standard — see [appointment-detail spec](../appointment-detail/spec.md)).
-- **Employee context:** `employeeId()` drives the scope. If null/undefined, mobile calendar renders nothing rather than crashing.
-- **Series action dialog result is null** (user dismissed without picking) → the edit/delete is cancelled silently.
+- **Employee context:** `employeeId()` signal drives the scope (sourced from `UnifiedAuthService.employee()?.id`). If null/undefined, `loadAppointments` logs a warning and returns early; mobile calendar renders nothing rather than crashing.
+- **Series action dialog result is `{ scope: 'cancel' }` or `undefined`** (user dismissed without picking) → the edit/delete is cancelled silently.
 - **AuthorizationStore guard** — some actions may be gated by auth-store permissions; verify in implementation.
 
 ## Permissions & Tenant/Institution
@@ -90,7 +91,7 @@ Personal calendar for staff appointments. Desktop uses FullCalendar with month/w
 - **New booking:** [`termine-neu.component.ts`](../../../apps/tagea-frontend/src/app/pages/teamspace/termine-neu.component.ts)
 - **Detail:** [`termine-detail.component.ts`](../../../apps/tagea-frontend/src/app/pages/teamspace/termine-detail.component.ts)
 - **FullCalendar:** `@fullcalendar/angular` + `dayGridPlugin`, `timeGridPlugin`, `interactionPlugin`
-- **Services:** `AppointmentsService`, `TeamspaceService`, `AuthorizationStore`, `UnifiedAuthService`
+- **Services:** `AppointmentsService` (`getCalendarEvents`, `getAppointment`, `getVirtualOccurrence`), `TeamspaceService` (`hasAdminRole`), `AuthorizationStore` (`accessibleInstitutionIds`), `UnifiedAuthService` (`employee()` signal)
 - **Dialogs:** `AppointmentDialogV2Component`, `SeriesActionDialogComponent`
 - **Sub-components:** `CalendarToolbarComponent`, `TermineSidebarComponent`, `MobileCalendarComponent`
 - **Model:** `Appointment`, `CalendarEvent`, `CalendarEventClickPayload`

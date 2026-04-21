@@ -18,17 +18,20 @@ Staff clients list at `/einrichtung/:institutionId/clients`. Table/card view of 
 
 ### List
 
-- [ ] **Given** the page loads, **When** `ClientsDataService` / `BasicClientService` resolve, **Then** clients render as rows (desktop) or cards (mobile), showing name, age, assigned employee (with color chip via `getEmployeeColor`), and status indicators.
-- [ ] **Given** a text search is entered, **When** the user pauses (debounce), **Then** the server performs a search query and the list updates.
-- [ ] **Given** filter chips / dropdowns render (status, employee, date range), **When** any filter changes, **Then** the list reloads.
-- [ ] **Given** the viewport is mobile, **When** the filters FAB fires, **Then** `ClientFiltersBottomSheetComponent` opens.
+- [ ] **Given** the page loads, **When** `ClientsDataService` / `BasicClientService` resolve, **Then** clients render as rows (desktop) or cards (mobile), showing name, birth date, counselors (Bezugsmitarbeiter) with color chip via `getEmployeeColor`, and portal-access / status indicators.
+- [ ] **Given** a text search is entered, **When** the user pauses (300ms debounce), **Then** the server performs a search query and the list updates.
+- [ ] **Given** filter controls render (search, phone, street, postal code, birth date, category multi-select, department), **When** any filter changes, **Then** the list reloads and category/department preferences are persisted via `EmployeesService.updateClientsFilterPreferences`.
+- [ ] **Given** the viewport is mobile, **When** the filters FAB fires `openFilterSheet()`, **Then** `ClientFiltersBottomSheetComponent` opens seeded with the current filter values and the institution's departments.
 - [ ] **Given** a row / card is tapped, **When** navigation resolves, **Then** open `/einrichtung/:institutionId/profile/:clientId`.
+- [ ] **Given** the list is scrolled near the bottom, **When** the IntersectionObserver sentinel enters the viewport, **Then** `ClientsDataService.loadMore()` is called up to `MAX_AUTO_LOAD = 300`; beyond that a manual "Load more" button is shown.
 
-### Create / edit / delete
+### Create / edit / delete / portal login
 
-- [ ] **Given** the user presses "New client", **When** the dialog opens, **Then** `ClientDialogComponent` is shown with an empty form.
-- [ ] **Given** the user chooses "Delete" from a row's menu, **When** the confirm dialog resolves, **Then** `DeleteConfirmationDialogComponent` lists related entities (cases, appointments) for context before committing the delete.
-- [ ] **Given** permission `clients.edit` is missing, **When** the row menu renders, **Then** delete / edit actions are hidden via `HasPermissionDirective`.
+- [ ] **Given** the user presses "New client", **When** the dialog opens, **Then** `ClientDialogComponent` is shown in `mode: 'create'` with an empty form; gated by `clients.create`.
+- [ ] **Given** the user chooses "Edit" from a row's menu, **When** `BasicClientService.getClient(id)` resolves, **Then** `ClientDialogComponent` opens in `mode: 'edit'` with the full `Client`; gated by `clients.edit`.
+- [ ] **Given** the user chooses "Delete" from a row's menu, **When** `BasicClientService.getRelatedEntities(id)` resolves, **Then** `DeleteConfirmationDialogComponent` lists related entities (cases, appointments, relationships, reminders, financial records, documents) and requires the user to type the client name (`confirmationText`) before committing `deleteClient`; gated by `clients.delete`.
+- [ ] **Given** the client has `category === 'client'` and an email, **When** the user triggers "Enable login", **Then** `BasicClientService.enableClientLogin(id)` is called and an invitation email is sent; gated by `clients.enable_login`.
+- [ ] **Given** `login_enabled` is true, **When** the user triggers "Disable login", **Then** `BasicClientService.disableClientLogin(id)` is called and active sessions are terminated; gated by `clients.enable_login`.
 
 ## UI States
 
@@ -46,17 +49,23 @@ Staff clients list at `/einrichtung/:institutionId/clients`. Table/card view of 
 
 ## Edge Cases
 
-- **Client without assigned employee** — chip omitted; filter by "unassigned" supported.
-- **Archived clients** — toggled via a filter chip; default view may exclude them.
-- **Soft-delete vs hard-delete** — `DeleteConfirmationDialogComponent` surfaces related-entity count; actual semantics owned by `BasicClientService`.
-- **Permission-gated actions** — `HasPermissionDirective` hides menu entries; verify which permission flags which action.
+- **Client without counselors** — counselor chip omitted; list query still returns the client.
+- **Category filter defaults to `['client']`** — related persons and contacts are excluded by default and restored from the user's persisted preferences on load.
+- **Cascade-delete preview may fail** — if `getRelatedEntities` throws, the confirmation dialog still opens without the related-entity sections; the error is logged but non-blocking.
+- **Enable-login validation is client-side too** — non-`client` categories or missing emails short-circuit with a snackbar before hitting the backend.
+- **Permission-gated actions** — `*appHasPermission` hides menu entries individually (`clients.create`, `clients.edit`, `clients.delete`, `clients.enable_login`).
 
 ## Permissions & Tenant/Institution
 
-- **Required permission:** `permissionGuard` with `requiredPermission: 'clients.view'`.
-- **Edit/delete gated by:** `clients.edit` (via `HasPermissionDirective`).
+- **Route guard:** `permissionGuard` with `requiredPermission: 'clients.view'` (see `apps/tagea-frontend/src/app/routes/institution.routes.ts`).
+- **UI-level gates (via `*appHasPermission`):**
+  - `clients.create` — "New client" button / FAB, "Create first client" CTA
+  - `clients.edit` — row-menu "Edit" action
+  - `clients.delete` — row-menu "Delete" action
+  - `clients.enable_login` — "Enable login" / "Disable login" menu items
+- **Backend guards:** `@Auth({ scope: 'institution', permissions: [...] })` on every method in `ClientsController` — see [contracts.md](./contracts.md) for the per-endpoint mapping.
 - **Feature guards:** `HasFeatureDirective` hides feature-flagged UI.
-- **Institution context:** URL param.
+- **Institution context:** `UnifiedAuthService.institutionId()` (URL-derived); wire URL built via `getInstitutionApiUrl` → `${INSTITUTION_ROUTE_PREFIX}/clients`.
 
 ## Notifications (Push / In-App)
 
@@ -76,10 +85,11 @@ Staff clients list at `/einrichtung/:institutionId/clients`. Table/card view of 
 
 - **Angular implementation:** [`apps/tagea-frontend/src/app/pages/clients-page/clients-page.ts`](../../../apps/tagea-frontend/src/app/pages/clients-page/clients-page.ts)
 - **Services:** `BasicClientService`, `ClientsDataService`, `UnifiedAuthService`, `EmployeesService`
-- **Models:** `ClientData`
+- **Models:** `ClientData`, `Client`, `ClientFilters` (all in `apps/tagea-frontend/src/app/models/client.model.ts`)
 - **Dialogs:** `ClientDialogComponent`, `DeleteConfirmationDialogComponent`
 - **Filter sheet:** `ClientFiltersBottomSheetComponent`
-- **Directives:** `HasPermissionDirective`, `HasFeatureDirective`
-- **Utilities:** `getEmployeeColor`
+- **Directives:** `HasPermissionDirective` (selector `*appHasPermission`), `HasFeatureDirective`
+- **Utilities:** `getEmployeeColor`, `institutionRoute`
+- **Backend controller:** `apps/tagea-backend/src/clients/clients.controller.ts` (`${INSTITUTION_ROUTE_PREFIX}/clients`)
 - **E2E tests:** _(to be identified)_
 - **Backend endpoints:** see [contracts.md](./contracts.md)

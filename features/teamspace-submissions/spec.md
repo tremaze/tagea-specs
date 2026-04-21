@@ -20,7 +20,7 @@ Staff-facing hub for creating and tracking submissions (e.g. incident reports, e
 
 - [ ] **Given** the user opens the page, **When** `SubmissionsService` + `SubmissionCategoriesService` + `TeamspaceService` resolve, **Then** submissions render as `TageaSubmissionCardComponent` cards with status, category, submitter, and timestamp.
 - [ ] **Given** multiple teamspaces are accessible, **When** filter chips render, **Then** one chip per teamspace is shown; an active filter scopes the list.
-- [ ] **Given** status chips render, **When** a status chip is selected (e.g. `new`, `in_progress`, `closed`), **Then** the list additionally filters on `SubmissionStatus`.
+- [ ] **Given** status chips render, **When** a status chip is selected (e.g. `awaiting_approval`, `pending`, `in_review`, `closed`, `rejected`), **Then** the list additionally filters on `SubmissionStatus`.
 - [ ] **Given** a card is tapped, **When** navigation resolves, **Then** open `/teamspace/submissions/:id`.
 - [ ] **Given** a "New submission" CTA fires, **When** the user is on the list, **Then** they can pick a category and the creation form for that category renders (dynamic fields based on `FieldGroup[]`).
 

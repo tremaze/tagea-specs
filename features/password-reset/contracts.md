@@ -2,24 +2,33 @@
 
 ## Endpoints
 
-| Method | Path                                                 | Purpose                           |
-| ------ | ---------------------------------------------------- | --------------------------------- |
-| `GET`  | `/public/password-reset/validate?userId=…&code=…`    | Validate the reset token          |
-| `GET`  | `/public/password-reset/:userId/:token/requirements` | Load tenant password requirements |
-| `POST` | `/public/password-reset/:userId/:token/set-password` | Submit the new password           |
+| Method | Path                                                | Purpose                           |
+| ------ | --------------------------------------------------- | --------------------------------- |
+| `GET`  | `/public/password-reset/validate?userId=…&code=…`   | Validate the reset token          |
+| `GET`  | `/public/password-reset/:userId/:code/requirements` | Load tenant password requirements |
+| `POST` | `/public/password-reset/:userId/:code/set-password` | Submit the new password           |
 
 All endpoints are unauthenticated (public). Base URL is `environment.apiUrl`.
 
+> Path param naming: the backend controller (`apps/tagea-backend/src/public-api/onboarding.controller.ts`) uses `:userId/:code`. The Angular route definition (`public/password-reset/:userId/:token`) names the second segment `:token` but passes the same value into the backend's `code` slot. Spec uses `:code` to match the backend (authoritative).
+
 ### Validation response
 
+> Documentation-only shape. Reflects the backend response body; the Angular component's local `TokenValidationResponse` is narrower.
+
 ```ts
-interface TokenValidationResponse {
+// Backend wire shape (from OnboardingService.validateToken)
+interface TokenValidationResponseWire {
   valid: boolean;
-  reason?: 'invalid_code' | 'already_used' | 'expired';
+  reason?: string; // typed as string on the server; known values below
+  email?: string; // present when valid === true
+  expiresAt?: Date; // present when valid === true
 }
 ```
 
-Token state mapping:
+Known `reason` values emitted by the backend: `'invalid_code'`, `'already_used'`, `'expired'`.
+
+The Angular client ignores `email` and `expiresAt` (surface-only) and narrows `reason` to the following mapping:
 
 | `valid` | `reason`                         | Frontend state |
 | ------- | -------------------------------- | -------------- |
@@ -65,10 +74,11 @@ Successful response:
 }
 ```
 
-Error response (detected by string match in `error.error.message`):
+Error response: the backend wraps service errors in `BadRequestException`, producing `{ statusCode: 400, message: string, error: 'Bad Request' }`. The client detects the specific reason by lowercasing `error.error.message` and substring-matching:
 
-- Contains `"already used"` / `"already_used"` → map to `already_used`
-- Contains `"expired"` → map to `expired`
+- Contains `"already used"` / `"already_used"` → map to `already_used` (backend raises `'Code already used'`)
+- Contains `"expired"` → map to `expired` (backend raises `'Code expired'` or `'Invalid or expired code'`)
+- Otherwise → generic `errorMessage`
 
 ## Local types
 

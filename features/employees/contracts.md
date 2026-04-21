@@ -12,16 +12,19 @@ interface Employee {
   id: string;
   first_name: string;
   last_name: string;
-  email: string;
-  role: string; // one of EMPLOYEE_ROLES values
+  email: string | null;
+  role: string; // one of EMPLOYEE_ROLES values (per-institution)
   status: string; // one of EMPLOYEE_STATUS values
-  institution_ids?: string[];
+  tenant_id: string;
+  color?: string | null;
+  pendingOnboarding?: boolean;
+  last_invitation_sent_at?: Date;
   // + extended fields (phone, custom fields, etc.)
 }
 
 // Exported constants — used for chip labels / filter options
-const EMPLOYEE_ROLES: readonly string[];
-const EMPLOYEE_STATUS: readonly string[];
+const EMPLOYEE_ROLES = ['admin', 'counselor', 'supervisor', 'manager'] as const;
+const EMPLOYEE_STATUS = ['active', 'suspended', 'pending_activation', 'pending_approval'] as const;
 ```
 
 ## Dialogs
@@ -30,6 +33,10 @@ const EMPLOYEE_STATUS: readonly string[];
 interface EmployeeDialogData {
   mode: 'create' | 'edit';
   employee?: Employee;
+  showTenantAdminToggle?: boolean;
+  preselectedInstitutionId?: string;
+  restrictToInstitutionId?: string;
+  manageableInstitutionIds?: string[];
 }
 ```
 

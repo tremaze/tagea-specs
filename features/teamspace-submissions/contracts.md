@@ -2,11 +2,11 @@
 
 ## Services
 
-| Service                       | Methods used (indicative)                            | Purpose                                       |
-| ----------------------------- | ---------------------------------------------------- | --------------------------------------------- |
-| `SubmissionsService`          | `getForEmployee()`, `getById(id)`, `create(payload)` | Submission CRUD                               |
-| `SubmissionCategoriesService` | `getForTeamspace(id)`                                | Fetch active categories + their field configs |
-| `TeamspaceService`            | `getMyTeamspaces()`                                  | Chip data + picker options                    |
+| Service                       | Methods used (indicative)                                                                                                                            | Purpose                                       |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| `SubmissionsService`          | `getSubmissions(teamspaceId, filter?)`, `getSubmissionById(teamspaceId, id)`, `createSubmission(teamspaceId, categoryId, customFieldValues, files?)` | Submission CRUD                               |
+| `SubmissionCategoriesService` | `getCategories(teamspaceId)`, `getCategoryById(teamspaceId, id)`                                                                                     | Fetch active categories + their field configs |
+| `TeamspaceService`            | `getAccessibleTeamspaces()`, `loadUserRolesSummary()`                                                                                                | Chip data + picker options                    |
 
 > Exact signatures in each service file under `apps/tagea-frontend/src/app/services/`. Flutter port reads there.
 

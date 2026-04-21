@@ -24,12 +24,12 @@ Dual-mode error page: either explains that an **email change must be confirmed**
 ### Email-verification variant
 
 - [ ] **Given** this variant renders, **When** the user reads the content, **Then** they see: the main message ("Ihre E-Mail-Adresse wurde geändert…"), an info box about the 24-hour link validity, and a checklist (check inbox incl. spam, click link, contact admin if missing).
-- [ ] **Given** this variant renders, **When** actions render, **Then** **only** a "Logout" button is shown (no "teamspace" CTA).
+- [ ] **Given** this variant renders, **When** actions render, **Then** **only** an "Abmelden" button is shown (no "teamspace" CTA).
 
 ### Blocked-access variant
 
 - [ ] **Given** this variant renders, **When** the user reads the content, **Then** they see: the main message, an info box about needing institution assignment, and a checklist (contact admin, request assignment, access teamspace in the meantime).
-- [ ] **Given** this variant renders, **When** actions render, **Then** both a primary "Zu Teamspace wechseln" button (routes to `/teamspace`) and a secondary "Logout" button are shown.
+- [ ] **Given** this variant renders, **When** actions render, **Then** both a primary "Zu Teamspace wechseln" button (routes to `/teamspace`) and a secondary "Abmelden" button are shown.
 
 ### Mobile
 
@@ -37,10 +37,10 @@ Dual-mode error page: either explains that an **email change must be confirmed**
 
 ## UI States
 
-| State                    | When?                        | What does the user see?                                                 |
-| ------------------------ | ---------------------------- | ----------------------------------------------------------------------- |
-| Email-not-verified       | `?reason=email-not-verified` | `mark_email_unread` icon + email-verification copy + Logout only        |
-| Blocked-access (default) | no matching query param      | `block` icon + institution-assignment copy + Teamspace + Logout buttons |
+| State                    | When?                        | What does the user see?                                                   |
+| ------------------------ | ---------------------------- | ------------------------------------------------------------------------- |
+| Email-not-verified       | `?reason=email-not-verified` | `mark_email_unread` icon + email-verification copy + Abmelden only        |
+| Blocked-access (default) | no matching query param      | `block` icon + institution-assignment copy + Teamspace + Abmelden buttons |
 
 ## Non-Goals
 

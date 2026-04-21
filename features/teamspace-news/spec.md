@@ -19,10 +19,13 @@ News list for staff scoped to their teamspaces. Filter chips per teamspace, text
 ### List (`/teamspace/news`)
 
 - [ ] **Given** the user opens the page, **When** `ArticleService` + `TeamspaceService` resolve, **Then** articles render as `NewsDisplayCardComponent` cards.
-- [ ] **Given** the user has multiple teamspaces, **When** filter chips render, **Then** one chip per accessible teamspace appears with unread count badges.
-- [ ] **Given** a teamspace chip is selected, **When** the selection commits, **Then** the list filters to articles tagged with that teamspace.
-- [ ] **Given** the user types in the search field, **When** they pause (debounce ~300ms), **Then** the server performs a full-text search and the list updates.
+- [ ] **Given** the user has multiple teamspaces with the news module active, **When** teamspace filter chips render, **Then** one chip per teamspace where `is_active && active_modules.news === true` appears (plus a leading "Alle" chip).
+- [ ] **Given** a teamspace chip is selected, **When** the selection commits, **Then** the list reloads with the selected `teamspace_ids` filter (multi-select supported).
+- [ ] **Given** the user selects a single category chip, **When** the selection commits, **Then** `category_id` is passed to the backend; multiple selected categories are filtered client-side.
+- [ ] **Given** the user types in the search field, **When** they pause (debounce ~300ms), **Then** the server performs a title+content match and the list updates.
+- [ ] **Given** the user has a redaktion role in any teamspace (or is super admin), **When** the page renders, **Then** a "Redaktion" button (desktop) and a FAB (mobile) link to `/teamspace/redaktion`.
 - [ ] **Given** the user taps a card, **When** navigation resolves, **Then** open `/teamspace/news/:id`.
+- [ ] **Given** the user scrolls near the list end, **When** the intersection observer fires, **Then** the next page is appended (infinite scroll, batch size 12).
 
 ### Detail (`/teamspace/news/:id`)
 
@@ -30,13 +33,14 @@ Shared `SharedNewsDetailComponent` with `data.context: 'teamspace'` — see [new
 
 ## UI States
 
-| State     | When?                    | What does the user see?       | A11y notes      |
-| --------- | ------------------------ | ----------------------------- | --------------- |
-| Loading   | Initial fetch            | Spinner                       | `role="status"` |
-| Searching | Debounced search         | Search icon → inline spinner  | —               |
-| Empty     | No matches after filters | Empty state + "clear filters" | —               |
-| Populated | Cards rendered           | Chips + search + card grid    | —               |
-| Error     | Fetch failure            | Error panel + retry           | `role="alert"`  |
+| State     | When?                    | What does the user see?                   | A11y notes      |
+| --------- | ------------------------ | ----------------------------------------- | --------------- |
+| Loading   | Initial fetch            | Spinner                                   | `role="status"` |
+| Searching | Debounced search         | Search icon → inline spinner              | —               |
+| Empty     | No matches after filters | Empty state + "Filter zurücksetzen"       | —               |
+| Populated | Cards rendered           | Chips + search + card grid + FAB (mobile) | —               |
+| LoadMore  | Infinite scroll trigger  | Bottom spinner while next page loads      | —               |
+| Error     | Fetch failure            | Error logged; state returns to populated  | —               |
 
 ## Non-Goals
 
@@ -64,8 +68,11 @@ Shared `SharedNewsDetailComponent` with `data.context: 'teamspace'` — see [new
 
 > User-facing strings remain in German.
 
-- `newsPage.title`, `.subtitle`, `.helpTooltip`
-- Rest owned by the template and child components.
+- `newsPage.title`, `.subtitle`, `.helpTooltip`, `.redaktionButton`
+- `newsPage.search.label`, `.search.placeholder`
+- `newsPage.loading`, `.allNews`, `.resetFilters`
+- `newsPage.empty.title`, `.empty.message`
+- `common.all` (chip label for the "Alle" filter)
 
 ## Offline Behavior
 
@@ -78,7 +85,8 @@ Shared `SharedNewsDetailComponent` with `data.context: 'teamspace'` — see [new
 
 - **Angular implementation:** [`apps/tagea-frontend/src/app/pages/teamspace/news-page.component.ts`](../../../apps/tagea-frontend/src/app/pages/teamspace/news-page.component.ts)
 - **Detail component:** see [news-detail spec](../news-detail/spec.md)
-- **Services:** `ArticleService`, `TeamspaceService`, `SecureImageService`, `UnifiedAuthService`, `LanguageService`
-- **Card component:** `NewsDisplayCardComponent`
+- **Services:** `ArticleService`, `TeamspaceService`, `SecureImageService`, `UnifiedAuthService`, `LanguageService`, `TranslocoService`
+- **Card component:** `NewsDisplayCardComponent` (`NewsDisplayCardData` input)
+- **Filter chips:** `TageaFilterChipsComponent` with `FilterChip[]` (one row for teamspaces, one for categories)
 - **E2E tests:** _(to be identified)_
 - **Backend endpoints:** see [contracts.md](./contracts.md)

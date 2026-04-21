@@ -85,7 +85,7 @@ rootRedirectGuard.canActivate
 
 ## Edge Cases
 
-- Token exists but is expired → `checkAuthStatus()` returns false; the standard Keycloak redirect flow is triggered (no browser-specific silent-refresh semantics — the client doesn't implement an iframe-based refresh).
+- Token exists but is expired → `AuthService.isAuthenticated` returns false; `rootRedirectGuard` then tries `ensureAuthenticated()` (refresh-token path) followed by `trySilentLogin()`. If both fail the user lands on `/welcome`. There is no iframe-based silent refresh — refresh is driven by the refresh-token grant in `@tagea/auth`.
 - User has no institution assigned → dashboard route handles this (separate spec).
 - Deep link before login (`/some/protected/page`) → should land there after login, not on the dashboard (currently **not** implemented in Angular; tracked as an open item).
 - Multiple tabs: if login is in-flight in tab A, tab B must not trigger a duplicate redirect.
@@ -93,8 +93,9 @@ rootRedirectGuard.canActivate
 ## Permissions & Tenant/Institution
 
 - **Required roles:** none (public)
-- **Institution context:** extracted from the JWT after login (`institutionId()` on the auth service). The dashboard URL is institution-scoped.
-- **Backend access checks:** the Keycloak token is sent with every API call in the `Authorization` header; the backend validates the signature and institution membership.
+- **Institution context:** **not** derived from the JWT. After login the frontend resolves the institution from the URL (`/einrichtung/:id/…`) via `InstitutionContextService.setInstitutionId(...)`; the initial redirect picked by `defaultModeRedirectGuard` uses the first entry from `AuthorizationStore.context().institutions`. The `institutionId` signal on `UnifiedAuthService` is re-exported from `InstitutionContextService`, not parsed from the token.
+- **Tenant context:** resolved by the backend from the `X-Tenant-ID` header (added by the tenant interceptor) and/or the `currentTenant` field in the `/auth/current` response. The Keycloak JWT itself does **not** carry an institution claim.
+- **Backend access checks:** the Keycloak token is sent with every API call in the `Authorization: Bearer` header; the backend validates the signature via `OidcJwtGuard` / `OidcAuthMiddleware` and resolves tenant/institution membership from the database, not from JWT claims.
 
 ## Notifications (Push / In-App)
 
@@ -121,7 +122,8 @@ rootRedirectGuard.canActivate
 - **Root redirect guard:** [`apps/tagea-frontend/src/app/guards/root-redirect.guard.ts`](../../../apps/tagea-frontend/src/app/guards/root-redirect.guard.ts) — decides between dashboard and `/welcome` on empty-path entry.
 - **Redirect-if-authenticated guard:** [`apps/tagea-frontend/src/app/guards/redirect-if-authenticated.guard.ts`](../../../apps/tagea-frontend/src/app/guards/redirect-if-authenticated.guard.ts) — wraps `PUBLIC_ROUTES`; has an `EXCLUDED_PATHS` list for error surfaces (`/session-expired`, etc.).
 - **Landing page (IdP redirect entry):** [`apps/tagea-frontend/src/app/pages/landing-page/landing-page.component.ts`](../../../apps/tagea-frontend/src/app/pages/landing-page/landing-page.component.ts)
-- **Auth service:** [`apps/tagea-frontend/src/app/services/unified-auth.service.ts`](../../../apps/tagea-frontend/src/app/services/unified-auth.service.ts)
+- **OIDC auth service (used directly by `rootRedirectGuard`):** [`packages/auth/src/lib/services/auth.service.ts`](../../../packages/auth/src/lib/services/auth.service.ts) — exports `AuthService` with `isAuthenticated`, `hasRefreshToken()`, `ensureAuthenticated()`, `trySilentLogin()`, `isInitialized$`.
+- **App-level auth orchestration (profile load, tenant/institution switching):** [`apps/tagea-frontend/src/app/services/unified-auth.service.ts`](../../../apps/tagea-frontend/src/app/services/unified-auth.service.ts)
 - **Vestigial login components (not mounted by any route):** `pages/login/login.component.ts`, `components/login/login.component.ts` — present in the tree but unreachable.
 - **E2E tests:** _(to be identified — add link)_
 - **Backend endpoints:** see [contracts.md](./contracts.md)
