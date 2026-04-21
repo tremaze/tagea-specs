@@ -2,6 +2,8 @@
 
 Single source of truth for feature behavior. Both frontend implementations (Angular + Flutter) are built against these specs.
 
+> **License:** GNU AGPL-3.0-or-later — Copyright © 2026 Tremaze GmbH. See [LICENSE](./LICENSE) for the full text.
+
 ## Information Flow
 
 ```
