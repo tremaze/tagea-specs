@@ -6,7 +6,7 @@
 2. Populate **spec.md** based on:
    - Angular code under `apps/tagea-frontend/src/app/...`
    - E2E tests under `apps/tagea-frontend-e2e/src/...` (they describe observable behavior — gold for spec extraction)
-   - **Backend DTOs and entities under `apps/tagea-backend/src/**/dto/_.dto.ts`+`_.entity.ts`\*\* — these are the authoritative wire contracts and database shapes. Always prefer them over inferred types from the frontend service. Especially important when:
+   - **Backend DTOs and entities** under `apps/tagea-backend/src/` — look for `dto/` directories (wire contracts) and `*.entity.ts` files (database shapes). These are the authoritative source of truth and should be preferred over inferred types from the frontend service. Especially important when:
      - A field looks enum-like in the UI (it may actually be tenant-configurable from a database table — check for an entity by that name)
      - The frontend type definition is sparse / inferred (e.g. `relationship_type: string`) — the backend DTO often has Swagger comments with example values
      - The endpoint path is not obvious from the frontend service (frontend often uses `apiConfig.getApiUrl(...)` indirection; the backend controller decorator gives you the real route)
