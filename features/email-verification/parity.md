@@ -17,7 +17,7 @@
 | Topic               | Angular                         | Flutter                                                          |
 | ------------------- | ------------------------------- | ---------------------------------------------------------------- |
 | Source of `success` | `ActivatedRoute.queryParamMap`  | GoRouter deep-link query param                                   |
-| Login action        | `UnifiedAuthService.login()`    | `ref.read(authRepoProvider).login()`                             |
+| Login action        | `UnifiedAuthService.login()`    | `context.read<AuthCubit>().login()`                              |
 | Error navigation    | `Router.navigate(['/welcome'])` | `context.go('/welcome')`                                         |
 | Layout              | Material card + CSS gradient    | `Card` widget inside `Scaffold` with `LinearGradient` background |
 

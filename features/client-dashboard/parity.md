@@ -11,7 +11,7 @@
 
 - **Status:** ⏳ Planned
 - **Suggested path:** `lib/features/client_portal/dashboard/`
-- **State management suggestion:** `flutter_riverpod` or `flutter_bloc`; one provider per data source (feed, next appointment, unread counts, pending signatures) to mirror the parallel-load structure.
+- **State management:** `flutter_bloc`; one `Cubit` per data source (feed, next appointment, unread counts, pending signatures) to mirror the parallel-load structure. `Cubit` is the default since each data source is a straightforward load-and-display.
 - **Infinite scroll:** `ScrollController` with bottom threshold; same per-source pagination state.
 - **Read tracking:** `VisibilityDetector` package replaces IntersectionObserver.
 - **Integration tests:** `integration_test/client_portal_dashboard_test.dart`

@@ -20,7 +20,7 @@
 
 | Topic                  | Angular                                                                  | Flutter                                                                                                      |
 | ---------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| DI / service injection | `APPOINTMENT_DETAILS_SERVICE` token with two providers                   | Constructor-injected repo via Riverpod provider (two provider families)                                      |
+| DI / service injection | `APPOINTMENT_DETAILS_SERVICE` token with two providers                   | Constructor-injected repo into a Cubit/Bloc, provided via `BlocProvider` scoped per route (appointment id and optional slot id passed as constructor parameters) |
 | Mode discrimination    | `route.data.mode` string                                                 | `AppointmentDetailMode` enum passed as page argument                                                         |
 | Custom fields UI       | `TageaCustomFieldsComponent`                                             | Dynamic form widget — see [client-profile spec](../client-profile/spec.md) for the shared rendering strategy |
 | Timezone               | `AppointmentTimeService` + Angular date pipes configured to Berlin       | `timezone` + `intl` packages; render via helper `formatBerlinTime(dt)`                                       |

@@ -18,7 +18,7 @@
 | --------------------- | -------------------------------------------------------- | ------------------------------------------------- |
 | Chat engine           | `@tagea/chat` TS library (possibly Matrix-based)         | Dart port of the same protocol; separate effort   |
 | Safe-area handling    | `CHAT_CONTAINER_CONFIG.defaultSafeArea = 'conversation'` | `SafeArea` widget or context-aware inset handling |
-| Feature-flag redirect | Angular `effect()` watching a signal                     | Riverpod `ref.listen` or `BlocListener`           |
+| Feature-flag redirect | Angular `effect()` watching a signal                     | `BlocListener`                                    |
 
 ## Port Log
 

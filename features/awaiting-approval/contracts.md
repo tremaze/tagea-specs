@@ -32,4 +32,4 @@ interface Employee {
 
 - Approval detected → `Router.navigate(['/'])` (root). Under the secure shell, `/` renders `SecureMainComponent` guarded by `activeEmployeeGuard`, which now permits the user (status flipped to `active`) and lets the default child route resolve to the institution dashboard.
 
-> **Flutter port note:** Use `Stream.periodic(Duration(seconds: 5))` or Riverpod's `StreamProvider` for polling. Cancel the stream when the widget is disposed. Consider backoff on errors (the Angular impl currently doesn't handle poll errors).
+> **Flutter port note:** Drive polling from a `Cubit` (or `Bloc`) that owns a `Timer.periodic(Duration(seconds: 5))` or a `StreamSubscription` on `Stream.periodic(Duration(seconds: 5))` and emits new state on each tick. Cancel the timer/subscription in the Cubit/Bloc's `close()` override — `BlocProvider` calls `close()` automatically when the widget is removed from the tree, which is the BLoC equivalent of cancelling on dispose. Consider backoff on errors (the Angular impl currently doesn't handle poll errors).

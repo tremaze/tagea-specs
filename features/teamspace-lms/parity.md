@@ -25,8 +25,8 @@
 | -------------------- | ------------------------------------- | ---------------------------------------------------------------------------------- |
 | Video player         | HTML5 `<video>` with Angular wrappers | `video_player` + `chewie` for controls                                             |
 | PDF viewer           | iframe with authenticated URL         | `syncfusion_flutter_pdfviewer`; fetch bytes with Dio + render via `memoryProvider` |
-| Progress persistence | Angular facade                        | Riverpod `LearningController`                                                      |
-| Course catalog cache | In-memory signal                      | Riverpod provider + optional `hive` cache                                          |
+| Progress persistence | Angular facade                        | `LearningBloc` (or `LearningCubit`) managing progress state                        |
+| Course catalog cache | In-memory signal                      | `Cubit` (or `Bloc`) backed by a repository with optional `hive` cache layer        |
 
 ## Port Log
 
