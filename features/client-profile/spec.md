@@ -35,10 +35,12 @@ Clients manage their own profile: personal data, custom fields defined by the te
 - [ ] **Given** the tenant has custom fields configured, **When** the page loads, **Then** field groups render via `TageaCustomFieldsComponent` with their current values.
 - [ ] **Given** custom field values change, **When** Save is pressed for that section, **Then** the update is persisted independently of the basic profile.
 
-### Managed Clients
+### Managed Clients ("Verwaltete Personen")
 
-- [ ] **Given** the user is a guardian/manager of other clients, **When** the page loads, **Then** a "Managed Clients" section lists each via `ManagedClientCardComponent`.
-- [ ] **Given** a managed client is tapped, **When** navigation happens, **Then** the user is taken to the correct client's view (verify target route).
+- [ ] **Given** the user has any `client_relationships` row with `can_manage: true` and `is_deleted: false`, **When** the page loads, **Then** `GET /api/client-portal/managed-clients` returns those entries and a section lists each via `ManagedClientCardComponent`.
+- [ ] **Given** the response carries `relationship_type`, **When** rendered, **Then** the value is shown verbatim (free-form string from the tenant's `relationship_types` table — e.g. `"Kind"`, `"Ehepartner"`). It represents the **reverse** relationship — what the managed client is _to the viewer_ (a parent sees their child as `"Kind"`, not their own role as `"Erziehungsberechtigte/r"`). See [contracts.md](./contracts.md) for the backend logic.
+- [ ] **Given** the load fails, **When** the catch branch runs, **Then** the section silently shows the empty state (no error toast — confirmed in `loadManagedClients()` line 286).
+- [ ] **Given** a managed client is tapped, **When** navigation happens, **Then** the user is taken to the correct client's view (verify target route in `ManagedClientCardComponent`).
 
 ### Mobile
 
