@@ -105,6 +105,7 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 | Files (Institution)      | ✅      | ❌      | [files-institution/](./features/files-institution/spec.md) |
 | Files (Global)           | ✅      | ❌      | [files-global/](./features/files-global/spec.md)           |
 | Employee Profile (Own)   | ✅      | ❌      | [employee-profile/](./features/employee-profile/spec.md)   |
+| Admin: Submission Cats.  | 🚧      | ❌      | [admin-submission-categories/](./features/admin-submission-categories/spec.md) |
 
 ### Public (P2)
 
