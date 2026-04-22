@@ -21,9 +21,20 @@
 
 ## Flutter
 
-- **Status:** ⏳ Not started
-- **Path:** `lib/bootstrap/` + `lib/features/push/` _(in tagea-flutter repo)_
-- **Integration tests:** `integration_test/push/...`
+- **Status:** 🟡 Push transport done — bootstrap chain and cold-start deeplink still to do
+- **Push stack:** `apps/tagea_frontend/lib/push/`
+  - `firebase_bootstrap.dart` — `Firebase.initializeApp` + background handler wiring
+  - `fcm_service.dart` — `FcmService` abstraction over `FirebaseMessaging`
+  - `push_cubit.dart` — subscribe / revalidate / unsubscribe state machine
+  - `push_gateway_client.dart` — REST client for `/api/fcm/subscriptions`
+  - `matrix_pusher_service.dart` — homeserver pusher registration (sygnal)
+  - `deeplink_router.dart` — safe route resolution from notification data
+  - `permission_prompt.dart` — one-time bottom-sheet asking for OS permission
+  - `notification_channels.dart` — Android channel constants + setup
+- **Lifecycle wiring:** `apps/tagea_frontend/lib/app.dart` (`_PushLifecycleHost`) — `init()` on auth, `revalidate()` on resume, `unsubscribe()` via `AuthCubit.onBeforeLogout`
+- **Config:** `apps/tagea_frontend/lib/config.dart` — `pushGatewayBaseUrl`, `pushBrandId`, per-platform pusher app IDs
+- **Unit tests:** `apps/tagea_frontend/test/push/` (cubit, gateway client, deeplink router, matrix pusher)
+- **Integration tests:** ⏳ not yet added (`integration_test/push/...`)
 
 ## Known Divergences
 
@@ -39,6 +50,7 @@ Bootstrap and push are the bundle with the **most** platform-specific difference
 
 ## Port Log
 
-| Date       | Who      | What                                                                                                          |
-| ---------- | -------- | ------------------------------------------------------------------------------------------------------------- |
-| 2026-04-21 | ltoenjes | Spec drafted — bootstrap chain, push subscribe flow, cold-start deeplink, foreground revalidation documented. |
+| Date       | Who      | What                                                                                                                                                                             |
+| ---------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-04-21 | ltoenjes | Spec drafted — bootstrap chain, push subscribe flow, cold-start deeplink, foreground revalidation documented.                                                                    |
+| 2026-04-22 | ltoenjes | Flutter push transport completed — FCM subscribe/revalidate/unsubscribe, gateway handshake, Matrix pusher registration, deeplink routing, permission prompt and lifecycle wired. |
