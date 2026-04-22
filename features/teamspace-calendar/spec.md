@@ -2,7 +2,7 @@
 
 > **Status:** 🚧 Spec drafted — awaiting review
 > **Owner:** ltoenjes
-> **Last updated:** 2026-04-22
+> **Last updated:** 2026-04-22 (institution_id / teamspace separation)
 
 ## Vision (Elevator Pitch)
 
@@ -32,15 +32,19 @@ Personal calendar for staff appointments — Outlook-style. Appointments are cro
 
 ### Visibility rule (backend-enforced)
 
-- [ ] **Given** an appointment exists, **When** the calendar endpoint filters by the requesting employee, **Then** the appointment is visible **only** if that employee has an `AppointmentParticipant` row (any role: `organizer`, `required`, `invited`, etc.).
+Teamspace appointments are persisted with `institution_id IS NULL` and `teamspace_id IS NULL` — the teamspace dropdown is a transient pre-fill helper that leaves no trace on the persisted row (see "Creation dialog behavior" below). The cross-cutting nature is therefore expressed entirely through `AppointmentParticipant` rows; visibility follows participants, not institution or teamspace columns. The institution-scoped counterpart (`institution_id` set) is described in [calendar spec — Visibility rule](../calendar/spec.md).
+
+- [ ] **Given** an appointment exists, **When** the calendar endpoint filters by the requesting employee (`employee_id` query param set), **Then** the appointment is visible **only** if that employee has an `AppointmentParticipant` row (any role: `organizer`, `required`, `invited`, etc.).
 - [ ] **Given** an employee is a member of a teamspace, **When** the backend decides visibility, **Then** teamspace membership alone does **not** grant visibility — a participant entry is required.
 - [ ] **Given** an administrator or tenant admin has no participant entry on an appointment, **When** they load the calendar, **Then** they do **not** see that appointment (no special admin exemption in the calendar endpoint).
+- [ ] **Given** the requesting employee is a participant on an appointment with `institution_id` set (i.e. an institution appointment, not a teamspace one), **When** the teamspace calendar loads, **Then** that appointment is also visible here — the participant filter combined with `institution_id = current OR institution_id IS NULL` includes both kinds of "appointments I'm on".
 
 ### Creation dialog behavior (`AppointmentDialogV2Component` in teamspace mode)
 
 - [ ] **Given** the user opens the dialog in teamspace mode, **When** they pick a teamspace from the dropdown, **Then** the active members of that teamspace are appended to the participants list (existing selections are kept; duplicates are deduplicated).
 - [ ] **Given** the user picks a second (different) teamspace, **When** the change fires, **Then** members of the second teamspace are appended to the participants list without removing members from the first — the dropdown acts as a cumulative pre-fill helper.
 - [ ] **Given** the user saves a new appointment, **When** the payload is built, **Then** `teamspace_id` is **not** set on the appointment. The teamspace selection is a transient pre-fill helper and leaves no trace on the persisted appointment. (Exception: bookings, which follow a different creation flow and keep `teamspace_id` via `booking_category_id` semantics.)
+- [ ] **Given** the dialog renders the staff participant list and a participant has `role === 'organizer'`, **When** their status badge is rendered, **Then** the label reads "Organisator" (not "Eingeladen") regardless of the underlying `response_status`. The organizer does not RSVP to themselves; the dialog must reflect that distinction.
 
 ### Recurring series
 
