@@ -68,7 +68,7 @@ The `AppointmentDetailComponent` route-driven modes read `route.data.mode` (`'st
 
 ### RSVP (Staff Invited)
 
-> RSVP (Accept / Decline) is surfaced on the **appointment detail page** (`TermineDetailComponent` at `/teamspace/kalender/:id`), **not** in the notification center. The notification center is strictly informational: clicking a notification marks it read and navigates to the detail page. RSVP persists by `PATCH /appointment-participants/:id` with `{ response_status }` ('confirmed' | 'no_show_with_notice' | 'no_show_short_notice').
+> RSVP (Accept / Decline) is surfaced on the **appointment detail page** (`TermineDetailComponent` at `/teamspace/kalender/:id`), **not** in the notification center. The notification center is strictly informational: clicking a notification marks it read and navigates to the detail page. RSVP persists by `PATCH /employees/me/appointment-participants/:id` with `{ response_status }` ('confirmed' | 'no_show_with_notice' | 'no_show_short_notice'). The endpoint is institution-independent: the backend validates that the participant row belongs to the authenticated employee, so the RSVP works for employees without any institution assignment (e.g. staff invited only via teamspace membership).
 
 - [ ] **Given** the user is listed as a staff participant on a teamspace appointment, **When** the detail renders, **Then** their own participant entry is resolved via `participants.find(p => p.participant_employee_id === me && p.participant_type === 'staff')`.
 - [ ] **Given** the resolved participant has `role !== 'organizer'` and the appointment is in the future, **When** the detail renders, **Then** Accept and Decline buttons are visible with the current `response_status` shown alongside.
@@ -119,8 +119,10 @@ TermineDetailComponent renders with Accept / Decline buttons
 user presses Accept / Decline
             │
             ▼
-PATCH /appointment-participants/:participantId
+PATCH /employees/me/appointment-participants/:participantId
 { response_status: 'confirmed' | 'no_show_with_notice' | 'no_show_short_notice' }
+(institution-independent — backend validates the participant row
+ belongs to the authenticated employee)
             │
             ▼
 response_status re-rendered read-only; notification center is informational only
@@ -178,7 +180,7 @@ Owned by component templates + child view components. Full list should be compil
 - **Client view:** `AppointmentDetailClientViewComponent`
 - **Services:**
   - `APPOINTMENT_DETAILS_SERVICE` interface — injected `AppointmentsService` or `ClientAppointmentsService`
-  - `AppointmentParticipantsService` — participant CRUD (`manageAppointmentParticipants` during staff save; `updateParticipant` is what RSVP ends up patching)
+  - `AppointmentParticipantsService` — participant CRUD. `manageAppointmentParticipants` runs during staff save (institution-scoped). RSVP uses `selfRsvp(participantId, { response_status })` which hits the institution-independent `PATCH /employees/me/appointment-participants/:id`.
   - `AppointmentTimeService`, `AppointmentFormService`, `CustomFieldsService`, `FinancialSupportService`
   - `VideoSessionService` — `startSession(appointmentId)` opens the pre-join dialog and shows the floating video widget
 - **Related commits of interest:**

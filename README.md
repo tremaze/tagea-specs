@@ -119,10 +119,11 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 
 | Feature            | Angular | Flutter | Spec                                                         |
 | ------------------ | ------- | ------- | ------------------------------------------------------------ |
-| Appointment Detail | ✅      | ⏳      | [appointment-detail/](./features/appointment-detail/spec.md) |
-| News Detail        | ✅      | ⏳      | [news-detail/](./features/news-detail/spec.md)               |
-| Knowledge Base     | ✅      | ❌      | [knowledge-base/](./features/knowledge-base/spec.md)         |
-| Redaktion          | ✅      | ❌      | [redaktion/](./features/redaktion/spec.md)                   |
+| Appointment Detail    | ✅      | ⏳      | [appointment-detail/](./features/appointment-detail/spec.md)       |
+| Employee Availability | 🚧      | ⏳      | [employee-availability/](./features/employee-availability/spec.md) |
+| News Detail           | ✅      | ⏳      | [news-detail/](./features/news-detail/spec.md)                     |
+| Knowledge Base        | ✅      | ❌      | [knowledge-base/](./features/knowledge-base/spec.md)               |
+| Redaktion             | ✅      | ❌      | [redaktion/](./features/redaktion/spec.md)                         |
 
 ### App Shell
 

@@ -2,7 +2,7 @@
 
 ## Angular
 
-- **Status:** ✅ Implemented
+- **Status:** 🚧 Institution-independence work in progress (new `employees/me/…` endpoints + frontend switch). Previous institution-scoped wiring still functions for employees with ≥1 institution assignment.
 - **Path:** [`apps/tagea-frontend/src/app/pages/teamspace/termine-page.component.ts`](../../../apps/tagea-frontend/src/app/pages/teamspace/termine-page.component.ts)
 - **New booking:** [`termine-neu.component.ts`](../../../apps/tagea-frontend/src/app/pages/teamspace/termine-neu.component.ts)
 - **Detail:** [`termine-detail.component.ts`](../../../apps/tagea-frontend/src/app/pages/teamspace/termine-detail.component.ts)
@@ -39,3 +39,4 @@
 | ---------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-04-20 | ltoenjes | Spec created                                                                                                                                                                              |
 | 2026-04-22 | sb       | Spec updated: participant-based visibility (teamspace membership no longer grants visibility); dialog-opener limited to organizers; notification RSVP removed; staff invitation email added |
+| 2026-04-22 | sb       | Spec updated: institution-independence. Three new participant-scoped endpoints under `employees/me/…` (calendar, self-RSVP, availability check). Template dropdown removed from teamspace mode. New sibling feature [employee-availability](../employee-availability/spec.md). |
