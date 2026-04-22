@@ -35,6 +35,7 @@
 
 ## Port Log
 
-| Date       | Who      | What         |
-| ---------- | -------- | ------------ |
-| 2026-04-20 | ltoenjes | Spec created |
+| Date       | Who      | What                                                                                                                                                                                      |
+| ---------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-04-20 | ltoenjes | Spec created                                                                                                                                                                              |
+| 2026-04-22 | sb       | Spec updated: participant-based visibility (teamspace membership no longer grants visibility); dialog-opener limited to organizers; notification RSVP removed; staff invitation email added |
