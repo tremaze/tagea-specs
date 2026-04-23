@@ -50,7 +50,7 @@ Staff-facing hub for creating and tracking submissions (e.g. incident reports, e
 ## Non-Goals
 
 - **Submission-categories configuration** — handled under `/teamspace/submissions/konfiguration` (teamspace-admin surface, marked ❌ for Flutter).
-- **Global admin management** — handled under `/teamspace/submissions/verwaltung` (admin-only, ❌ for Flutter).
+- **Global admin management** — handled under `/administration/daten/einreichungs-kategorien` (admin-only, ❌ for Flutter). See [`admin-submission-categories`](../admin-submission-categories/spec.md).
 - **Bulk actions** — not implemented.
 
 ## Edge Cases

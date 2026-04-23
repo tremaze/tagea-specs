@@ -84,6 +84,7 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 | Teamspace LMS         | ✅      | ⏳      | [teamspace-lms/](./features/teamspace-lms/spec.md)                 |
 | Teamspace Events      | ✅      | ⏳      | [teamspace-events/](./features/teamspace-events/spec.md)           |
 | Teamspace Calendar    | ✅      | ⏳      | [teamspace-calendar/](./features/teamspace-calendar/spec.md)       |
+| Teamspace Appointment RSVP Notifications | ⏳      | ⏳      | [teamspace-appointment-rsvp-notifications/](./features/teamspace-appointment-rsvp-notifications/spec.md) |
 | Gehaltsnachweise      | ✅      | ⏳      | [gehaltsnachweise/](./features/gehaltsnachweise/spec.md)           |
 
 ### Institution Staff (P2 — documentation only, Flutter non-goal)
@@ -105,6 +106,7 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 | Files (Institution)      | ✅      | ❌      | [files-institution/](./features/files-institution/spec.md) |
 | Files (Global)           | ✅      | ❌      | [files-global/](./features/files-global/spec.md)           |
 | Employee Profile (Own)   | ✅      | ❌      | [employee-profile/](./features/employee-profile/spec.md)   |
+| Admin: Submission Cats.  | 🚧      | ❌      | [admin-submission-categories/](./features/admin-submission-categories/spec.md) |
 
 ### Public (P2)
 
@@ -118,10 +120,11 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 
 | Feature            | Angular | Flutter | Spec                                                         |
 | ------------------ | ------- | ------- | ------------------------------------------------------------ |
-| Appointment Detail | ✅      | ⏳      | [appointment-detail/](./features/appointment-detail/spec.md) |
-| News Detail        | ✅      | ⏳      | [news-detail/](./features/news-detail/spec.md)               |
-| Knowledge Base     | ✅      | ❌      | [knowledge-base/](./features/knowledge-base/spec.md)         |
-| Redaktion          | ✅      | ❌      | [redaktion/](./features/redaktion/spec.md)                   |
+| Appointment Detail    | ✅      | ⏳      | [appointment-detail/](./features/appointment-detail/spec.md)       |
+| Employee Availability | 🚧      | ⏳      | [employee-availability/](./features/employee-availability/spec.md) |
+| News Detail           | ✅      | ⏳      | [news-detail/](./features/news-detail/spec.md)                     |
+| Knowledge Base        | ✅      | ❌      | [knowledge-base/](./features/knowledge-base/spec.md)               |
+| Redaktion             | ✅      | ❌      | [redaktion/](./features/redaktion/spec.md)                         |
 
 ### App Shell
 

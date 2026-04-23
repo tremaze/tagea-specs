@@ -4,22 +4,29 @@
 
 | Service               | Methods relevant here                                              | Purpose                                    |
 | --------------------- | ------------------------------------------------------------------ | ------------------------------------------ |
-| `AppointmentsService` | `getCalendarEvents(start, end, employeeId?, includeMyTeamspaces?)` | Range-scoped appointments for calendar     |
-| `AppointmentsService` | `getAppointment(id)`                                               | Full appointment for dialog edit mode      |
+| `AppointmentsService` | `getCalendarEvents(start, end)` | Range-scoped appointments for calendar. Hits `GET /employees/me/appointments/calendar`. No `employeeId` param — the endpoint is self-scoped. |
+| `AppointmentsService` | `getAppointment(id)`                                               | Full appointment for dialog edit mode. Already has an institution-less fallback to `GET /appointments/:id`. |
 | `AppointmentsService` | `getVirtualOccurrence(anchorId, occurrenceDate)`                   | Materialize virtual series occurrences     |
+| `AppointmentParticipantsService` | `selfRsvp(participantId, { response_status })` | Self-RSVP for staff invitees. Hits `PATCH /employees/me/appointment-participants/:id`. |
+| `WorkingHoursService` | `checkEmployeeAvailability(employeeId, start, end)` | Availability check for dialog conflict warnings. Hits `GET /employees/me/availability/check`. |
 | `TeamspaceService`    | `hasAdminRole()`                                                   | Gate for availability-config FAB           |
-| `UnifiedAuthService`  | `employee()` signal                                                | The "me" scope for `myAppointmentsOnly`    |
-| `AuthorizationStore`  | `accessibleInstitutionIds()`                                       | Bootstrapping institution context on entry |
+| `UnifiedAuthService`  | `employee()` signal                                                | The "me" scope used in UI state (not sent to the backend — server resolves the caller). |
 
 Exact method signatures live in the respective service files.
 
-## Backend endpoint
+## Backend endpoints
 
-```
-GET /appointments/calendar?start=<iso>&end=<iso>&employee_id=<uuid>&include_my_teamspaces=true
-```
+All three read/write paths below are **institution-independent** — the teamspace calendar surface must not depend on an `institution_id` in the URL. Visibility is participant-based; mutation rights for institution-scoped appointments remain gated by the institution mutation endpoints (which are **not** called from the teamspace calendar).
 
-Controller: `apps/tagea-backend/src/appointments/controllers/appointments.controller.ts` (`@Get('calendar')`).
+| Method + Path | Purpose | Controller |
+| ------------- | ------- | ---------- |
+| `GET /employees/me/appointments/calendar?start=<iso>&end=<iso>` | Range-scoped calendar events for the authenticated employee. Participant-based filter. Includes teamspace appointments (`institution_id IS NULL`) and institution appointments where the employee is participant. | `employee-appointments.controller.ts` |
+| `PATCH /employees/me/appointment-participants/:id` | Self-RSVP: updates `response_status` on the caller's own participant row. Institution-independent — backend validates that the participant row belongs to the authenticated employee. | `employee-appointments.controller.ts` (or dedicated `employee-participants.controller.ts`) |
+| `GET /employees/me/availability/check?employeeId=<uuid>&start=<iso>&end=<iso>` | Per-employee availability check used by the appointment dialog to warn about conflicts. Documented in [employee-availability spec](../employee-availability/spec.md). | `working-hours-self-service.controller.ts` |
+
+**Visibility rule (authoritative):** an appointment is returned by `GET /employees/me/appointments/calendar` only if the requesting employee has an `AppointmentParticipant` row on it. `institution_id` is not a read-time gate. Teamspace membership alone does not grant visibility — a participant entry is required.
+
+**Deprecated for teamspace calendar:** the legacy `GET /institutions/:institutionId/appointments/calendar?include_my_teamspaces=true` is no longer called from `/teamspace/kalender`. It stays in place for the institution calendar (`/calendar-page` — see [calendar contracts](../calendar/contracts.md)). The `include_my_teamspaces` query param is dropped from the new path — participant-based visibility makes it redundant.
 
 ## FullCalendar Options
 
@@ -79,12 +86,14 @@ Caller treats `{ scope: 'cancel' }` (and an `undefined` afterClosed payload) as 
 
 ## Dialog vs. Route navigation
 
-- **Desktop click on event** → `AppointmentDialogV2Component` (inline dialog, keeps calendar context) via `openAppointmentDialog(id)`.
-- **Mobile click on event** → `navigateToTermin(payload)` — routes differ by payload:
-  - `payload.isEvent === true` → `/teamspace/events/:id`
-  - virtual series occurrence → opens `SeriesActionDialogComponent` first, then edits
-  - otherwise → opens `AppointmentDialogV2Component`
-- **Invited staff (non-organizer) on a teamspace appointment** → `/teamspace/kalender/:id` (full detail page with RSVP).
-- **Booker of a `booking_category_id` appointment** → `/teamspace/buchung/:id` (read-only booker view).
+The click-handler on a calendar event resolves the target in this order:
+
+1. **`booking_category_id` set and user is not a provider** → `/teamspace/buchung/:id` (booker read-only view).
+2. **User is the organizer** (has an `AppointmentParticipant` row with `role === 'organizer'` for this appointment) → `AppointmentDialogV2Component` opens in edit mode.
+3. **Otherwise** (any other participant, or not a participant — which in practice does not occur, since non-participants cannot see the appointment) → `/teamspace/kalender/:id` (detail page with RSVP affordances).
+
+On **mobile**, step 2 is also routed to `/teamspace/kalender/:id` instead of opening a dialog (organizers get the read-only detail; editing happens on desktop).
+
+Virtual series occurrences intercept step 2: `SeriesActionDialogComponent` opens first to resolve the scope (single / this-and-following / series), then the resulting flow continues as above.
 
 > **Flutter port note:** mirror the responsive split — use `showDialog` on tablet/desktop and push a full `MaterialPageRoute` on mobile. The shared appointment-detail widget (see [appointment-detail](../appointment-detail/spec.md)) renders in both surfaces.
