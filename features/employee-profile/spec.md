@@ -27,6 +27,12 @@ Self-service profile page at `/employee-profile` for staff to manage their own p
 - [ ] **Given** the user fills the password form, **When** the Keycloak policy from `employeesService.getPasswordPolicy()` validates, **Then** `employeesService.changePassword()` is called.
 - [ ] **Given** the user clicks delete account, **When** they confirm in `SimpleConfirmationDialogComponent`, **Then** `employeesService.deleteOwnAccount()` runs and the user is logged out.
 
+### Source-based field locking
+
+- [ ] **Given** the loaded employee has `source === 'vivendi-sync'`, **Then** stammdaten fields on the personal-data tab (`first_name`, `last_name`, `email`, `phone_mobile`, `phone_landline`, `date_of_birth`, `gender`) render as **disabled** with the Vivendi-managed hint (i18n key `employeeDialog.vivendiManagedHint`) — same convention as `EmployeeDialogComponent`.
+- [ ] **Given** the employee has `source === 'manual'` (or undefined), **Then** all stammdaten fields remain editable; `email` stays read-only because the address is owned by Keycloak, not the source-lock.
+- [ ] **Given** the locks apply, **Then** the visibility toggles (`email_visible`, `phone_mobile_visible`, `phone_landline_visible`), profile picture upload, notification settings, personal preferences, and password change remain editable — they are personal preferences, not stammdaten.
+
 ## UI States
 
 | State         | When?                                | Rendering                                                                            |
