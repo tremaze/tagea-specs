@@ -79,6 +79,42 @@ push notification tap ──▶ /chat/room/:roomId
 
 - Owned by the Flutter port of `@tagea/chat`. Typically: cached messages show, composer disabled offline.
 
+## Message Drafts (Flutter-only)
+
+> **Flutter port note:** Drafts are a Flutter-only enhancement — no Angular equivalent exists.
+
+The composer persists unsent work per room so that closing the room, backgrounding the app, or force-quitting does not lose context.
+
+### Behavior
+
+- **What is persisted:** composer text, reply-to target event ID, edit-target event ID. Works the same on iOS, Android, and Web (Hive-on-IndexedDB for web).
+- **What is NOT persisted (Phase 1):** staged file attachments. The current file picker loads files as bytes in memory and does not expose a stable on-disk path, so attachments are lost on room close. Persisting attachments is tracked as a follow-up.
+- **When saved:** 500 ms after the last composer change (debounced), and immediately on `AppLifecycleState.paused` and when navigating away from the room.
+- **When deleted:** when the composer becomes empty (no text, no reply, no edit), and after a successful send.
+- **When restored:** on `loadRoom(roomId)` the composer is hydrated from the saved draft, if any.
+- **Stale reply/edit targets:** if the referenced event is no longer retrievable (redacted, paginated out, room cleared), the reply/edit state is cleared on restore but other fields survive.
+
+### Per-User Scoping
+
+Drafts are stored in a Hive box keyed by the current Matrix user ID. On login, the repo asserts ownership: if a different user owns the existing box, it is wiped before use. On logout, the draft store is cleared. This prevents any cross-account leakage on shared devices.
+
+### Room List Preview
+
+When a room has a non-empty draft, the room-list tile subtitle renders `<localized "Draft:"> <first line of draft text>` using the primary accent color, overriding the attachment preview / last-message preview. If the draft text is empty but files / reply / edit state exist, the tile falls back to showing the last message.
+
+### Acceptance Criteria
+
+- [ ] **Given** I type text in the composer and leave the room, **When** I re-enter the room, **Then** my text is restored into the composer.
+- [ ] **Given** I have unsent text and backgrounded the app, **When** I kill and relaunch the app, **Then** my text is restored into the composer on re-entry.
+- [ ] **Given** I have a draft and send the message, **When** the send succeeds, **Then** the draft is cleared.
+- [ ] **Given** I log out as user A and a new user B logs in, **When** user B opens any room, **Then** no drafts from user A are visible.
+- [ ] **Given** a room has a non-empty draft, **When** I view the room list, **Then** the subtitle shows `Draft: <text>` / `Entwurf: <text>` in accent color, overriding any attachment / last-message preview.
+
+### Edge Cases
+
+- **Multiple devices (same user):** drafts are local to the device; no Matrix-sync. A draft written on device A is not visible on device B.
+- **Encryption:** drafts live on-device only; no network transfer, so Matrix encryption does not apply. The Hive box is not separately encrypted — drafts have the same protection as any other app-local data.
+
 ## References
 
 - **Route definition:** `apps/tagea-frontend/src/app/app.routes.ts` (`path: 'chat/room/:roomId'`, children: `CHAT_ROOM_ROUTE`)
