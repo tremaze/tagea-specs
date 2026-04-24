@@ -12,6 +12,7 @@ Fullscreen preview of a chat invitation — shown when a user is invited to a Ma
 
 - As an **invited user** I want to see a preview of the room before joining, so that I can decide whether to accept.
 - As a **user tapping a push notification** I want to land directly on the invite preview, so that I don't need extra navigation.
+- _(Flutter-only)_ As a **user browsing my chat list** I want to see pending invites at the top of the room list with inline accept/decline controls, so that I can act on them without opening a detail page.
 
 ## Acceptance Criteria
 
@@ -19,6 +20,14 @@ Fullscreen preview of a chat invitation — shown when a user is invited to a Ma
 - [ ] **Given** `InvitePreviewComponent` renders, **When** the invitation is resolved, **Then** the room avatar, room name, direct-vs-group info line (with member count for groups), a static description, and accept/decline buttons are shown.
 - [ ] **Given** the user accepts, **When** `ConversationsService.acceptInvite(roomId)` resolves, **Then** the active room is set via `ActiveConversationService.selectRoom(roomId)` and the router navigates to `['room', roomId]` relative to the parent route.
 - [ ] **Given** the user declines, **When** `ConversationsService.declineInvite(roomId)` resolves, **Then** the active invite highlight is cleared via `ActiveConversationService.clearInvite()` and the router navigates to `[]` relative to the parent route.
+
+### Flutter-only Acceptance Criteria (Room List Integration)
+
+- [ ] **Given** the current user has rooms with `Membership.invite`, **When** the room list renders, **Then** those invites appear as a distinct group above all joined rooms, sorted by invite timestamp descending.
+- [ ] **Given** an invite tile in the room list, **When** the user taps the accept icon, **Then** `room.join()` is called and the router navigates to `/chat/:roomId` on success.
+- [ ] **Given** an invite tile in the room list, **When** the user taps the decline icon, **Then** `room.leave()` followed by `room.forget()` is called and the tile disappears from the list on success.
+- [ ] **Given** an invite tile, **When** the user taps the body (not the action icons), **Then** the router navigates to `/chat/:roomId/invite` where the same accept/decline actions are available in a fullscreen preview.
+- [ ] **Given** the detail route `/chat/:roomId/invite`, **When** the user accepts, **Then** the router navigates to `/chat/:roomId`. **When** the user declines, **Then** the router navigates back to the room list (`/chat`).
 
 ## UI States
 
@@ -80,6 +89,7 @@ Push notification tap ──▶ /chat/invite/:roomId
 **Flutter-specific:**
 
 - Owned by the Flutter port of `@tagea/chat`. Accepting an invite requires online; show offline hint if attempted.
+- Decline on the Flutter client performs both `room.leave()` and `room.forget()` so the tile does not reappear on the next sync; Angular has no equivalent list integration.
 
 ## References
 
