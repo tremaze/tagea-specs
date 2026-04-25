@@ -150,6 +150,14 @@ These bundles describe behavior that spans every feature — routing, HTTP, auth
 | i18n & Theming     | ✅      | ⏳      | [i18n-and-theming/](./cross-cutting/i18n-and-theming/spec.md)     |
 | Bootstrap & Push   | ✅      | ⏳      | [bootstrap-and-push/](./cross-cutting/bootstrap-and-push/spec.md) |
 
+### Backend infrastructure
+
+Backend-only architecture specs. No Angular/Flutter parity — these describe server-side behavior that frontends do not implement.
+
+| Bundle                    | Status | Spec                                                                              |
+| ------------------------- | ------ | --------------------------------------------------------------------------------- |
+| Scheduler Queue Migration | ⏳     | [scheduler-queue-migration/](./cross-cutting/scheduler-queue-migration/spec.md)   |
+
 ## Scripts
 
 ### Creating a new spec
