@@ -107,6 +107,7 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 | Files (Global)           | ✅      | ❌      | [files-global/](./features/files-global/spec.md)           |
 | Employee Profile (Own)   | ✅      | ❌      | [employee-profile/](./features/employee-profile/spec.md)   |
 | Admin: Submission Cats.  | 🚧      | ❌      | [admin-submission-categories/](./features/admin-submission-categories/spec.md) |
+| Department Membership    | ✅      | ❌      | [department-membership/](./features/department-membership/spec.md)             |
 
 ### Public (P2)
 
