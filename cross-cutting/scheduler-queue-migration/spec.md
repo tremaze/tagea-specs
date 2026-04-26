@@ -111,9 +111,10 @@ Repeatable jobs (replacing per-minute / daily / monthly @Cron):
 |---|---|---|---|---|---|
 | 0 | Vorbereitung | Redis-Reconfig (AOF + noeviction + 3GB cap), Mess-Infra (`pg_stat_activity` snapshot CSV), QS-Tenant-Seed | 1 Tag | Niedrig | ✅ QS done 2026-04-25; Prod deferred |
 | 1 | BullMQ Foundation | `QueueModule`, `SchedulerDataSourceService`, bull-board mount, tenant-isolation test suite | 1–2 Tage | Niedrig | ✅ Done 2026-04-25 |
-| 2 | Pilot: Reminder | Migrate `appointment-reminder-scheduler` to a single BullMQ repeatable job + worker using `SchedulerDataSourceService.runInTenantContext()`. **Keep the existing query-based dispatch model** — see [`phase-2-plan.md`](./phase-2-plan.md). No migration script, no schema change. | ~8h Code + 4 Tage Soak | Niedrig | ⏳ Planned |
-| 3 | Article Publishing | Migrate `article-scheduler` to event-driven enqueue + worker, fan-out sub-jobs for embedding/notification | 1 Tag | Niedrig | ⏳ |
-| 4 | Daily Crons | Migrate `azure-ad-sync`, `vivendi-sync`, `time-account-scheduler`, `ai-chat-cleanup`, `registration-cleanup`, `outlook-sync` to repeatable jobs with per-tenant fan-out | 2 Tage | Niedrig | ⏳ |
+| 2 | Pilot: Reminder | Migrate `appointment-reminder-scheduler` to a single BullMQ repeatable job + worker using `SchedulerDataSourceService.runInTenantContext()`. **Keep the existing query-based dispatch model** — see [`phase-2-plan.md`](./phase-2-plan.md). | ~8h Code + Soak | Niedrig | ✅ Code done; soaking on QS since 2026-04-25 |
+| 3 | Article Publishing | Migrate `article-scheduler` to **event-driven enqueue** at status-transitions + BullMQ worker that runs the same atomic `UPDATE … RETURNING` plus fan-out sub-jobs for embedding (KNOWLEDGE) and notification (NEWS). See [`phase-3-plan.md`](./phase-3-plan.md). | ~8h Code + 3 Tage Soak | Niedrig | ✅ Code done 2026-04-26 |
+| 3b | Outlook-Sync | Migrate `outlook-sync-scheduler` (5-min cadence) to a BullMQ repeatable job + worker. Query-based, query-pattern analog to Phase 2; CoreService is already singleton-tenantId-explicit. | ~5h Code + 1 Tag Soak | Niedrig | ⏳ Deferred — separate later iteration |
+| 4 | Daily Crons | Migrate `azure-ad-sync`, `vivendi-sync`, `time-account-scheduler`, `ai-chat-cleanup`, `registration-cleanup` to repeatable jobs with per-tenant fan-out. (Outlook moved to Phase 3b above.) | 2 Tage | Niedrig | ⏳ Optional — daily/monthly schedulers are not steady-state PG-conn drivers; migration is a consistency play, not a perf play |
 | 5 | Cleanup | Delete old `*-scheduler.service.ts` classes, remove `@Cron` decorators, remove feature flags, update memory | 0,5 Tag | Niedrig | ⏳ |
 
 **Total: ~8 days net engineering time.**
@@ -236,24 +237,64 @@ Both paths coexist in code through Phase 5 cleanup. The `appointment_reminder_se
 
 For per-step details (file list, test plan, observability, rollback runbook, soak windows), see [`phase-2-plan.md`](./phase-2-plan.md).
 
-### Phase 3 — Article Publishing
+### Phase 3 — Article Publishing ✅ DONE 2026-04-26
 
-Pattern is the same as Reminder, but simpler:
+> **Detailed implementation plan, decisions, and cutover checklist:** [`phase-3-plan.md`](./phase-3-plan.md). Summary below records the design choice and rationale.
 
-- The existing `UPDATE articles SET status='published' ... RETURNING *` already deduplicates atomically (commit `7dd8fa82` documents this), so no additional idempotency table needed.
-- The async embedding/notification fire-and-forget code paths today (`generateEmbeddingsAsync`, `sendArticleNotificationAsync` in `article-scheduler.service.ts:207–298`) become **separate sub-jobs** in their own queues, enqueued by the publish worker on success. Each sub-job is independently retry-able.
+#### Design choice: Event-driven enqueue (different from Phase 2)
+
+Article migrates **event-driven** — unlike Reminders which kept query-based — because the three reasons that argued against event-driven for Reminders fall away here:
+
+| Aspect | Reminder (query-based) | Article (event-driven) |
+|---|---|---|
+| State machine | Complex: cancel, reschedule, employee opt-in toggle, suppression rules | Trivial: `scheduled` → `published`. Single-step. |
+| Idempotency | Per-channel UNIQUE index, multiple writes | Atomic `UPDATE … WHERE status='scheduled' … RETURNING *` does it in the SAME statement |
+| Stale-job risk | High: an obsolete job can't tell whether its target is still valid | Zero: UPDATE finds 0 rows when article is reverted/deleted — lazy-cancel by design |
+
+**Trigger points** (in `articles.service.ts`):
+- create() with `status='scheduled'` + `scheduled_publish_date` → `producer.enqueuePublish(...)`
+- update() into `scheduled` from another status → `producer.enqueuePublish(...)`
+- update() of `scheduled_publish_date` while still in `scheduled` → `producer.replaceJob(...)`
+- update() out of `scheduled` (back to draft / forced publish) → `producer.removeJob(...)`
+- remove() (soft-delete) of an article that was `scheduled` → `producer.removeJob(...)`
+
+JobId is `publish-${articleId}` — stable, BullMQ-deduped. The producer is a no-op when `FEATURE_ARTICLE_QUEUE` is unset, so callers in `articles.service.ts` invoke unconditionally.
+
+#### Worker (`ArticleProcessor`)
 
 ```
-publish-article job (success)
-    ├──→ generate-article-embeddings job
-    └──→ send-article-notification job
+publish-article (delayed by publish_date - now)
+    │
+    ▼
+schedulerDs.runInTenantContext(tenantId, manager =>
+  UPDATE articles SET status='published', published_at=NOW(), updated_at=NOW()
+   WHERE id=$1 AND status='scheduled' AND scheduled_publish_date<=NOW() AND is_deleted=false
+   RETURNING *
+)
+    │
+    │ rowCount > 0 (we actually published — fan-out)
+    ▼
+generate-article-embedding   (KNOWLEDGE-only, AI Chat enabled tenants)
+send-article-notification    (NEWS-only)
 ```
 
-Use BullMQ `FlowProducer` or chained `.add()` calls.
+Both sub-jobs run on QUEUE_ARTICLES with `concurrency: 5`. Sub-job retries are independent (BullMQ `attempts: 3, backoff: exponential`), so a Mistral hiccup doesn't roll back the publish.
+
+#### Cutover
+
+Behind env-var feature flag `FEATURE_ARTICLE_QUEUE` (default `false`):
+- `false` — old `@Cron` path runs (legacy minute-tick); producer is a no-op; processor is registered but receives no work.
+- `true` — `cronTick()` returns early; producer enqueues at status-transitions; processor picks up jobs.
+
+Both paths coexist in code through Phase 5 cleanup. The atomic UPDATE protects against double-publish during the brief dual-active window when one replica is flipped before the other.
 
 ### Phase 4 — Daily Crons (Repeatable Jobs)
 
-For schedulers that don't have a natural per-event trigger (`azure-ad-sync`, `vivendi-sync`, `time-account-scheduler`, `ai-chat-cleanup`, `registration-cleanup`, `outlook-sync`), use BullMQ repeatable jobs registered on module init:
+> **Note:** Originally included `outlook-sync`. After Phase 2/3 demonstrated that the steady-state PG-conn drop is what matters, daily/monthly schedulers (`azure-ad-sync`, `vivendi-sync`, `time-account-scheduler`, `ai-chat-cleanup`, `registration-cleanup`) are **not** steady-state drivers — they spike once per day or month. Migrating them is a consistency play, not a perf play. Phase 4 is therefore optional / lower-priority.
+>
+> `outlook-sync` (5-min cadence) IS a steady-state driver and was split out as Phase 3b — separate plan, separate cutover.
+
+For schedulers that don't have a natural per-event trigger, use BullMQ repeatable jobs registered on module init:
 
 ```typescript
 await this.syncQueue.add(
