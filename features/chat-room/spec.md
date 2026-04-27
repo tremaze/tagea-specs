@@ -115,6 +115,38 @@ When a room has a non-empty draft, the room-list tile subtitle renders `<localiz
 - **Multiple devices (same user):** drafts are local to the device; no Matrix-sync. A draft written on device A is not visible on device B.
 - **Encryption:** drafts live on-device only; no network transfer, so Matrix encryption does not apply. The Hive box is not separately encrypted — drafts have the same protection as any other app-local data.
 
+## Image Caching (Flutter-only)
+
+> **Flutter port note:** Flutter-only behavior. The Angular reference uses the browser's HTTP cache, which is sufficient for its model.
+
+Images displayed in the chat (thumbnails and full-size views) are cached on disk so reopening a room or restarting the app does not re-download or re-decrypt them.
+
+### Behavior
+
+- **Plain (non-E2EE) media:** persisted in the Matrix SDK's shared file cache (sqflite database under the application-support directory), keyed by the `mxc://` URI. Reused across launches on iOS, Android, and Web (IndexedDB-backed).
+- **Encrypted (E2EE) media:** *decrypted* bytes are persisted in an app-managed cache at `<applicationCacheDirectory>/encrypted_media/<sha256(mxcUrl, isThumbnail)>`. Stored as plaintext, mobile-only (iOS/Android). Web and desktop fall back to in-memory cache only. The OS-level cache directory (`Library/Caches/` on iOS, `getCacheDir()` on Android) is excluded from iCloud Backup and Android Auto Backup by platform convention, so decrypted bytes do not leak into cloud backups. The OS may evict entries under storage pressure — that is acceptable: an evicted entry is re-downloaded and re-decrypted on next access.
+- **In-memory layer:** every successful load also populates a process-lifetime `Map<String, Uint8List>` for instant reuse during scrolling. Cleared when the process exits.
+
+### Acceptance Criteria
+
+- [ ] **Given** a room with E2EE images, **When** the user scrolls through it, **Then** each image is downloaded and decrypted at most once per process — subsequent rebuilds use the in-memory cache.
+- [ ] **Given** a room with E2EE images that has been opened once on iOS or Android, **When** the user kills the app and reopens the room, **Then** the images are read from the on-disk encrypted-media cache without a network request and without re-decryption.
+- [ ] **Given** the platform is **Web** or a desktop OS, **When** the user reopens a room with E2EE images after a reload, **Then** the images are re-downloaded and re-decrypted (no disk cache for E2EE on these platforms).
+- [ ] **Given** any platform, **When** plain (non-E2EE) media is shown, **Then** it is served from the SDK file cache on subsequent loads.
+
+### Threat Model
+
+- The encrypted-media cache stores plaintext on iOS/Android, in the app-sandbox-protected platform cache directory. On unrooted/unjailbroken devices this is inaccessible to other apps. This matches the existing trust assumption made by the Matrix SDK, which already persists decrypted message bodies on-device.
+- **Cloud backups:** the cache directory is excluded from iCloud Backup (iOS) and Android Auto Backup by platform convention, so decrypted bytes never leave the device through cloud-backup channels even if the user has those features enabled.
+- No at-rest encryption is layered on top in V1. The cache can be wiped via `MxcImage.clearCache()` (which also wipes the on-disk cache) and is not yet wired into logout — see Edge Cases.
+- Web is intentionally excluded: IndexedDB is per-origin sandboxed but trivially inspectable via DevTools; the marginal sandbox guarantee is not worth the divergence from the in-memory-only model that has been in production.
+
+### Edge Cases
+
+- **Disk-write failure:** swallowed and logged; the next load falls through to network + decrypt as before.
+- **Logout:** cache is *not* cleared automatically in V1. Users wanting to wipe local data must reinstall or use OS-level "clear app data". Wiring `clearCache()` into the logout flow is tracked as a follow-up.
+- **Cache size:** unbounded by the app in V1 (matches the SDK's plain-media cache behavior). The OS may evict cache-directory entries under storage pressure on both iOS and Android — semantically aligned with the cache role (a miss falls through to re-download + re-decrypt). An app-level size cap / LRU eviction can be added later without API changes.
+
 ## References
 
 - **Route definition:** `apps/tagea-frontend/src/app/app.routes.ts` (`path: 'chat/room/:roomId'`, children: `CHAT_ROOM_ROUTE`)
