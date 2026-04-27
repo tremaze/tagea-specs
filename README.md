@@ -85,6 +85,7 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 | Teamspace LMS         | ✅      | ⏳      | [teamspace-lms/](./features/teamspace-lms/spec.md)                 |
 | Teamspace Events      | ✅      | ⏳      | [teamspace-events/](./features/teamspace-events/spec.md)           |
 | Teamspace Calendar    | ✅      | ⏳      | [teamspace-calendar/](./features/teamspace-calendar/spec.md)       |
+| Teamspace Appointment RSVP Notifications | ⏳      | ⏳      | [teamspace-appointment-rsvp-notifications/](./features/teamspace-appointment-rsvp-notifications/spec.md) |
 | Gehaltsnachweise      | ✅      | ⏳      | [gehaltsnachweise/](./features/gehaltsnachweise/spec.md)           |
 
 ### Institution Staff (P2 — documentation only, Flutter non-goal)
@@ -106,6 +107,8 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 | Files (Institution)      | ✅      | ❌      | [files-institution/](./features/files-institution/spec.md) |
 | Files (Global)           | ✅      | ❌      | [files-global/](./features/files-global/spec.md)           |
 | Employee Profile (Own)   | ✅      | ❌      | [employee-profile/](./features/employee-profile/spec.md)   |
+| Admin: Submission Cats.  | 🚧      | ❌      | [admin-submission-categories/](./features/admin-submission-categories/spec.md) |
+| Department Membership    | ✅      | ❌      | [department-membership/](./features/department-membership/spec.md)             |
 
 ### Public (P2)
 
@@ -119,10 +122,11 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 
 | Feature            | Angular | Flutter | Spec                                                         |
 | ------------------ | ------- | ------- | ------------------------------------------------------------ |
-| Appointment Detail | ✅      | ⏳      | [appointment-detail/](./features/appointment-detail/spec.md) |
-| News Detail        | ✅      | ⏳      | [news-detail/](./features/news-detail/spec.md)               |
-| Knowledge Base     | ✅      | ❌      | [knowledge-base/](./features/knowledge-base/spec.md)         |
-| Redaktion          | ✅      | ❌      | [redaktion/](./features/redaktion/spec.md)                   |
+| Appointment Detail    | ✅      | ⏳      | [appointment-detail/](./features/appointment-detail/spec.md)       |
+| Employee Availability | 🚧      | ⏳      | [employee-availability/](./features/employee-availability/spec.md) |
+| News Detail           | ✅      | ⏳      | [news-detail/](./features/news-detail/spec.md)                     |
+| Knowledge Base        | ✅      | ❌      | [knowledge-base/](./features/knowledge-base/spec.md)               |
+| Redaktion             | ✅      | ❌      | [redaktion/](./features/redaktion/spec.md)                         |
 
 ### App Shell
 
@@ -147,6 +151,14 @@ These bundles describe behavior that spans every feature — routing, HTTP, auth
 | Context Resolution | ✅      | ⏳      | [context-resolution/](./cross-cutting/context-resolution/spec.md) |
 | i18n & Theming     | ✅      | ⏳      | [i18n-and-theming/](./cross-cutting/i18n-and-theming/spec.md)     |
 | Bootstrap & Push   | ✅      | ⏳      | [bootstrap-and-push/](./cross-cutting/bootstrap-and-push/spec.md) |
+
+### Backend infrastructure
+
+Backend-only architecture specs. No Angular/Flutter parity — these describe server-side behavior that frontends do not implement.
+
+| Bundle                    | Status | Spec                                                                              |
+| ------------------------- | ------ | --------------------------------------------------------------------------------- |
+| Scheduler Queue Migration | ⏳     | [scheduler-queue-migration/](./cross-cutting/scheduler-queue-migration/spec.md)   |
 
 ## Scripts
 

@@ -1,5 +1,7 @@
 # Contracts: Institution Calendar
 
+> **Scope:** this contract covers the institution calendar at `/calendar-page`. The teamspace calendar at `/teamspace/kalender` uses participant-scoped counterparts under `employees/me/…` — see [teamspace-calendar/contracts.md](../teamspace-calendar/contracts.md). Availability queries shared by both surfaces are documented in [employee-availability/contracts.md](../employee-availability/contracts.md).
+
 ## Services
 
 | Service                                      | Role                                                                    |

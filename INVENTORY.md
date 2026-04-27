@@ -236,6 +236,18 @@ Institution-scoped config, gated by `permissionGuard: institutions.manage`.
 | Einrichtungsdaten         | `einstellungen-einrichtungsdaten`         | `.../einrichtungsdaten`      | `CurrentInstitutionAdminComponent`                                                                                     | ⏳    | ❌            |
 | Custom Fields Definitions | `einstellungen-custom-fields`             | `.../custom-fields/**`       | `FieldDefinitionsListComponent`, `FieldDefinitionFormComponent`, `FieldGroupsListComponent`, `FieldGroupFormComponent` | ⏳    | ❌            |
 
+### Administration — `/administration/*`
+
+Cross-institution admin shell under `AdministrationShellComponent`. Gated by `adminAccessGuard`. All non-goals for Flutter.
+
+| Feature               | Slug                                | Route                                        | Component                              | Spec?                                             | Port Priority |
+| --------------------- | ----------------------------------- | -------------------------------------------- | -------------------------------------- | ------------------------------------------------- | ------------- |
+| Admin Employees       | `administration-employees`          | `/administration/nutzer/mitarbeitende`       | `AdminEmployeesComponent`              | (covered by [employees](./features/employees/spec.md) — EmployeeDialog section) | ❌            |
+| Admin Clients         | `administration-clients`            | `/administration/nutzer/klienten`            | `AdminClientsComponent`                | ⏳                                                | ❌            |
+| Admin Institutions    | `administration-institutions`       | `/administration/organisation/einrichtungen` | `EinrichtungenListComponent`           | ⏳                                                | ❌            |
+| Admin Appointment Templates | `administration-appointment-templates` | `/administration/planung/terminvorlagen` | `AdminAppointmentTemplatesComponent`   | ⏳                                                | ❌            |
+| Admin Submission Categories | `administration-submission-categories` | `/administration/daten/einreichungs-kategorien` | `AdminSubmissionCategoriesComponent` | ⏳                                                | ❌            |
+
 ### Super-Admin — `/super-admin/*`
 
 All gated by `superAdminGuard`. Tenant-management surfaces — **all non-goals for Flutter.**

@@ -2,23 +2,24 @@
 
 > **Status:** 🚧 Spec drafted — awaiting review
 > **Owner:** ltoenjes
-> **Last updated:** 2026-04-20
+> **Last updated:** 2026-04-22
 
 ## Vision (Elevator Pitch)
 
-A single component that renders the detail view of an appointment for three user roles — staff, booker (teamspace participant), and client — with mode-specific affordances. Staff see full editing, client sees read-only + RSVP/cancellation, booker sees the teamspace-flavored view.
+A detail view of an appointment for several user roles — staff (full edit), booker (teamspace booking), client (read-only + cancel) and invited staff participant (read-only + RSVP) — with mode-specific affordances. RSVP (Accept/Decline for an invited staff participant) lives on the **detail page**, not in the notification center: notifications are strictly informational.
 
 ## Modes
 
-**The same route component is mounted three times** via dependency injection:
+**The same detail surface is reached from multiple routes**, each wired via dependency injection and route data:
 
-| Mode     | Route                                                | DI provider                                                                               |
-| -------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `staff`  | `/einrichtung/:institutionId/staff/appointments/:id` | `APPOINTMENT_DETAILS_SERVICE: AppointmentsService`                                        |
-| `booker` | `/teamspace/buchung/:id`                             | `APPOINTMENT_DETAILS_SERVICE: AppointmentsService` (data scoped by teamspace permissions) |
-| `client` | `/client-portal/termine/:id`                         | `APPOINTMENT_DETAILS_SERVICE: ClientAppointmentsService`                                  |
+| Mode                   | Route                                                | Component                                                                           | Notes                                                                                            |
+| ---------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `staff`                | `/einrichtung/:institutionId/staff/appointments/:id` | `AppointmentDetailComponent` → `AppointmentDetailStaffViewComponent`                | Full staff edit affordances. Uses `APPOINTMENT_DETAILS_SERVICE: AppointmentsService`.            |
+| `booker`               | `/teamspace/buchung/:id`                             | `AppointmentDetailComponent` → `AppointmentDetailStaffViewComponent` (booker flavor) | Teamspace booking detail for the booker role.                                                   |
+| `client`               | `/client-portal/termine/:id`                         | `AppointmentDetailComponent` → `AppointmentDetailClientViewComponent`               | Client self-serve view. Uses `APPOINTMENT_DETAILS_SERVICE: ClientAppointmentsService`.           |
+| `termine-detail` (staff invitee) | `/teamspace/kalender/:id`                            | `TermineDetailComponent` (uses `AppointmentDetailClientViewComponent` for layout)  | Read-only detail for staff invited to a teamspace appointment; adds Accept/Decline RSVP buttons. |
 
-The component reads `route.data.mode` (`'staff' | 'booker' | 'client'`) and branches rendering between `AppointmentDetailStaffViewComponent` and `AppointmentDetailClientViewComponent`.
+The `AppointmentDetailComponent` route-driven modes read `route.data.mode` (`'staff' | 'booker' | 'client'`) and branch rendering between `AppointmentDetailStaffViewComponent` and `AppointmentDetailClientViewComponent`. The `termine-detail` mode is a separate component (`TermineDetailComponent`) that reuses the client view's layout and layers in participant RSVP logic; it is not a route-data branch.
 
 ## User Stories
 
@@ -67,10 +68,15 @@ The component reads `route.data.mode` (`'staff' | 'booker' | 'client'`) and bran
 
 ### RSVP (Staff Invited)
 
-> **Current Angular implementation:** RSVP Accept / Decline is surfaced in the in-app notification center (`NotificationCenterComponent`), not on the appointment detail page. The detail page shows participant `response_status` read-only. RSVP persists by `PATCH /appointment-participants/:id` with `{ response_status }` ('confirmed' | 'no_show_with_notice').
+> RSVP (Accept / Decline) is surfaced on the **appointment detail page** (`TermineDetailComponent` at `/teamspace/kalender/:id`), **not** in the notification center. The notification center is strictly informational: clicking a notification marks it read and navigates to the detail page. RSVP persists by `PATCH /employees/me/appointment-participants/:id` with `{ response_status }` ('confirmed' | 'no_show_with_notice' | 'no_show_short_notice'). The endpoint is institution-independent: the backend validates that the participant row belongs to the authenticated employee, so the RSVP works for employees without any institution assignment (e.g. staff invited only via teamspace membership).
 
-- [ ] **Given** the user is listed as a staff participant, **When** the detail renders, **Then** each participant's current `response_status` ('pending' | 'accepted' | 'declined' | 'tentative' | 'confirmed') is visible.
-- [ ] **Given** the user received an `appointment_invitation` notification, **When** they click Accept / Decline in the notification center, **Then** the backend patches the participant record and the notification is dismissed.
+- [ ] **Given** the user is listed as a staff participant on a teamspace appointment, **When** the detail renders, **Then** their own participant entry is resolved via `participants.find(p => p.participant_employee_id === me && p.participant_type === 'staff')`.
+- [ ] **Given** the resolved participant has `role !== 'organizer'` and the appointment is in the future, **When** the detail renders, **Then** Accept and Decline buttons are visible with the current `response_status` shown alongside.
+- [ ] **Given** the user presses Accept, **When** the request fires, **Then** the backend patches `response_status` to `'confirmed'` and the UI refreshes the response state read-only.
+- [ ] **Given** the user presses Decline, **When** the request fires, **Then** the backend patches `response_status` to `'no_show_with_notice'` (or `'no_show_short_notice'` depending on the time until start) and the UI refreshes the response state read-only.
+- [ ] **Given** the appointment is in the past, **When** the detail renders, **Then** the Accept and Decline buttons are hidden (RSVP is no longer actionable).
+- [ ] **Given** the user is the organizer (own participant entry has `role === 'organizer'`), **When** the detail renders, **Then** no Accept/Decline buttons are shown — the organizer label is displayed instead.
+- [ ] **Given** the user receives an `appointment_invitation` notification, **When** they click the notification item, **Then** the notification is marked as read and the user is navigated to `/teamspace/kalender/:id` — there is no inline Accept/Decline inside the notification item itself.
 
 ## UI States
 
@@ -93,21 +99,33 @@ route.data.mode ──┬── 'staff' / 'booker'  ──▶ AppointmentDetailS
                   └── 'client'             ──▶ AppointmentDetailClientViewComponent
 ```
 
-### Staff participant RSVP (via notification center, not detail page)
+### Staff participant RSVP (via detail page)
 
 ```
-appointment_invitation notification
+appointment_invitation notification arrives
             │
             ▼
-user clicks Accept / Decline in NotificationCenterComponent
+user clicks the notification item
             │
             ▼
-PATCH /appointment-participants/:participantId
-{ response_status: 'confirmed' | 'no_show_with_notice' }
+notification marked as read; router navigates to /teamspace/kalender/:id
             │
             ▼
-notification dismissed; next time the detail loads, the updated
-response_status is reflected read-only in the participants list
+TermineDetailComponent renders with Accept / Decline buttons
+(own participant resolved; canConfirm / canDecline derived from
+ role ≠ 'organizer' and appointment not yet past)
+            │
+            ▼
+user presses Accept / Decline
+            │
+            ▼
+PATCH /employees/me/appointment-participants/:participantId
+{ response_status: 'confirmed' | 'no_show_with_notice' | 'no_show_short_notice' }
+(institution-independent — backend validates the participant row
+ belongs to the authenticated employee)
+            │
+            ▼
+response_status re-rendered read-only; notification center is informational only
 ```
 
 ## Non-Goals
@@ -135,8 +153,9 @@ All modes rely on backend row-level checks (client can only see own/managed-clie
 
 ## Notifications (Push / In-App)
 
-- `APPOINTMENT_INVITATION`, `APPOINTMENT_REMINDER`, cancellation notifications all deep-link here.
-- RSVP actions update invitation-notification dismissal state (see commit `ee93f8f49`).
+- `APPOINTMENT_INVITATION`, `APPOINTMENT_REMINDER`, cancellation notifications all deep-link to an appropriate detail route (for a staff participant: `/teamspace/kalender/:id`).
+- Notifications are strictly informational: there are no inline mutation affordances (Accept/Decline buttons) inside notification items. RSVP happens on the detail page.
+- A notification is marked as read when the user clicks it; dismissal happens automatically on read/navigation.
 - Cancellations trigger notifications to participants (covered by the reminder/dispatcher spec).
 
 ## i18n Keys
@@ -155,12 +174,13 @@ Owned by component templates + child view components. Full list should be compil
 
 ## References
 
-- **Angular implementation:** [`apps/tagea-frontend/src/app/pages/appointment-detail/appointment-detail.component.ts`](../../../apps/tagea-frontend/src/app/pages/appointment-detail/appointment-detail.component.ts)
+- **Angular implementation (staff / booker / client):** [`apps/tagea-frontend/src/app/pages/appointment-detail/appointment-detail.component.ts`](../../../apps/tagea-frontend/src/app/pages/appointment-detail/appointment-detail.component.ts)
+- **Termine-Detail (staff invitee on teamspace appointments):** [`apps/tagea-frontend/src/app/pages/teamspace/termine-detail.component.ts`](../../../apps/tagea-frontend/src/app/pages/teamspace/termine-detail.component.ts)
 - **Staff view:** `AppointmentDetailStaffViewComponent`
 - **Client view:** `AppointmentDetailClientViewComponent`
 - **Services:**
   - `APPOINTMENT_DETAILS_SERVICE` interface — injected `AppointmentsService` or `ClientAppointmentsService`
-  - `AppointmentParticipantsService` — participant CRUD (`manageAppointmentParticipants` during staff save; `updateParticipant` is what RSVP ends up patching)
+  - `AppointmentParticipantsService` — participant CRUD. `manageAppointmentParticipants` runs during staff save (institution-scoped). RSVP uses `selfRsvp(participantId, { response_status })` which hits the institution-independent `PATCH /employees/me/appointment-participants/:id`.
   - `AppointmentTimeService`, `AppointmentFormService`, `CustomFieldsService`, `FinancialSupportService`
   - `VideoSessionService` — `startSession(appointmentId)` opens the pre-join dialog and shows the floating video widget
 - **Related commits of interest:**
