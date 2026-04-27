@@ -13,13 +13,16 @@
 
 ## Flutter
 
-- **Status:** ⏳ Planned
-- **Path:** `lib/app/shell/` _(in tagea-flutter repo; suggested structure)_
-  - `public_shell.dart` — equivalent of `PublicMainComponent`
-  - `secure_shell.dart` — equivalent of `SecureShellComponent` (chat/push/presence orchestration)
-  - `secure_main_shell.dart` — equivalent of `SecureMainComponent` (nav chrome)
-  - `crypto_bootstrap_listener.dart` — equivalent of `CryptoBootstrapOrchestratorComponent`
-- **Integration tests:** `integration_test/shell/` — cover the three-tier nesting by verifying that `/awaiting-approval` and `/chat/room/:id` render without nav chrome while chat/push/presence still initialize.
+- **Status:** 🚧 In progress (v0.1-alpha 2-tier subset)
+- **Path:**
+  - `apps/tagea_frontend/lib/app.dart` — root `TageaApp` widget + provider tree
+  - `apps/tagea_frontend/lib/app/auth_bridges.dart` — auth-driven side-effect hosts (profile-cache owner, brand-theme bridge, push lifecycle)
+  - `apps/tagea_frontend/lib/app/router_host.dart` — owns the `GoRouter` lifecycle + `MaterialApp.router`
+  - `apps/tagea_frontend/lib/auth/login_page.dart` + `error_page.dart` — pre-shell screens
+  - `apps/tagea_frontend/lib/home/home_shell.dart` — secure-main equivalent (nav chrome)
+- **Integration tests:** `integration_test/shell/` — cover the three-tier nesting by verifying that `/awaiting-approval` and `/chat/room/:id` render without nav chrome while chat/push/presence still initialize. _(planned for v0.2)_
+- **v0.1 covers:** 2 of the 3 layouts — pre-shell (login / error) and secure-main (full nav chrome). Auth-driven hosts initialise chat profile cache + brand theme + push.
+- **v0.1 deliberately omits:** the secure-shell vs. secure-main separation (no fullscreen chat-room layout), awaiting-approval flow, public-shell distinction, crypto bootstrap dialog host (lives inside matrix_chat for now).
 
 ## Known Divergences
 
@@ -35,3 +38,4 @@
 | Date       | Who      | What                                                |
 | ---------- | -------- | --------------------------------------------------- |
 | 2026-04-21 | ltoenjes | Spec created — documents 3-tier shell architecture. |
+| 2026-04-27 | sven     | v0.1-alpha 2-tier subset shipped (pre-shell + secure-main). Awaiting-approval flow and fullscreen chat-room layout deferred to v0.2. Auth-driven hosts (`AuthBridges`) initialise chat profile cache + brand theme + push lifecycle. |

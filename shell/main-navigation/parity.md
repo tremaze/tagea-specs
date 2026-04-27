@@ -14,9 +14,11 @@
 
 ## Flutter
 
-- **Status:** ⏳
-- **Path:** `lib/features/shell/navigation/` _(proposed, in tagea-flutter repo)_
+- **Status:** 🚧 In progress (v0.1-alpha minimal)
+- **Path:** `apps/tagea_frontend/lib/home/` — `home_shell.dart` (adaptive bottom-nav vs. rail at 720 dp), `tagea_app_drawer.dart`, `tagea_destination.dart` (single-source-of-truth enum)
 - **Integration tests:** `integration_test/shell/navigation/` _(proposed)_
+- **v0.1 covers:** four destinations (home, calendar, chat, news), adaptive layout (bottom-nav < 720 dp / rail ≥ 720 dp), drawer for mobile, rail user menu for desktop.
+- **v0.1 deliberately omits:** the remaining 29 Angular nav items, badge counts, mode-aware filtering, permission/feature gates, route-prefix templating for `/einrichtung/:id/...`, detail-route bottom-nav hiding.
 
 ### Suggested Flutter structure
 
@@ -50,3 +52,4 @@ lib/features/shell/navigation/
 | Date       | Who      | What                                                                  |
 | ---------- | -------- | --------------------------------------------------------------------- |
 | 2026-04-21 | ltoenjes | Spec created — schema, full catalogue, 9-step filter pipeline, badges |
+| 2026-04-27 | sven     | v0.1-alpha minimal nav shipped (4 destinations, adaptive bottom-nav/rail at 720 dp, drawer + rail user menu). Filter pipeline, badges, mode-aware items, route prefixing all deferred. |
