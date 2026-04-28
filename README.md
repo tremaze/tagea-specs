@@ -67,13 +67,14 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 
 ### Chat & AI
 
-| Feature            | Angular | Flutter | Spec                                           |
-| ------------------ | ------- | ------- | ---------------------------------------------- |
-| Chat (staff)       | ✅      | ⏳      | [chat/](./features/chat/spec.md)               |
-| Chat Room          | ✅      | ⏳      | [chat-room/](./features/chat-room/spec.md)     |
-| Chat Invite        | ✅      | ⏳      | [chat-invite/](./features/chat-invite/spec.md) |
+| Feature            | Angular | Flutter | Spec                                                   |
+| ------------------ | ------- | ------- | ------------------------------------------------------ |
+| Chat (staff)       | ✅      | ⏳      | [chat/](./features/chat/spec.md)                       |
+| Chat Room          | ✅      | ⏳      | [chat-room/](./features/chat-room/spec.md)             |
+| Chat Invite        | ✅      | ⏳      | [chat-invite/](./features/chat-invite/spec.md)         |
 | Chat Attachment Source Menu | N/A | 🚧 | [chat-attachment-source-menu/](./features/chat-attachment-source-menu/spec.md) |
-| AI Chat (Tagea AI) | ✅      | ⏳      | [ai-chat/](./features/ai-chat/spec.md)         |
+| Chat E2EE Media    | 🚧      | ✅      | [chat-e2ee-media/](./features/chat-e2ee-media/spec.md) |
+| AI Chat (Tagea AI) | ✅      | ⏳      | [ai-chat/](./features/ai-chat/spec.md)                 |
 
 ### Teamspace
 
