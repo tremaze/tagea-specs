@@ -2,7 +2,7 @@
 
 > **Status:** 🚧 Spec drafted — awaiting review
 > **Owner:** ltoenjes
-> **Last updated:** 2026-04-20
+> **Last updated:** 2026-04-28
 
 ## Vision (Elevator Pitch)
 
@@ -146,6 +146,43 @@ Images displayed in the chat (thumbnails and full-size views) are cached on disk
 - **Disk-write failure:** swallowed and logged; the next load falls through to network + decrypt as before.
 - **Logout:** cache is *not* cleared automatically in V1. Users wanting to wipe local data must reinstall or use OS-level "clear app data". Wiring `clearCache()` into the logout flow is tracked as a follow-up.
 - **Cache size:** unbounded by the app in V1 (matches the SDK's plain-media cache behavior). The OS may evict cache-directory entries under storage pressure on both iOS and Android — semantically aligned with the cache role (a miss falls through to re-download + re-decrypt). An app-level size cap / LRU eviction can be added later without API changes.
+
+## Routing & Layout (Flutter-only)
+
+> **Flutter port note:** Flutter-specific routing behavior. The Angular reference already places `/chat/room/:roomId` outside `secure-main`; the Flutter port closes a parity gap by hoisting the room route above the home shell so the bottom navigation does not constrain it.
+
+### Routes
+
+- **Chat list:** `/chat` — lives inside the home shell's `StatefulShellBranch`, so the bottom-nav (compact) or nav-rail (wide) remains visible.
+- **Chat room:** `/chat/:roomId` — declared as a sibling of the home shell's `StatefulShellRoute` under the same outer `ShellRoute`. Activating this route **replaces** the home shell on the outer shell's navigator, so no bottom-nav and no rail are shown while a room is open.
+  - Sub-routes `details` and `invite` continue to live under `/chat/:roomId`.
+- **URL divergence from Angular:** the Flutter port uses `/chat/:roomId` (Angular uses `/chat/room/:roomId`). Push deep-links and existing in-app links target this Flutter path.
+
+### Adaptive Layout
+
+Single breakpoint at **720 dp** (Material 3 compact / medium boundary).
+
+- **Compact (`< 720 dp`):**
+  - `/chat` shows the room list as the body of a scaffold with a hamburger menu and the chat account menu.
+  - Tapping a room navigates to `/chat/:roomId` (root navigator). The home shell is hidden behind it; the room view occupies the full screen.
+  - Back from `/chat/:roomId` pops to `/chat`. If the user landed via a deep link with no history, back falls back to `context.go('/chat')`.
+- **Wide (`≥ 720 dp`):**
+  - `/chat` shows a master-detail layout: room list (320 dp) on the left, room detail on the right, separated by a vertical divider.
+  - Tapping a room **does not** change the URL — it calls `ChatCubit.loadRoom(roomId)` directly. The detail pane updates in place.
+  - Deep-linking directly to `/chat/:roomId` still renders the room fullscreen (same widget as compact). Back returns to `/chat`, where the master-detail view is shown again.
+
+### Acceptance Criteria
+
+- [ ] **Given** the user is on `/chat` on a compact viewport, **When** they tap a room, **Then** the URL becomes `/chat/:roomId` and no bottom-nav / rail is rendered.
+- [ ] **Given** the user is on `/chat` on a wide viewport, **When** they tap a room, **Then** the URL stays `/chat` and the right pane shows the selected room.
+- [ ] **Given** a cold launch with deep-link `/chat/:roomId` on either viewport, **When** the route activates, **Then** the room renders fullscreen with a back button that returns to `/chat`.
+- [ ] **Given** the user is in the fullscreen room on compact and presses back, **When** the route pops, **Then** they land on `/chat` with the chat tab selected in the bottom nav.
+
+### Implementation Notes
+
+- **Shared chat state:** `RoomListCubit`, `ChatCubit`, `TypingCubit`, and `CreateRoomCubit` are mounted **once** above both routes (in an outer `ShellRoute` wrapping the `StatefulShellRoute` and the top-level `/chat/:roomId` route). They subscribe to global Matrix sync streams and cannot be safely instantiated twice.
+- **Lazy initialisation:** all four cubits use `BlocProvider(lazy: true, ...)`. They are not instantiated until the user first navigates into chat (or arrives via a deep link). `RoomListCubit`'s `client.onSync.stream` subscription is paid lazily for that reason.
+- **Encryption-guard scope:** `MatrixEncryptionSetupGuard` wraps each chat shell individually (not the outer `ShellRoute`). Visiting `/home`, `/calendar`, or `/news` does not trigger crypto setup; only the chat surface does.
 
 ## References
 
