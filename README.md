@@ -153,6 +153,7 @@ These bundles describe behavior that spans every feature — routing, HTTP, auth
 | Context Resolution | ✅      | ⏳      | [context-resolution/](./cross-cutting/context-resolution/spec.md) |
 | i18n & Theming     | ✅      | ⏳      | [i18n-and-theming/](./cross-cutting/i18n-and-theming/spec.md)     |
 | Bootstrap & Push   | ✅      | ⏳      | [bootstrap-and-push/](./cross-cutting/bootstrap-and-push/spec.md) |
+| Offline Support    | N/A     | ⏳      | [offline-support/](./features/offline-support/spec.md)            |
 
 ### Backend infrastructure
 
