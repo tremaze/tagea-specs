@@ -2,7 +2,7 @@
 
 > **Status:** 🚧 Spec drafted — implementation in progress
 > **Owner:** ltoenjes
-> **Last updated:** 2026-04-27
+> **Last updated:** 2026-04-28
 
 > **Flutter port note:** This is a Flutter-only enhancement to the
 > chat composer. The Angular reference frontend has no equivalent —
@@ -54,6 +54,13 @@ content, not buried two levels deep behind the system file dialog.
   **When** the user picks Camera, **Then** the platform shows its
   permission prompt; on denial the composer returns to its prior
   state without a staged file (no crash).
+- [ ] **Given** the user picks a **video** from the gallery on any
+  supported platform (iOS, Android, Web), **When** the file is
+  staged, **Then** the staging tile shows a thumbnail extracted
+  from the video's first frame with a play-circle overlay — not a
+  generic file icon. If thumbnail extraction fails, the tile falls
+  back to the generic file icon (no crash) and the file can still
+  be sent.
 
 ## UI States
 
@@ -62,7 +69,9 @@ content, not buried two levels deep behind the system file dialog.
 | Sheet closed (idle)      | Initial composer state                                                | Paperclip icon next to the text field                                                                                    | Icon button has accessible label "Attach file"                   |
 | Sheet open               | After tap on paperclip (mobile only)                                  | Modal bottom sheet with drag handle and three list tiles: Camera, Gallery, Files (each with a leading icon)              | Each tile is focusable; tap target ≥ 48dp; semantic label is the option name |
 | Picker open              | After picking a source                                                 | OS-level picker (camera / photo picker / file picker)                                                                    | OS-owned                                                         |
-| Staged                   | After successful pick                                                  | Thumbnail preview chip in the composer's staging strip; remove (×) overlay                                               | Existing staging UI (no change)                                  |
+| Staged (image)           | After successful image pick                                            | Image bytes rendered as a thumbnail in the composer's staging strip; remove (×) overlay                                  | Existing staging UI (no change)                                  |
+| Staged (video)           | After successful video pick                                            | Extracted first-frame thumbnail with a play-circle overlay; remove (×) overlay. Falls back to generic file icon if extraction fails | Existing staging UI (no change)                                  |
+| Staged (other file)      | After successful file pick (PDF, etc.)                                 | Generic file icon + truncated filename; remove (×) overlay                                                                | Existing staging UI (no change)                                  |
 | Cancelled                | After user dismiss / picker cancel                                     | Composer unchanged                                                                                                       | —                                                                |
 | Web fallback             | Any tap on attach button on Web                                        | OS file picker only (no sheet)                                                                                           | —                                                                |
 
@@ -195,5 +204,11 @@ parameters and stays i18n-agnostic in `packages/ui`.
   `packages/ui/lib/src/media/tagea_file_picker.dart`.
 - **App-side wiring:**
   `apps/tagea_frontend/lib/home/tabs/chat_tab.dart` (line 64).
-- **Underlying plugin:**
-  [`image_picker`](https://pub.dev/packages/image_picker) on pub.dev.
+- **Underlying plugins:**
+  - [`image_picker`](https://pub.dev/packages/image_picker) — gallery / camera on iOS/Android.
+  - [`fc_native_video_thumbnail`](https://pub.dev/packages/fc_native_video_thumbnail) — first-frame extraction on iOS/Android (verified publisher `flutter-cavalry.com`).
+  - On Web, the first-frame extraction uses a `<video>` element seeked to `0.1s` and `<canvas>.toDataURL('image/jpeg')` — no plugin.
+- **Shared thumbnail helper:**
+  `packages/ui/lib/src/media/video_thumbnail.dart` (conditional
+  `_io` / `_web` implementations). Used by `TageaImagePicker` for
+  mobile picks and by the example app's web file picker.
