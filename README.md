@@ -74,6 +74,7 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 | Chat Invite        | ✅      | ⏳      | [chat-invite/](./features/chat-invite/spec.md)         |
 | Chat Attachment Source Menu | N/A | 🚧 | [chat-attachment-source-menu/](./features/chat-attachment-source-menu/spec.md) |
 | Chat E2EE Media    | 🚧      | ✅      | [chat-e2ee-media/](./features/chat-e2ee-media/spec.md) |
+| Chat E2EE Recovery File Enforcement | N/A | ⏳ | [chat-e2ee-recovery-enforcement/](./features/chat-e2ee-recovery-enforcement/spec.md) |
 | AI Chat (Tagea AI) | ✅      | ⏳      | [ai-chat/](./features/ai-chat/spec.md)                 |
 
 ### Teamspace
