@@ -11,9 +11,11 @@
 
 ## Flutter
 
-- **Status:** ⏳ Planned
-- **Path:** `lib/features/shell/top_bar/` _(in tagea-flutter repo)_
-- **Integration tests:** `integration_test/shell/top_bar_test.dart`
+- **Status:** 🚧 In progress (v0.1-alpha subset)
+- **Path:** `apps/tagea_frontend/lib/home/widgets/` (top bar + profile menu + tenant-switch sheet) and `apps/tagea_frontend/lib/home/tagea_rail_user_menu.dart`
+- **Integration tests:** `integration_test/shell/top_bar_test.dart` _(planned)_
+- **v0.1 covers:** logo, title, hamburger, profile menu (display name from JWT, tenant tile + switch sheet, dark-mode toggle, logout), notifications-stub button.
+- **v0.1 deliberately omits:** mode toggle, institution switcher, language switcher, patch-notes bell, notification-center panel, update indicator.
 
 ## Known Divergences
 
@@ -29,3 +31,4 @@
 | Date       | Who      | What                                                                      |
 | ---------- | -------- | ------------------------------------------------------------------------- |
 | 2026-04-21 | ltoenjes | Spec created from Angular `TopBarComponent` and backend `AuthController`. |
+| 2026-04-27 | sven     | v0.1-alpha subset shipped (logo, title, hamburger, profile menu with tenant switch + dark-mode + logout, notifications-stub). Mode toggle, institution switcher, language switcher, patch-notes, notification-center, update indicator deferred to v0.2+. |

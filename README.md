@@ -72,6 +72,7 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 | Chat (staff)       | ✅      | ⏳      | [chat/](./features/chat/spec.md)               |
 | Chat Room          | ✅      | ⏳      | [chat-room/](./features/chat-room/spec.md)     |
 | Chat Invite        | ✅      | ⏳      | [chat-invite/](./features/chat-invite/spec.md) |
+| Chat Attachment Source Menu | N/A | 🚧 | [chat-attachment-source-menu/](./features/chat-attachment-source-menu/spec.md) |
 | AI Chat (Tagea AI) | ✅      | ⏳      | [ai-chat/](./features/ai-chat/spec.md)         |
 
 ### Teamspace
@@ -107,6 +108,7 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 | Files (Global)           | ✅      | ❌      | [files-global/](./features/files-global/spec.md)           |
 | Employee Profile (Own)   | ✅      | ❌      | [employee-profile/](./features/employee-profile/spec.md)   |
 | Admin: Submission Cats.  | 🚧      | ❌      | [admin-submission-categories/](./features/admin-submission-categories/spec.md) |
+| Department Membership    | ✅      | ❌      | [department-membership/](./features/department-membership/spec.md)             |
 
 ### Public (P2)
 
@@ -149,6 +151,14 @@ These bundles describe behavior that spans every feature — routing, HTTP, auth
 | Context Resolution | ✅      | ⏳      | [context-resolution/](./cross-cutting/context-resolution/spec.md) |
 | i18n & Theming     | ✅      | ⏳      | [i18n-and-theming/](./cross-cutting/i18n-and-theming/spec.md)     |
 | Bootstrap & Push   | ✅      | ⏳      | [bootstrap-and-push/](./cross-cutting/bootstrap-and-push/spec.md) |
+
+### Backend infrastructure
+
+Backend-only architecture specs. No Angular/Flutter parity — these describe server-side behavior that frontends do not implement.
+
+| Bundle                    | Status | Spec                                                                              |
+| ------------------------- | ------ | --------------------------------------------------------------------------------- |
+| Scheduler Queue Migration | ⏳     | [scheduler-queue-migration/](./cross-cutting/scheduler-queue-migration/spec.md)   |
 
 ## Scripts
 
