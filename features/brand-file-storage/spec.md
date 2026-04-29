@@ -13,6 +13,7 @@ Each brand in the brand-manager gets its own file area: a flat folder where admi
 - As a **brand-manager admin** I want to drag files into a brand's storage so I can keep brand-related documents (mockups, contracts, build notes) next to the brand they belong to.
 - As a **brand-manager admin** I want to download a brand's previously uploaded assets (google-services.json, icons, …) from the same browser so I don't have to re-upload to retrieve them.
 - As a **brand-manager admin** I want the protected asset entries to be clearly read-only so I can't accidentally delete or overwrite a build-critical file.
+- As a **brand-manager admin** I want to preview a file inline (image / JSON / text) without downloading so I can quickly confirm I'm looking at the right file.
 
 ## Acceptance Criteria
 
@@ -24,6 +25,9 @@ Each brand in the brand-manager gets its own file area: a flat folder where admi
 - [ ] **Given** an asset for a system subfolder is missing (e.g. no `google-services.json` uploaded yet), **When** the subfolder is opened, **Then** the empty state explains where to upload it.
 - [ ] **Given** a user-file name collides with an existing file, **When** the upload is attempted, **Then** the user is asked whether to overwrite or cancel (no silent overwrite).
 - [ ] **Given** any storage operation fails, **When** the error returns, **Then** the UI surfaces a German error message and the list refreshes to its last consistent state.
+- [ ] **Given** the user clicks a file row (user file or system file), **When** the preview dialog opens, **Then** the file is rendered according to its content type — image as `<img>`, text/JSON/XML/plist as monospace text, anything else as a "Keine Vorschau verfügbar" placeholder with file metadata.
+- [ ] **Given** a previewable file exceeds 2 MB for text or 10 MB for images, **When** the user opens the preview, **Then** the dialog shows a size-warning placeholder instead of rendering, with a download button.
+- [ ] **Given** the preview dialog is open, **When** the user clicks "Herunterladen" inside it, **Then** the same download flow as the row's download button runs.
 
 ## System Subfolders
 
@@ -56,6 +60,8 @@ Each subfolder shows only the files that have actually been uploaded for that as
 | Populated              | ≥ 1 user file or any system asset present          | User files at top, system subfolders at bottom with lock icon                                    | Lock icon has `aria-label="Schreibgeschützt"`                       |
 | System subfolder open  | User entered a system subfolder                    | Read-only file list; if all assets missing → empty state with link back to the relevant editor step | Back button labeled "Zurück zur Dateiübersicht"                  |
 | Upload in progress     | File(s) being uploaded                             | Per-file progress + cancel                                                                       | Live region announces completion / failure                          |
+| Preview dialog         | User opens a file preview                          | Modal with rendered content (image / monospace text) + filename + Download / Schließen buttons   | Dialog has `aria-labelledby` pointing to the filename               |
+| Preview unsupported    | File type not previewable or exceeds size limit    | Same dialog, body shows "Keine Vorschau verfügbar" with file size and content type               | Same as above                                                       |
 | Error                  | Upload, download, or delete failed                 | Inline error toast with retry; list reverts to last good state                                   | Toast role `alert`                                                  |
 
 ## Flows
@@ -115,6 +121,8 @@ User-facing strings only (German), to be added under `brandManager.fileStorage.*
 - `brandManager.fileStorage.confirmDelete` → "Datei wirklich löschen?"
 - `brandManager.fileStorage.uploadFailed` → "Upload fehlgeschlagen."
 - `brandManager.fileStorage.downloadFailed` → "Download fehlgeschlagen."
+- `brandManager.fileStorage.previewUnsupported` → "Keine Vorschau verfügbar."
+- `brandManager.fileStorage.previewTooLarge` → "Datei zu groß für Vorschau. Bitte herunterladen."
 
 ## Offline Behavior
 
