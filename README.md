@@ -102,6 +102,7 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 | Profile Detail (11 tabs) | ✅      | ❌      | [profile-detail/](./features/profile-detail/spec.md)       |
 | Employees List           | ✅      | ❌      | [employees/](./features/employees/spec.md)                 |
 | Pending Employees        | ✅      | ❌      | [pending-employees/](./features/pending-employees/spec.md) |
+| Employee Status Lifecycle | 🚧      | ❌      | [employee-status-lifecycle/](./features/employee-status-lifecycle/spec.md) |
 | PEP                      | ✅      | ❌      | [pep/](./features/pep/spec.md)                             |
 | Bulk Messaging           | ✅      | ❌      | [bulk-messaging/](./features/bulk-messaging/spec.md)       |
 | Reports                  | ✅      | ❌      | [reports/](./features/reports/spec.md)                     |
