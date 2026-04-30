@@ -56,6 +56,24 @@ Renaming or moving a backend controller obliges the matching frontend service to
 
 All surface services live under `apps/tagea-frontend/src/app/services/`. Feature-specific helpers (e.g. `app/pages/pep-page/pep.service.ts`) are not surface services and are out of scope; they call surface services internally rather than the HTTP client directly.
 
+### Method-name redundancy
+
+When a method's surface is already encoded in the service class name, the method name does NOT repeat it. The split cuts illustrate this — every method that previously embedded a surface qualifier shed it on the way into the new service:
+
+| Legacy method on monolithic service       | New method on surface service                          |
+| ----------------------------------------- | ------------------------------------------------------ |
+| `getInstitutionPermissions()`             | `InstitutionPermissionsService.getPermissions()`       |
+| `getInstitutionRolePermissions()`         | `InstitutionPermissionsService.getRolePermissions()`   |
+| `updateInstitutionRolePermissions(...)`   | `InstitutionPermissionsService.updateRolePermissions(...)` |
+| `resetInstitutionToDefaults()`            | `InstitutionPermissionsService.resetToDefaults()`      |
+| `getInstitutionRoles()`                   | `InstitutionRolesService.getRoles()`                   |
+| `setInstitutionPermissions(...)`          | `InstitutionRolesService.setPermissions(...)`          |
+| `getClientAdmin(id)`                      | `TenantAdminClientsService.getClient(id)`              |
+| `createClientAdmin(dto, ids)`             | `TenantAdminClientsService.createClient(dto, ids)`     |
+| `updateClientAdmin(id, dto)`              | `TenantAdminClientsService.updateClient(id, dto)`      |
+
+Rule: read each call as `<service>.<verb><Noun>`. If the noun already contains the surface (e.g. "Institution" inside `getInstitutionRoles`, "Admin" inside `getClientAdmin`), strip it. Tenant-surface methods that include `institutionId` as a *filter parameter* (e.g. `TenantPermissionsService.getAllPermissions(institutionId?)`) are not affected — the surface is still tenant; the parameter is a query filter.
+
 ### Flutter port note
 
 The naming convention above is Angular-specific. The Flutter port mirrors the same surface decomposition with idiomatic naming — file names like `<surface>_<resource>_repository.dart` (snake_case), classes like `<Surface><Resource>Repository`. The mapping (one surface → one repository) is the verbatim part; the casing is not.
@@ -100,9 +118,65 @@ For this case:
 
 The acceptance test for this rule is: looking at the component's class body, a reader can identify which surface every HTTP call targets without reading the service implementation.
 
+### Worked example: `ClientDialogComponent`
+
+The client dialog opens from two contexts: institution-scoped pages (a counsellor adds a client to their institution) and the tenant-admin clients list (an admin manages clients across institutions). Surface selection is data-driven:
+
+- `data.adminContext?: { institutionId?: string }` — input that signals admin-mode and optionally constrains the institution
+- `adminCreateMode = computed(() => data.mode === 'create' && !!data.adminContext)`
+
+The component's constructor injects both services side-by-side:
+
+```typescript
+constructor(
+  private institutionClientsService: InstitutionClientsService,
+  private tenantAdminClientsService: TenantAdminClientsService,
+  // ...
+)
+```
+
+Each call site picks one explicitly:
+
+```typescript
+result = adminCreateMode()
+  ? await tenantAdminClientsService.createClient(dto, institutionIds)
+  : await institutionClientsService.createClient(dto);
+
+result = data.adminContext
+  ? await tenantAdminClientsService.updateClient(id, dto)
+  : await institutionClientsService.updateClient(id, dto);
+```
+
+The pattern matches `EmployeeDialogComponent` even though the predicate is different (`adminContext` here, `restrictToInstitutionId` there). The shared rule: NO wrapper service, both services in the constructor, branching is data-driven and visible at the call site.
+
+## Test Infrastructure
+
+Mock factories follow the same surface decomposition as the services they mock. When a monolithic service is split, its mock factory is split too:
+
+- `createMockBasicClientService()` → `createMockInstitutionClientsService()` + `createMockTenantAdminClientsService()`
+
+The shared test helper `provideTestServices()` (in `apps/tagea-frontend/src/app/testing/mock-services.ts`) provides every surface-scoped service token; tests that exercise mixed-surface components get both tokens registered automatically. Tests that build their own provider arrays (e.g. `*.security.spec.ts` files) must register a mock for each injected service:
+
+```typescript
+// In a security spec for a mixed-surface dialog:
+{ provide: InstitutionClientsService, useValue: mockInstitutionClientsService },
+{ provide: TenantAdminClientsService, useValue: mockTenantAdminClientsService },
+```
+
+The `ServiceOverrides` interface follows the same naming, one key per surface:
+
+```typescript
+overrides?: {
+  institutionClientsService?: Partial<jasmine.SpyObj<InstitutionClientsService>>;
+  tenantAdminClientsService?: Partial<jasmine.SpyObj<TenantAdminClientsService>>;
+};
+```
+
+When the legacy mock factory is removed in the split's final commit, the spec files that used it are migrated to the new factories in the same commit so the test infrastructure never goes through a broken intermediate state.
+
 ## Migration Playbook
 
-When promoting an existing mixed-surface service to the convention, the proven sequence (validated by the `EmployeesService` and `EmailAvailabilityService` migrations — commits `a836c039` through `14004433` and `885e950d`):
+When promoting an existing mixed-surface service to the convention, the proven sequence (validated by five completed cuts: `EmployeesService`, `EmailAvailabilityService`, `PermissionsService`, `RolesService`, `BasicClientService` — see References for commit ranges):
 
 1. **Inventory the call sites.** Grep for every injection of the legacy service. Group them by which method they call. Each method maps to a target surface based on its URL prefix.
 2. **Create the new surface services.** One file per target surface, with `providedIn: 'root'`. Copy the relevant methods over verbatim (do not refactor signatures in this step). Keep the legacy service untouched.
@@ -117,13 +191,17 @@ The migration is not a single PR. The series above can be 5–8 commits dependin
 
 ## Known Mixed-Surface Backlog
 
-Services known to violate the convention as of this spec's date:
+As of 2026-04-30, every previously-known mixed-surface service has been migrated. The cuts that closed the backlog:
 
-| Service              | Surfaces today                            | Proposed target                                                                                          | Priority |
-| -------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------- | -------- |
-| `PermissionsService` | `tenant` + `institution` + local state    | `TenantPermissionsService` + `InstitutionPermissionsService` + `UserPermissionsService` (state owner)    | High     |
-| `RolesService`       | `tenant` + `institution`                  | `TenantRolesService` + `InstitutionRolesService`                                                          | High     |
-| `BasicClientService` | `institution` + `administration`          | `InstitutionClientsService` + `TenantAdminClientsService`                                                 | Medium   |
+| Service                    | Resulting services                                                                          | Migration commits     |
+| -------------------------- | ------------------------------------------------------------------------------------------- | --------------------- |
+| `EmployeesService`         | `EmployeeSelfService` + `InstitutionEmployeesService` + `TenantEmployeesService`            | `a836c039` → `14004433` |
+| `EmailAvailabilityService` | `InstitutionEmailAvailabilityService` + `TenantEmailAvailabilityService`                    | `885e950d`            |
+| `PermissionsService`       | `TenantPermissionsService` + `InstitutionPermissionsService` + `UserPermissionsService` (state owner) | `3f64556c` → `3e9c1ea6` |
+| `RolesService`             | `TenantRolesService` + `InstitutionRolesService`                                            | `aab1b1f1` → `864aedef` |
+| `BasicClientService`       | `InstitutionClientsService` + `TenantAdminClientsService`                                   | `a641e60b` → `f7af9f03` |
+
+Future detection of new mixed-surface services should be flagged via the Decision Rule and added back to this table.
 
 ## Naming Inconsistencies to Address
 
@@ -140,6 +218,8 @@ Services known to violate the convention as of this spec's date:
 - [ ] **Given** a service performs no HTTP calls **Then** the surface convention does not apply and the service may be named freely.
 - [ ] **Given** an existing service violates the convention **When** it is migrated **Then** the steps in the Migration Playbook are followed, with one commit per surface to keep individual changes revertable.
 - [ ] **Given** the Flutter port reads this spec **Then** it adopts the same surface decomposition with idiomatic Flutter naming (snake_case repository files, Notifier-style state owners) — the separation is binding, the naming is not.
+- [ ] **Given** a method on a surface-scoped service **When** the surface name is already in the class **Then** the method name does NOT repeat the surface (e.g. `InstitutionPermissionsService.getPermissions`, not `getInstitutionPermissions`).
+- [ ] **Given** a monolithic service mock factory exists **When** the service is split **Then** the mock factory is split into one factory per surface, `provideTestServices` registers all surface tokens, and inline mocks in `*.security.spec.ts` files register both/all surface mocks for mixed-surface components.
 
 ## Non-Goals
 
@@ -170,6 +250,16 @@ Services known to violate the convention as of this spec's date:
 - `apps/tagea-frontend/src/app/services/tenant-employees.service.ts`
 - `apps/tagea-frontend/src/app/services/institution-email-availability.service.ts`
 - `apps/tagea-frontend/src/app/services/tenant-email-availability.service.ts`
+- `apps/tagea-frontend/src/app/services/tenant-permissions.service.ts`
+- `apps/tagea-frontend/src/app/services/institution-permissions.service.ts`
+- `apps/tagea-frontend/src/app/services/tenant-roles.service.ts`
+- `apps/tagea-frontend/src/app/services/institution-roles.service.ts`
+- `apps/tagea-frontend/src/app/services/institution-clients.service.ts`
+- `apps/tagea-frontend/src/app/services/tenant-admin-clients.service.ts`
+
+**State-owner exemplar (cross-surface local state, no HTTP):**
+
+- `apps/tagea-frontend/src/app/services/user-permissions.service.ts` — owns `userPermissions$`, `hasPermission`, `hasAnyPermission`, `setUserPermissions`, `clearPermissions`. Bridge effect that fills it from the surface service lives in `apps/tagea-frontend/src/app/services/unified-auth.service.ts` (the `effect` that calls `permissionsService.setUserPermissions(perms)`).
 
 **Backend mirror (controllers the exemplars track):**
 
@@ -183,12 +273,21 @@ Services known to violate the convention as of this spec's date:
 
 **Migration history (worked examples):**
 
-- Commits `a836c039`, `54a03a0f`, `64a7eef9`, `a3311a6d`, `14004433` — `EmployeesService` migration in five commits.
-- Commit `885e950d` — `EmailAvailabilityService` migration in one commit.
+- `EmployeesService` — five commits: `a836c039`, `54a03a0f`, `64a7eef9`, `a3311a6d`, `14004433`.
+- `EmailAvailabilityService` — one commit: `885e950d`.
+- `PermissionsService` — five commits: `3f64556c`, `ff2f0c43`, `068ef6db`, `8106e1db`, `3e9c1ea6`.
+- `RolesService` — five commits: `aab1b1f1`, `4040ecf6`, `c50d08cd`, `17cc6fdd`, `864aedef`.
+- `BasicClientService` — five commits: `a641e60b`, `3af8ca35`, `c13f9ce3`, `9d94c416`, `f7af9f03`.
 
-**Mixed-dialog example:**
+**Mixed-dialog examples:**
 
-- `apps/tagea-frontend/src/app/components/employee-dialog/employee-dialog.component.ts` — injects `InstitutionEmployeesService` and `TenantEmployeesService` directly and selects via `restrictToInstitutionId`.
+- `apps/tagea-frontend/src/app/components/employee-dialog/employee-dialog.component.ts` — injects `InstitutionEmployeesService` and `TenantEmployeesService` directly; selects via `restrictToInstitutionId`.
+- `apps/tagea-frontend/src/app/components/client-dialog/client-dialog.component.ts` — injects `InstitutionClientsService` and `TenantAdminClientsService` directly; selects via `data.adminContext` and the `adminCreateMode` computed signal.
+
+**Test infrastructure:**
+
+- `apps/tagea-frontend/src/app/testing/mock-services.ts` — surface-scoped `createMock<Surface><Resource>Service` factories, `provideTestServices` aggregator, `ServiceOverrides` interface.
+- `apps/tagea-frontend/src/app/components/client-dialog/client-dialog.component.security.spec.ts` — mixed-dialog test that registers both `InstitutionClientsService` and `TenantAdminClientsService` mocks.
 
 **Related cross-cutting specs:**
 
