@@ -10,25 +10,42 @@
 
 ## Flutter
 
-- **Status:** ⏳ Planned
-- **Suggested path:** `lib/features/news/detail/news_detail_page.dart`
-- **Context enum:** `NewsDetailContext { teamspace, clientPortal }`
-- **Repository abstraction:** inject `NewsDetailRepository` via a `RepositoryProvider` scoped to the route subtree (or pass it into the `Cubit`/`Bloc` constructor through a route-scoped `BlocProvider`), with the concrete implementation chosen per context; `CommentsRepository` similarly abstracted.
-- **Layout:** responsive split — `LayoutBuilder` chooses between sidebar + body (desktop) and body-only + FAB (mobile).
-- **Integration tests:** `integration_test/news_detail_teamspace_test.dart` + `news_detail_client_portal_test.dart`
+- **Status:** 🚧 Read-only port (teamspace context only) in review (PRs #19, #20 open)
+- **Page:** [`apps/tagea_frontend/lib/features/teamspace/news/detail/teamspace_news_detail_page.dart`](../../../apps/tagea_frontend/lib/features/teamspace/news/detail/teamspace_news_detail_page.dart)
+- **View:** [`apps/tagea_frontend/lib/features/teamspace/news/detail/view/news_detail_view.dart`](../../../apps/tagea_frontend/lib/features/teamspace/news/detail/view/news_detail_view.dart)
+- **Cubit:** `ArticleDetailCubit` in `teamspace_core` — parallel article + attachments load, optimistic like / acknowledgment with rollback
+- **Layout:** single column on iPhone (no desktop sidebar yet — comments aren't ported, so no second column to render)
+- **Repository abstraction:** **deferred** — only the teamspace context exists in Flutter today. `NewsDetailContext` enum + `NewsDetailRepository` interface land when the client-portal context starts (CLAUDE.md: avoid premature abstraction).
+- **Integration tests:** _(planned for `integration_test/news_detail_teamspace_test.dart`)_
 
 ## Known Divergences
 
-| Topic                  | Angular                                    | Flutter                                                           |
-| ---------------------- | ------------------------------------------ | ----------------------------------------------------------------- |
-| Context discrimination | `route.data.context` string                | Enum passed as page argument                                      |
-| Repository injection   | Per-context Angular provider               | Per-context `RepositoryProvider` (or `BlocProvider` scoped to route subtree) that supplies the correct repository implementation |
-| Comments layout        | CSS grid sidebar + mobile bottom-sheet FAB | `LayoutBuilder` with a `DraggableScrollableSheet` on mobile       |
-| Secure images          | `SecureImageService` blob URLs             | Dio-fetched bytes → `Image.memory` or custom `CachedNetworkImage` |
-| Comment form           | `ReactiveForms`                            | `reactive_forms` or plain `TextFormField`                         |
+| Topic                  | Angular                                    | Flutter                                                                                                                                       |
+| ---------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Context discrimination | `route.data.context` string                | n/a — only teamspace today                                                                                                                    |
+| Repository injection   | Per-context Angular provider               | Direct `ArticleApi` injection (no abstraction yet)                                                                                            |
+| Comments layout        | CSS grid sidebar + mobile bottom-sheet FAB | **Not ported** — comments are a separate tranche                                                                                              |
+| Secure cover image     | `SecureImageService` Blob URL              | `TageaAuthenticatedImage` (`Image.network` + auth headers); URL absolutised against `TageaConfig.apiBaseUrl`                                  |
+| Inline images in HTML  | Rewritten by `SecureImageService`          | **Stripped** — Flutter `<img>` would fire un-authed; auth-fetch via custom `WidgetFactory` is a follow-up                                     |
+| Video embed            | `<iframe>` / oEmbed                        | YouTube-id-extracted thumbnail (`i.ytimg.com/.../hqdefault.jpg`) → tap opens externally via `url_launcher`                                   |
+| HTML body              | DOM + sanitiser                            | `flutter_widget_from_html_core` (latest 0.17.x, perfect pub.dev score)                                                                       |
+| Acknowledgment chip    | `ArticleDetailShellComponent`-internal     | `_AcknowledgmentRow` — outlined-button CTA when required-not-acknowledged, subtle outlined pill once confirmed                                |
+| Read-status mark       | `ContentReadStatusService.markAsRead`      | `ReadStatusCubit.markAsRead(ContentType.article, id)` — fired once on first successful load, idempotent + debounced                          |
+| Bottom-nav on detail   | n/a (no app shell on web)                  | Detail mounted on root navigator (`parentNavigatorKey`) → bottom nav suppressed for full-screen reading                                       |
+
+## Out of scope (follow-up tranches)
+
+- **Comments** — `CommentsService` / `ClientCommentsService` port, paginated list, optimistic create, edit-in-place, like/unlike, delete-with-confirm, mobile bottom-sheet
+- **Inline `<img>` auth-fetch** — Dio-cached image loader exposed as a custom `flutter_widget_from_html_core` factory
+- **Acknowledgment list view** (admin) — out of scope for the read side
+- **Translation surface improvements** — language picker / re-translate trigger
+- **Client-portal context** — second mount that uses `ClientNewsService` + `ClientCommentsService`; introduces the repository abstraction noted above
 
 ## Port Log
 
-| Date       | Who      | What         |
-| ---------- | -------- | ------------ |
-| 2026-04-20 | ltoenjes | Spec created |
+| Date       | Who      | What                                                                                       |
+| ---------- | -------- | ------------------------------------------------------------------------------------------ |
+| 2026-04-20 | ltoenjes | Spec created                                                                               |
+| 2026-04-30 | sbaumgart | Read-only detail (cover, HTML body, attachments, like, video) — PR #19                    |
+| 2026-04-30 | sbaumgart | Acknowledgment + auto mark-as-read + translation hint — PR #20                            |
+| 2026-04-30 | sbaumgart | UX polish from on-device review: cover URL absolutise, attachments redesign, video card  |
