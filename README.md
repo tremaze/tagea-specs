@@ -47,6 +47,7 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 | Session Expired    | ✅      | ⏳      | [session-expired/](./features/session-expired/spec.md)       |
 | Auth Error         | ✅      | ⏳      | [auth-error/](./features/auth-error/spec.md)                 |
 | No Tenant          | ✅      | ⏳      | [no-tenant/](./features/no-tenant/spec.md)                   |
+| Cloud Tenant Selection | 🚧  | ⏳      | [tenant-selection/](./features/tenant-selection/spec.md)     |
 | Blocked Access     | ✅      | ⏳      | [blocked-access/](./features/blocked-access/spec.md)         |
 | Awaiting Approval  | ✅      | ⏳      | [awaiting-approval/](./features/awaiting-approval/spec.md)   |
 | Password Reset     | ✅      | ⏳      | [password-reset/](./features/password-reset/spec.md)         |
