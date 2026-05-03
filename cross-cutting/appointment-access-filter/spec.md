@@ -79,7 +79,7 @@ Soll-Modus pro Read-Pfad, plus aktueller Stand:
 | Endpoint | Zweck | Soll-Modus | Ist-Status |
 | -------- | ----- | ---------- | ---------- |
 | `GET /institutions/:instId/appointments/calendar` | Kalender-Slots, Doppelbuchungs-Prävention | Restricted-View | ✅ implementiert |
-| `GET /institutions/:instId/appointments/:id` | Einzelansicht | Hide (403/404) | ✅ implementiert (`checkAppointmentAccess`) |
+| `GET /institutions/:instId/appointments/:id` | Einzelansicht | Restricted-View über `checkAppointmentAccess` (object-based) | ✅ implementiert; nutzt eigenes Pattern statt Filter-Helper, weil der Service zusätzlich zu Hide einen Maskiert-Modus für UX-Konsistenz mit Calendar braucht (User sieht "Termin belegt" statt 404, wenn er die ID aus einem Calendar-Slot kennt). Kein Refactor-Blocker, der Helper kommt nur bei reinen List/Picker-Endpoints zum Einsatz. |
 | `GET /institutions/:instId/appointments` | Listen-View, Reports, Suche | **Hide** | ❌ kein Filter |
 | `GET /institutions/:instId/appointments/minimal` | Picker | **Hide** | ❌ kein Filter (anzunehmen) |
 | `GET /institutions/:instId/appointments/case/:caseId` | Termine eines Falls | **Hide** | ❌ kein Filter (anzunehmen) |
