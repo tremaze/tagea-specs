@@ -85,6 +85,7 @@ The two columns where the matrix splits are **Mitarbeitende** (Berater out — l
 - [ ] **Given** Einrichtungsberater **When** they look at the work-shell top-nav **Then** "Mitarbeitende" is also absent (lacks `institution.employees.view`).
 - [ ] **Given** any institution persona **When** they navigate to `/administration` or `/einstellungen/traeger/*` **Then** the route guard redirects them away (no tenant-scope shell access for institution roles).
 - [ ] **Given** the surface gate `institution.administration.access` is removed from a role **Then** the corresponding settings shell becomes inaccessible to that role and the "Einstellungen" top-nav entry disappears, regardless of which per-resource permissions the role still holds.
+- [ ] **Given** Einrichtungsberater, Einrichtungssupervisor or Einrichtungsmanager **When** they open an appointment they have access to **Then** the "Löschen" action succeeds (`institution.appointments.delete` is granted to all four operational roles, not only Einrichtungsadmin) — they need to manage their own day-to-day calendar.
 
 ## Non-Goals
 
