@@ -6,7 +6,7 @@
 
 ### `PATCH /brands/:id` (existing — extended)
 
-**Request body** (relevant fields, both optional):
+**Request body** (relevant fields, all optional):
 
 > Documentation-only shape. Source: `apps/brand-manager/src/app/brands/dto/create-brand.dto.ts` (NestJS backend, not tagea-frontend).
 
@@ -14,6 +14,9 @@
 interface UpdateBrandDto {
   privacyHtml?: string;
   imprintHtml?: string;
+  accountDeletionEmail?: string;
+  accountDeletionContactName?: string;
+  accountDeletionAddress?: string;
   // ...other existing fields
 }
 ```
@@ -36,6 +39,18 @@ interface UpdateBrandDto {
 
 Same shape as `/privacy`, returns the brand's Impressum.
 
+### `GET /public/brands/:id/request-account-deletion`
+
+**Auth:** none (`@Public()`).
+
+**Response:** `text/html; charset=utf-8` with the fixed DSGVO Art. 17 page. Brand-specific data points interpolated from the brand record:
+
+- `accountDeletionEmail` — recipient of the prefilled `mailto:` link. If null, page renders an empty-state notice instead of the request flow.
+- `accountDeletionContactName` — falls back to `displayName` when null.
+- `accountDeletionAddress` — multi-line postal address. Hidden when null.
+
+**Error codes:** 404 (brand not found).
+
 ## Data Models
 
 > Documentation-only shape. Source: `apps/brand-manager/src/app/database/entities/brand.entity.ts` (NestJS backend, not tagea-frontend).
@@ -46,6 +61,9 @@ interface Brand {
   displayName: string;
   privacyHtml: string | null;
   imprintHtml: string | null;
+  accountDeletionEmail: string | null;
+  accountDeletionContactName: string | null;
+  accountDeletionAddress: string | null;
   // ...other existing fields
 }
 ```

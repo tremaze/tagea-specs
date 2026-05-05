@@ -1,4 +1,4 @@
-# Feature: Brand Legal Pages (Datenschutz / Impressum)
+# Feature: Brand Legal Pages (Datenschutz / Impressum / Konto-Löschung)
 
 > **Status:** 🚧 Spec drafted
 > **Owner:** ltoenjes
@@ -6,14 +6,16 @@
 
 ## Vision (Elevator Pitch)
 
-Brand administrators can store an optional privacy policy ("Datenschutz") and an optional legal notice ("Impressum") per brand in the brand-manager. Each brand's legal pages are reachable via a stable, unauthenticated URL that displays the brand's logo and the formatted text — suitable for linking from the branded mobile and web apps to fulfil German legal disclosure requirements (TMG §5, DSGVO Art. 13).
+Brand administrators can store an optional privacy policy ("Datenschutz"), legal notice ("Impressum"), and account-deletion contact data per brand in the brand-manager. Each brand exposes three publicly reachable URLs that display the brand's logo and the formatted text — suitable for linking from the branded mobile and web apps to fulfil German legal disclosure requirements (TMG §5, DSGVO Art. 13, DSGVO Art. 17). The account-deletion page wording is fixed (uniform DSGVO Art. 17 language); only contact data points are editable per brand.
 
 ## User Stories
 
 - As a **brand-manager admin** I want to maintain a privacy policy per brand using rich text formatting so that I do not need to host it elsewhere.
 - As a **brand-manager admin** I want to maintain an Impressum per brand so that branded apps can fulfil legal disclosure requirements.
+- As a **brand-manager admin** I want to provide a deletion-request contact (email, controller name, postal address) per brand so that the public account-deletion page can route requests correctly without me writing the legal copy myself.
 - As a **brand-manager admin** I want to copy the public URL straight from the editor so that I can paste it into mobile-app config or marketing material.
-- As an **end user of a branded app** I want to open the brand's privacy/Impressum page from a deep link without logging in so that I can read the legal information at any time.
+- As an **end user of a branded app** I want to open the brand's privacy/Impressum/account-deletion page from a deep link without logging in so that I can read the legal information at any time.
+- As an **end user** I want a one-click `mailto:` link with prefilled subject and body on the deletion page so that I can request my account deletion without crafting the email myself.
 
 ## Acceptance Criteria
 
@@ -26,6 +28,9 @@ Brand administrators can store an optional privacy policy ("Datenschutz") and an
 - [ ] **Given** an unknown brand id **When** I request the legal URL **Then** the response is `404 Not Found`.
 - [ ] **Given** an admin attempts to inject `<script>` or `onerror=` into the rich-text content **When** the brand is saved **Then** the dangerous markup is stripped before persistence and never executes on the public page.
 - [ ] **Given** the brand has no app icon yet **When** the public page is rendered **Then** a neutral placeholder logo is shown instead of a broken image.
+- [ ] **Given** I save a brand with `accountDeletionEmail` set **When** I `GET /public/brands/:id/request-account-deletion` **Then** the response shows the fixed DSGVO Art. 17 page with the email, optional contact name, and optional address interpolated, plus a `mailto:` link with prefilled subject and body.
+- [ ] **Given** the brand has no `accountDeletionEmail` **When** I open the deletion page **Then** the page returns 200 and shows "noch keine Kontaktadresse hinterlegt" instead of dead links.
+- [ ] **Given** the deletion-page wording is hard-coded server-side **When** an admin changes anything in the brand-editor **Then** the public deletion-page text remains identical (only the data points change).
 
 ## UI States
 
@@ -39,10 +44,11 @@ Brand administrators can store an optional privacy policy ("Datenschutz") and an
 
 ## Public URL Contract
 
-- `GET /public/brands/:id/privacy` — Datenschutz page
-- `GET /public/brands/:id/imprint` — Impressum page
+- `GET /public/brands/:id/privacy` — Datenschutz page (admin-authored rich text)
+- `GET /public/brands/:id/imprint` — Impressum page (admin-authored rich text)
+- `GET /public/brands/:id/request-account-deletion` — fixed DSGVO Art. 17 page; only the contact data points (email, controller name, postal address) vary per brand.
 
-`:id` matches the existing brand id format `^[a-z0-9-]+$`. Both endpoints are unauthenticated (`@Public()`), respond with `Content-Type: text/html; charset=utf-8`, and set `Cache-Control: public, max-age=300`.
+`:id` matches the existing brand id format `^[a-z0-9-]+$`. All endpoints are unauthenticated (`@Public()`), respond with `Content-Type: text/html; charset=utf-8`, and set `Cache-Control: public, max-age=300`.
 
 ## Flows
 
@@ -74,9 +80,11 @@ sequenceDiagram
 
 - Multilingual legal text (single language per brand for now).
 - Versioning / history of legal content.
-- Terms of Service ("AGB") — only Datenschutz + Impressum are in scope.
+- Terms of Service ("AGB") — only Datenschutz + Impressum + Konto-Löschung are in scope.
 - Dedicated brand-logo asset separate from the existing iOS/Android app icon.
 - WYSIWYG features beyond the minimal toolbar (no tables, code blocks, images, color picker on legal pages).
+- Editable wording for the account-deletion page (intentional — keeps DSGVO Art. 17 language uniform across brands).
+- Form-based submission of deletion requests (mailto: only — no submission backend / audit log / anti-spam).
 
 ## Edge Cases
 
