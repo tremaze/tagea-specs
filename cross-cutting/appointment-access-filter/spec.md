@@ -2,7 +2,7 @@
 
 > **Status:** ✅ Specified
 > **Owner:** baumgart
-> **Last updated:** 2026-05-03
+> **Last updated:** 2026-05-05
 
 ## Vision (Elevator Pitch)
 
@@ -44,6 +44,39 @@ Ein Termin ist department-zugeordnet auf zwei Wegen, in dieser Reihenfolge:
 Diese Reihenfolge ist die heutige Implementierung in
 `appointments.service.ts::getCalendarAppointments` (Z. 559+) und wird in
 den Filter-Helper extrahiert.
+
+## Self-Bypass: Staff-Participant Override
+
+Wer als Mitarbeiter explizit zum Termin eingeladen ist, sieht den Termin
+unmaskiert — unabhängig davon, ob Klient/Fall in einem fremden Department
+liegen. Eingeladen-Sein wird gleichgesetzt mit "darf alle Details sehen",
+weil sonst die operative Mitwirkung am Termin (Vorbereitung, Absage,
+Statuspflege) nicht möglich ist.
+
+**Erkennung:** Es existiert ein `appointment_participants`-Eintrag mit
+`participant_type = 'staff'` und `participant_employee_id = principal.employeeId`
+für den angefragten Termin.
+
+**NICHT als Bypass-Trigger:**
+- `appointment.created_by_employee_id = principal.employeeId` allein. Erstellt-Haben
+  bedeutet historisch nicht, mitzuwirken — der Klient/Fall kann nach Erstellung
+  in ein anderes Department verschoben worden sein, der Ersteller verbleibt
+  aber im Audit-Trail. Wer weiterhin sehen soll, muss Staff-Participant sein.
+- Teamspace-Mitgliedschaft. Teamspace-Termine haben eigene Mechanik
+  (`teamspace_employee_assignments`); diese Regel betrifft ausschließlich
+  Institution-Mode-Reads.
+- Klient-Participant-Rolle (z.B. der Berater ist gleichzeitig als Klient
+  irgendwo eingetragen — Edge Case, ignorieren).
+
+**Reihenfolge der Bypass-Auswertung** (kürzeste Wirkung zuerst):
+
+1. Tenant-Admin → kompletter Bypass, kein Filter angewendet.
+2. Staff-Participant-Self-Bypass für den **konkreten Termin** → Department-Filter
+   wird für diese eine Zeile übersprungen, alle anderen Termine durchlaufen
+   den normalen Filter.
+3. Department-Membership-Filter (Hide oder Restricted-View, je nach Endpoint).
+4. Legacy-Fallback (User ohne Department-Assignments sieht nur Termine ohne
+   Department-Bezug).
 
 ## Filter-Modi
 
@@ -123,6 +156,30 @@ Soll-Modus pro Read-Pfad, plus aktueller Stand:
       der Termin für alle Institutions-User sichtbar (legacy-fallback,
       backward compatible).
 
+### Self-Bypass: Staff-Participant
+
+- [ ] **Given** Berater im Department-A, **and** Termin mit Klient-Participant
+      auf Case mit `department_id = B`, **and** Berater ist als Staff-Participant
+      auf dem Termin eingetragen, **when** er Liste/Kalender/Detail aufruft,
+      **then** Termin ist sichtbar **mit allen Feldern unmaskiert**
+      (kein `'Termin belegt'`, `has_full_access = 1`).
+- [ ] **Given** Berater im Department-A, **and** Termin mit Klient-Participant
+      ohne Case (Klient hat `department_id = B`), **and** Berater ist als
+      Staff-Participant auf dem Termin eingetragen, **when** er Liste/Kalender/Detail
+      aufruft, **then** Termin ist sichtbar mit allen Feldern unmaskiert.
+- [ ] **Given** Berater im Department-A, **and** Termin mit Klient/Case in
+      Department-B, **and** Berater ist **NICHT** Staff-Participant, aber
+      `created_by_employee_id` zeigt auf ihn, **when** er Liste aufruft,
+      **then** Termin ist **versteckt** (Hide-Mode) bzw. maskiert
+      (Restricted-View). Erstellen allein gibt keinen Bypass.
+- [ ] **Given** Berater im Department-A, **and** Termin mit Klient/Case in
+      Department-A (eigenes Department), **when** er Liste aufruft, **then**
+      Termin ist sichtbar — egal ob Staff-Participant oder nicht (regulärer
+      Department-Match).
+- [ ] **Given** Berater im Department-A, **and** Termin mit Klient/Case in
+      Department-B, **and** Berater ist **NICHT** Staff-Participant, **when**
+      er Liste aufruft, **then** Termin ist versteckt (Hide-Mode).
+
 ### Konsistenz über Endpoints
 
 - [ ] **Given** ein Termin ist im Calendar-Endpoint als "Termin belegt"
@@ -200,3 +257,15 @@ Mit Implementation der Spec sollen folgende Tests dazukommen:
 - `appointments-minimal-hides-foreign-department.spec.ts` — Picker-Test.
 - Konsistenz-Test: gleicher Termin → Calendar zeigt "Termin belegt", List
   zeigt gar nichts.
+
+Für den Staff-Participant-Self-Bypass (added 2026-05-05):
+
+- `einrichtungs-berater-staff-participation-grants-foreign-department-via-case.spec.ts` —
+  Berater im Dept-A sieht Termin mit Case in Dept-B unmaskiert, weil Staff-Participant.
+- `einrichtungs-berater-staff-participation-grants-foreign-department-via-client.spec.ts` —
+  gleiche Regel, aber Klient-Department-Fallback (kein Case).
+- `einrichtungs-berater-created-by-alone-does-not-bypass-department.spec.ts` —
+  Tripwire: `created_by_employee_id` ohne Staff-Participant gibt KEINEN Bypass.
+- `einrichtungs-berater-without-staff-participation-stays-hidden.spec.ts` —
+  Negative Sanity: ohne Staff-Participant + ohne Department-Match bleibt der
+  Termin versteckt.

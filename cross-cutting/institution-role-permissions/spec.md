@@ -2,7 +2,7 @@
 
 > **Status:** ✅ Specified
 > **Owner:** baumgart
-> **Last updated:** 2026-04-30
+> **Last updated:** 2026-05-05
 
 ## Vision (Elevator Pitch)
 
@@ -65,11 +65,15 @@ The institution work shell's top-nav (rendered while `NavigationModeService.isEi
 | Fälle                   | `institution.cases.view`             | ✅     | ✅       | ✅          | ✅       |
 | Klienten-Informationen  | `institution.client_news.view`       | ✅     | ✅       | ✅          | ✅       |
 | Mitarbeitende           | `institution.employees.view`         | ✅     | ✅       | ✅          | ❌       |
-| Berichte                | `institution.reports.view`           | ✅     | ✅       | ✅          | ✅       |
+| Berichte                | `institution.reports.view`           | ✅     | ✅       | ✅          | ❌       |
 | Wissensdatenbank        | feature flag + `institution.access`  | ✅     | ✅       | ✅          | ✅       |
 | Einstellungen           | `institution.administration.access`  | ✅     | ✅       | ❌          | ❌       |
 
-The two columns where the matrix splits are **Mitarbeitende** (Berater out — lacks `institution.employees.view`) and **Einstellungen** (Supervisor + Berater out — lack the surface gate). Everything else is uniform across all four institution personas.
+Three columns split: **Mitarbeitende** (Berater out — lacks `institution.employees.view`), **Berichte** (Berater out — lacks `institution.reports.view`; Berichtswesen ist Auswertungs-Werkzeug für Supervisor+, kein Berater-Alltag), and **Einstellungen** (Supervisor + Berater out — lack the surface gate). The remaining seven items are uniform across all four institution personas.
+
+### KI-Doku-Sonderfall
+
+Die KI-Dokumentations-Endpoints (`POST /institutions/:id/ai/documentation/{extract,transcribe,transcribe-audio}`) sind kein Berichts-Feature, sondern hängen am Termin-/Doku-Workflow. Sie werden über die eigene Permission `institution.ai_documentation.use` gegated, die alle vier institution-scope-Rollen halten. Das KI-Doku-Panel öffnet sich aus `appointment-documentation.component.ts` heraus und ist zusätzlich durch das Tenant-Feature-Flag `aiDocumentation` geschützt. Diese Permission wurde 2026-05-05 aus `institution.reports.view` herausgelöst, damit Berater das Berichtsmodul nicht mehr sehen, KI-Doku aber weiterhin nutzen können.
 
 ## Mode-Switch Mechanics
 
@@ -86,6 +90,9 @@ The two columns where the matrix splits are **Mitarbeitende** (Berater out — l
 - [ ] **Given** any institution persona **When** they navigate to `/administration` or `/einstellungen/traeger/*` **Then** the route guard redirects them away (no tenant-scope shell access for institution roles).
 - [ ] **Given** the surface gate `institution.administration.access` is removed from a role **Then** the corresponding settings shell becomes inaccessible to that role and the "Einstellungen" top-nav entry disappears, regardless of which per-resource permissions the role still holds.
 - [ ] **Given** Einrichtungsberater, Einrichtungssupervisor or Einrichtungsmanager **When** they open an appointment they have access to **Then** the "Löschen" action succeeds (`institution.appointments.delete` is granted to all four operational roles, not only Einrichtungsadmin) — they need to manage their own day-to-day calendar.
+- [ ] **Given** Einrichtungsberater **When** they look at the work-shell top-nav **Then** "Berichte" is absent (lacks `institution.reports.view`).
+- [ ] **Given** Einrichtungsberater **When** they navigate directly to `/reports` **Then** the route guard redirects them away.
+- [ ] **Given** any of the four institution personas **When** they open the KI-Doku-Panel inside `appointment-documentation` and trigger extract / transcribe-image / transcribe-audio **Then** the call succeeds (`institution.ai_documentation.use` is granted to all four operational roles), provided the `aiDocumentation` tenant-feature is enabled.
 
 ## Non-Goals
 

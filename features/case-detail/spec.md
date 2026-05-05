@@ -40,9 +40,29 @@ From `CASE_CHILD_ROUTES` in `routes/case.routes.ts`:
 - [ ] **Appointments:** list of appointments tied to the case; tap opens appointment detail.
 - [ ] **Financial:** financial-support records + templates (feature-gated).
 - [ ] **Approvals:** approval-link management (feature-gated).
-- [ ] **Data:** custom fields + stammdaten.
+- [ ] **Data:** custom fields + stammdaten. Tab label is "Falldaten" in the German UI.
 - [ ] **Reminders:** reminder rules + timeline.
 - [ ] **Documents:** attached documents + upload.
+
+### Falldaten missing-fields badge + invalid-appointments badge
+
+The "Falldaten" tab renders a badge with the count of required or statistic-relevant case fields that are still empty. The "Termine" tab renders a separate badge for appointments whose `appointment.invalid_fields > 0`. Both follow the same rule: server count is the source of truth on initial render and after saves; a live count from form state takes over while the user is editing.
+
+- [ ] **Given** the user opens a case and has not yet visited the Falldaten tab, **When** the layout renders, **Then** the Falldaten badge shows `case.invalid_fields` from the server (or hides if `0`).
+- [ ] **Given** the user opens the Falldaten tab and edits fields, **When** form state changes, **Then** the badge updates live from the count of empty required/statistic-relevant fields (custom fields + repeating-group rows + statistic-relevant case entity fields).
+- [ ] **Given** the user saves Falldaten, **When** the PUT response arrives, **Then** the badge resets to the response's `invalid_fields` value — server stays the source of truth.
+- [ ] **Given** the case has appointments with missing required/statistic-relevant fields, **When** the appointments tab badge renders, **Then** it shows the count of appointments where `invalid_fields > 0`, derived from `case.invalid_appointments` on the server.
+- [ ] **Given** an admin updates a report's `validation_rules.required_custom_fields` or `appointment_rules`, **When** `sync_statistic_relevant_fields()` runs, **Then** affected case and appointment counters are recalculated and the badges reflect the new state on next load.
+
+### Repeating-group custom fields — local edit persistence
+
+When a Falldaten custom-field group is configured as `is_repeating`, it renders as a card that opens a side-panel dialog (`TageaFieldGroupDialogComponent`) for editing. All edits within a session — newly added rows, edits on existing rows, and row deletions — are tracked on the parent (`TageaCustomFieldsComponent`) and survive close/reopen of the side panel. Persistence ends only on save or on confirmed discard via `UnsavedChangesGuard` / `discardChanges()`.
+
+- [ ] **Given** the user adds a row in the side panel and closes it without saving, **When** they reopen the same group, **Then** the previously-added row is still visible with the same field values.
+- [ ] **Given** the user edits an existing row's field in the side panel and closes without saving, **When** they reopen, **Then** the edited value is shown — not the server value.
+- [ ] **Given** the user deletes a row in the side panel and closes without saving, **When** they reopen, **Then** the row stays hidden (deletion is part of the local change set until save).
+- [ ] **Given** the user saves successfully, **When** the response arrives, **Then** the local change set is cleared, server-loaded rows replace tempIds, and the side panel reflects the server-acknowledged state on next open.
+- [ ] **Given** the user discards via `UnsavedChangesGuard`, **When** the discard is confirmed, **Then** the local change set is cleared and the side panel returns to the server state on next open.
 
 ## UI States
 

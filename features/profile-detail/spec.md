@@ -43,7 +43,7 @@ From `PROFILE_CHILD_ROUTES` in `routes/profile.routes.ts`:
 
 - [ ] **Overview:** client summary + recent activity.
 - [ ] **Appointments:** client's appointments list.
-- [ ] **Stammdaten:** form-heavy; `UnsavedChangesGuard` applies.
+- [ ] **Stammdaten:** form-heavy; `UnsavedChangesGuard` applies. Tab label is "Profil" in the German UI.
 - [ ] **Relationships:** family / managed-client links.
 - [ ] **Financial:** financial-support records (feature-gated).
 - [ ] **Reminders:** reminder rules for the client.
@@ -51,6 +51,29 @@ From `PROFILE_CHILD_ROUTES` in `routes/profile.routes.ts`:
 - [ ] **Messages:** message history with the client.
 - [ ] **Cases:** cases the client is involved in (feature-gated).
 - [ ] **Reports:** list of reports for the client (feature-gated); tapping opens `reports/:reportId` with `ClientReportEditorComponent`.
+
+### Stammdaten / Profil missing-fields badge
+
+The "Profil" tab renders a numeric badge next to its label that signals how many required or statistic-relevant client fields are still empty. The count comes from two sources that the layout merges into a single computed value:
+
+- **Server count** — `client.invalid_fields`, recalculated by the `update_client_validity` PG trigger whenever `clients` rows or related `custom_field_values` change. Includes both client custom fields (`is_required` ∨ `is_statistic_relevant`) and client entity fields listed in `statistic_relevant_entity_fields` (driven by reports' `validation_rules.required_entity_fields` for `entity: 'client'`).
+- **Live count** — computed in the Stammdaten tab from current form state, updated as the user types so the badge reflects unsaved edits without a round-trip.
+
+- [ ] **Given** the user opens a client and has not visited the Stammdaten tab in this session, **When** the layout renders, **Then** the badge shows the server count `client.invalid_fields` (or hides if `0`).
+- [ ] **Given** the Stammdaten tab has been mounted at least once, **When** the user edits any field, **Then** the badge updates live from form state — without requiring a save.
+- [ ] **Given** the user saves the Stammdaten or custom fields, **When** the API responds with the updated client, **Then** the live count is reset to the server count from the response — server stays the source of truth across saves.
+- [ ] **Given** an admin marks a client field as statistic-relevant via a report's `validation_rules`, **When** the next page load happens for any affected client, **Then** the badge reflects the new requirement (DB trigger has already updated `clients.invalid_fields`).
+- [ ] **Given** a tenant with `tenantFeaturesService.isTasksEnabled() === false`, **When** the layout renders, **Then** the badge is suppressed regardless of count.
+
+### Repeating-group custom fields — local edit persistence
+
+When a custom-field group is configured as `is_repeating`, the Stammdaten/Profil tab renders it as a card that opens a side-panel dialog (`TageaFieldGroupDialogComponent`) for editing. All edits within a session — newly added rows, edits on existing rows, and row deletions — are tracked on the parent (`TageaCustomFieldsComponent`) and survive close/reopen of the side panel. Persistence ends only on save or on confirmed discard via `UnsavedChangesGuard` / `discardChanges()`.
+
+- [ ] **Given** the user adds a row in the side panel and closes it without saving, **When** they reopen the same group, **Then** the previously-added row is still visible with the same field values.
+- [ ] **Given** the user edits an existing row's field in the side panel and closes without saving, **When** they reopen, **Then** the edited value is shown — not the server value.
+- [ ] **Given** the user deletes a row in the side panel and closes without saving, **When** they reopen, **Then** the row stays hidden (deletion is part of the local change set until save).
+- [ ] **Given** the user saves successfully, **When** the response arrives, **Then** the local change set is cleared, server-loaded rows replace tempIds, and the side panel reflects the server-acknowledged state on next open.
+- [ ] **Given** the user discards via `UnsavedChangesGuard`, **When** the discard is confirmed, **Then** the local change set is cleared and the side panel returns to the server state on next open.
 
 ## UI States
 
