@@ -22,12 +22,13 @@ Staff clients list at `/einrichtung/:institutionId/clients`. Table/card view of 
 - [ ] **Given** a text search is entered, **When** the user pauses (300ms debounce), **Then** the server performs a search query and the list updates.
 - [ ] **Given** filter controls render (search, phone, street, postal code, birth date, category multi-select, department), **When** any filter changes, **Then** the list reloads and category/department preferences are persisted via `EmployeesService.updateClientsFilterPreferences`.
 - [ ] **Given** the viewport is mobile, **When** the filters FAB fires `openFilterSheet()`, **Then** `ClientFiltersBottomSheetComponent` opens seeded with the current filter values and the institution's departments.
+- [ ] **Given** the department filter dropdown loads, **When** options render, **Then** the source is `GET /institutions/:id/departments/assignable` — see [department-picker](../department-picker/spec.md). Users with `institution.departments.access_all` see all active departments of the institution; others see only their own memberships in the active institution.
 - [ ] **Given** a row / card is tapped, **When** navigation resolves, **Then** open `/einrichtung/:institutionId/profile/:clientId`.
 - [ ] **Given** the list is scrolled near the bottom, **When** the IntersectionObserver sentinel enters the viewport, **Then** `ClientsDataService.loadMore()` is called up to `MAX_AUTO_LOAD = 300`; beyond that a manual "Load more" button is shown.
 
 ### Create / edit / delete / portal login
 
-- [ ] **Given** the user presses "New client", **When** the dialog opens, **Then** `ClientDialogComponent` is shown in `mode: 'create'` with an empty form; gated by `clients.create`.
+- [ ] **Given** the user presses "New client", **When** the dialog opens, **Then** `ClientDialogComponent` is shown in `mode: 'create'` with an empty form; gated by `clients.create`. The department dropdown inside the dialog follows [department-picker](../department-picker/spec.md): scoped to the active institution, contents gated by `institution.departments.access_all`.
 - [ ] **Given** the user chooses "Edit" from a row's menu, **When** `BasicClientService.getClient(id)` resolves, **Then** `ClientDialogComponent` opens in `mode: 'edit'` with the full `Client`; gated by `clients.edit`.
 - [ ] **Given** the user chooses "Delete" from a row's menu, **When** `BasicClientService.getRelatedEntities(id)` resolves, **Then** `DeleteConfirmationDialogComponent` lists related entities (cases, appointments, relationships, reminders, financial records, documents) and requires the user to type the client name (`confirmationText`) before committing `deleteClient`; gated by `clients.delete`.
 - [ ] **Given** the client has `category === 'client'` and an email, **When** the user triggers "Enable login", **Then** `BasicClientService.enableClientLogin(id)` is called and an invitation email is sent; gated by `clients.enable_login`.
