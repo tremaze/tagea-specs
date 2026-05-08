@@ -18,7 +18,7 @@ Inline composer at the top of the teamspace news feed for casual social-media-st
 
 ## Acceptance Criteria
 
-### Composer (top of `/teamspace/news`)
+### Composer (top of `/teamspace`, between filter chips and the first feed card)
 
 - [ ] **Given** the user has `tenant.posts.create` AND is member of at least one teamspace where `quick_posts_enabled = true`, **When** the news page renders, **Then** an inline composer appears above the feed.
 - [ ] **Given** the user lacks `tenant.posts.create` OR has no eligible teamspaces, **When** the news page renders, **Then** the composer is not rendered at all (no placeholder, no disabled card).
@@ -178,12 +178,12 @@ Quick posts inherit the existing article read-access semantics: visible to teams
 
 ### Frontend route guard
 
-The existing `/teamspace/news` route guard remains unchanged (`teamspace_news.view`). The composer is gated *inside* the page, not at the route.
+The existing `/teamspace` route guard remains unchanged (`teamspace_news.view`). The composer is gated *inside* the page, not at the route.
 
 ## Notifications (Push / In-App)
 
 - New `QUICK_POST` triggers the same teamspace-news unread-count increment as `NEWS` — see [teamspace-home](../teamspace-home/spec.md).
-- Push notifications: same delivery as `NEWS`, deep-linking to `/teamspace/news/:id`.
+- Push notifications: same delivery as `NEWS`, deep-linking to `/teamspace/:id`.
 - **Non-goal in v1:** distinct notification copy for "Schnellbeitrag" vs. "Beitrag" — same wording.
 
 ## i18n Keys
@@ -223,7 +223,7 @@ These are intentionally left for the implementation phase:
 ## References
 
 - **Backend articles module:** `apps/tagea-backend/src/articles/`
-- **Frontend feed page:** `apps/tagea-frontend/src/app/pages/teamspace/news-page.component.ts`
+- **Frontend feed page:** `apps/tagea-frontend/src/app/pages/teamspace-page.component.ts`
 - **Display card:** `apps/tagea-frontend/src/app/shared/articles/news-display-card/`
 - **Permission constants:** `apps/tagea-backend/src/permissions/permissions.constants.ts`
 - **Default role mapping:** `apps/tagea-backend/src/permissions/default-role-permissions.ts`
