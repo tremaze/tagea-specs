@@ -2,7 +2,7 @@
 
 > **Status:** 🚧 Spec drafted — awaiting review
 > **Owner:** ltoenjes
-> **Last updated:** 2026-04-20
+> **Last updated:** 2026-05-08
 
 ## Vision (Elevator Pitch)
 
@@ -42,6 +42,11 @@ Public self-registration form for new clients. Collects first name, last name, e
 
 - [ ] **Given** `TenantResolutionService.tenantId()` has a value, **When** any public-registration call fires, **Then** the request carries the `X-Tenant-ID` header.
 - [ ] **Given** no resolved tenant, **When** the call fires, **Then** `?domain=<window.location.hostname>` is sent as a query param instead.
+
+### Backend persistence (institution association)
+
+- [ ] **Given** the registration payload carries an `institutionId`, **When** the backend persists the new client, **Then** the institution association is written to `client_institution_assignments` (the M:N junction). The deprecated `clients.institution_id` column is not written and (post drop-migration) does not exist.
+- [ ] **Given** the registration is a reactivation of a soft-deleted client, **When** the institution is re-applied, **Then** an assignment is created in `client_institution_assignments` only if no row already exists for the `(client_id, institution_id)` pair (idempotent).
 
 ## UI States
 
