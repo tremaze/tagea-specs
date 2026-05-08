@@ -33,6 +33,18 @@ type Response = FeatureWithLockStatus[];
 
 **Error codes:** 401, 403, 404 (institution not found)
 
+### `PATCH /api/super-admin/tenants/:id/features`
+
+**Auth:** Super admin (`@RequireSuperAdmin`).
+**Path param:** `id` (tenant UUID).
+**Body:** `UpdateTenantFeaturesDto` — partial map of tenant feature keys to objects (`{ enabled: boolean, ... }`). Each feature has its own DTO type because some include extra fields (`billing.provider`, `mfa.target`, `videoMeeting.provider`, etc.).
+**Response (200):** the resolved `TenantFeatures`.
+**Side effects:**
+- Audit-log entries (`feature_audit_log`) are written for each changed key.
+- For every key that transitions from `enabled: true` to `enabled: false`, the tenant's `institutions` table is updated to flip `features.<key>.enabled = false` for every row where it was `true`. The mapping `clientRegistration → clientSelfRegistration` is honored. Disabling `institutions` also sets `allow_counseling_mode = false` on affected rows.
+
+**Error codes:** 400, 401, 403, 404.
+
 ### `PATCH /api/tenant-institutions/:id/features`
 
 **Auth:** `Auth({ scope: 'tenant', permissions: [TENANT_INSTITUTIONS_EDIT] })`
@@ -86,5 +98,9 @@ interface InstitutionFeatures {
 - **Source of truth:** the `institutions.features` JSONB column.
 - **Missing key = disabled** at every layer: `getFeaturesWithLockStatus`, `getEffectiveFeatures`, `isFeatureEnabled`. There is no implicit "inherit from tenant" default.
 - **Hierarchical AND:** `effectiveEnabled = tenantEnabled && institutionEnabled`. Tenant `false` always wins.
-- **Lock:** `locked = !tenantEnabled`. The persisted institution value is preserved when locked, so toggling tenant back on restores the original institution state.
+- **Lock:** `locked = !tenantEnabled`. The institution-level value is rewritten by the cascade (see below), not preserved across a tenant disable.
+- **Tenant → Institution cascade (disable only):** when `PATCH /super-admin/tenants/:id/features` flips a feature from `enabled: true` to `enabled: false`, `TenantManagementService.updateTenantFeatures` runs an UPDATE on the tenant's `institutions` table that sets `features.<key>.enabled = false` for every row where it was previously `true`. The reverse direction (re-enable) does **not** cascade — admins must opt in per institution.
+  - Mapping is 1:1 except `clientRegistration` (tenant) → `clientSelfRegistration` (institution).
+  - Disabling `institutions` also sets the legacy `institutions.allow_counseling_mode` column to `false` on affected rows.
+  - Tenant features without an institution counterpart (`timeTracking`, `datevExport`, `pep`, `mfa`, `employeeRegistration`) are no-ops in the cascade.
 - **Special key mapping:** `clientSelfRegistration` reads its tenant-level master from `clientRegistration` (legacy naming).

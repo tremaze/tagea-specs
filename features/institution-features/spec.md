@@ -1,6 +1,6 @@
 # Feature: Institution Features (Funktionen Tab)
 
-> **Status:** ✅ Implemented
+> **Status:** ✅ Implemented (incl. tenant→institution cascade)
 > **Owner:** ltoenjes
 > **Last updated:** 2026-05-08
 
@@ -22,6 +22,15 @@ Tenant administrators can enable or disable individual product features per inst
 - [ ] **Given** the user toggles one or more checkboxes, **When** they press "Speichern", **Then** only changed (dirty, non-disabled) controls are sent in the `PATCH` payload.
 - [ ] **Given** a successful save, **When** the response returns, **Then** the form re-fetches and rebuilds against the freshly persisted state and is marked pristine.
 - [ ] **Given** a runtime feature gate (e.g. `isFeatureEnabled('chat')`) for an institution with no entry for `chat`, **When** evaluated, **Then** the result is `false` (consistent with the unchecked checkbox).
+
+### Tenant-side cascade
+
+- [ ] **Given** a tenant feature transitions from `enabled: true` to `enabled: false` (super admin update), **When** the change is saved, **Then** every institution in that tenant whose `features.<key>.enabled` was `true` is updated to `enabled: false` for that key.
+- [ ] **Given** a tenant feature transitions to disabled, **When** the cascade runs, **Then** institutions whose `features` had `<key>` absent or already at `enabled: false` are **not** modified (no spurious writes).
+- [ ] **Given** the tenant disables `clientRegistration`, **When** the cascade runs, **Then** the institution-level `clientSelfRegistration` key is the one affected (preserving the master-switch mapping documented in the lock semantics).
+- [ ] **Given** the tenant disables `institutions`, **When** the cascade runs, **Then** the legacy `institutions.allow_counseling_mode` boolean is also set to `false` for backward compatibility.
+- [ ] **Given** the tenant *enables* a feature that was disabled, **When** the change is saved, **Then** institutions are **not** modified — admins must explicitly enable the feature per institution.
+- [ ] **Given** a tenant feature update payload that includes a key without changing it (`enabled` stays the same), **When** processed, **Then** no cascade runs and no audit-log noise is created for cascade.
 
 ## UI States
 
@@ -72,9 +81,9 @@ sequenceDiagram
 
 - **`features` is `NULL` or `{}`**: every feature renders unchecked. Runtime gates also return `false`. This is intentional and was the fix for a regression where empty DB state showed every checkbox as checked.
 - **Feature key absent from a non-empty `features` object**: same as above — the missing key is treated as `enabled: false`.
-- **Tenant disables a feature after an institution had it enabled**: the row becomes locked; `effectiveEnabled` is `false` regardless of the persisted institution value. The persisted institution value is preserved (not overwritten) so re-enabling at tenant level restores the original institution state.
-- **`clientSelfRegistration`**: tenant-side master switch is `clientRegistration` (not `clientSelfRegistration`). Lock status is derived from `clientRegistration.enabled`.
-- **`institutions` feature ↔ legacy `allow_counseling_mode`**: when `features.institutions` is updated, the legacy `allow_counseling_mode` boolean is mirrored for backward compatibility.
+- **Tenant disables a feature after an institution had it enabled**: a cascade runs — the institution's persisted `features.<key>.enabled` is flipped to `false` synchronously with the tenant update. Re-enabling at tenant level does **not** auto-reactivate institutions; admins must explicitly enable per institution. (Earlier behavior preserved the institution value across tenant disables; this was changed because a later tenant re-enable would silently activate features without admin intent.)
+- **`clientSelfRegistration`**: tenant-side master switch is `clientRegistration` (not `clientSelfRegistration`). Lock status and the tenant→institution cascade both honor this mapping: disabling `clientRegistration` cascades to `clientSelfRegistration` on institutions.
+- **`institutions` feature ↔ legacy `allow_counseling_mode`**: when `features.institutions` is updated at the institution level, the legacy `allow_counseling_mode` boolean is mirrored for backward compatibility. The tenant→institution cascade also flips `allow_counseling_mode` to `false` on affected institutions when the tenant disables `institutions`.
 
 ## Permissions & Tenant/Institution
 
