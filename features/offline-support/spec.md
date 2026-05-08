@@ -2,7 +2,7 @@
 
 > **Status:** ⏳ Spec drafted — awaiting review
 > **Owner:** ltoenjes
-> **Last updated:** 2026-04-28
+> **Last updated:** 2026-04-29
 > **Type:** Cross-cutting Flutter infrastructure (iOS + Android only — Web and Desktop are out of scope)
 > **Scope:** `apps/tagea_frontend` and a new `packages/tagea_storage` (or equivalent) Dart package for the storage backbone. Existing `packages/matrix_chat` is **out of scope** — Matrix is already offline-first via the Matrix SDK and stays untouched.
 
@@ -22,6 +22,7 @@ The infrastructure is built **before** the first writing domain is needed, so fe
 - Tagea targets the German care/social sector. Realistically processed data falls under Art. 9 GDPR (special-category personal data); §22 BDSG requires application-side encryption. OWASP MASVS, BSI TR-03161 and DSK SDM v3 are the binding compliance leaflets.
 - Shared care tablets are common in the field. Two staff members may use the same device on the same shift; the next user must never see a trace of the previous user's data, including pending unsynced mutations.
 - The backend is a hand-rolled REST API, **not** Postgres-direct, Supabase, or anything CRDT-aware. PowerSync, Brick, ElectricSQL, Replicache, Zero, and Isar were considered and rejected (no Postgres source-of-truth; no production-ready Flutter clients; archived projects). A custom repository on top of Drift is the only stable foundation.
+- Encryption-at-rest is provided by **SQLite3MultipleCiphers** (sqlite3mc) running in `sqlcipher`-compatible cipher mode, selected via the `package:sqlite3` build hook (`hooks.user_defines.sqlite3.source: sqlite3mc`). The earlier `sqlcipher_flutter_libs` / `encrypted_drift` path is end-of-life as of `package:sqlite3` 3.x and `drift` 2.32+; the cipher-mode pragmas (`pragma cipher = 'sqlcipher'; pragma legacy = 4; pragma key = …`) are used so files remain wire-compatible with the SQLCipher-4 format.
 - Multi-device consistency is **not** a requirement. A staff member typically uses a single phone; convergence on conflict is acceptable as last-write-wins / server-wins (with a per-domain merge hook for exceptions).
 - The existing Matrix chat path is offline-first via Matrix SDK and is **not** subject to this spec; it has its own database (`matrix-sdk-database` on `sqflite`) and its own wipe path.
 
@@ -142,7 +143,7 @@ flowchart TD
 
 ### Components
 
-1. **Encrypted local DB per tenant.** Drift over `sqlcipher_flutter_libs` using the `encrypted_drift` pattern. File path: `getApplicationSupportDirectory()/tagea_<tenantId>.db`. One DB per tenant; switching tenants closes one and opens the next.
+1. **Encrypted local DB per tenant.** Drift on top of `package:sqlite3` 3.x with the `sqlite3mc` build-hook source selection (SQLite3MultipleCiphers in SQLCipher-compatible cipher mode). File path: `getApplicationSupportDirectory()/tagea_<tenantId>.db`. One DB per tenant; switching tenants closes one and opens the next. Native libs are bundled by the `sqlite3` package itself — no separate `sqlcipher_flutter_libs` / `sqlite3_flutter_libs` dependency is required.
 2. **Per-`(tenant, user)` key in `flutter_secure_storage`.** Namespace `tagea.storage.key.<tenantId>.<userId>`. iOS: `first_unlock_this_device`. Android: AndroidKeyStore-backed `EncryptedSharedPreferences`, request StrongBox where available.
 3. **Outbox table** — see [Data Model](#data-model).
 4. **Synchronizer service.** DI singleton. Listens on `connectivity_plus`, app-resume (`AppLifecycleState.resumed`), and a manual trigger. Replays outbox entries sequentially per domain with exponential backoff (60 s → 1 h cap). Marks `dead` after 5 days or 50 attempts and surfaces a notification.
@@ -235,7 +236,7 @@ Phases P0–P4 do **not** depend on server changes and can ship independently.
 | Phase | Scope                                                                                                                                                      | Server dep |
 | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
 | P0    | Add `connectivity_plus`. Ship `NetworkStatusCubit` and offline banner in `packages/ui`. Tighten iOS/Android backup manifests. Add Sentry payload scrubbing. | None       |
-| P1    | Storage backbone: Drift + `sqlcipher_flutter_libs` + `flutter_secure_storage`. `TageaStorageBootstrap` mirroring `MatrixBootstrap`. Per-tenant DB strategy. `TageaCacheLifecycle.wipeAllForUserChange()` end-to-end including pre-wipe modal. | None       |
+| P1    | Storage backbone: Drift + `package:sqlite3` 3.x with `sqlite3mc` build-hook (SQLCipher-compatible encryption) + `flutter_secure_storage`. `TageaStorageBootstrap` mirroring `MatrixBootstrap`. Per-tenant DB strategy. `TageaCacheLifecycle.wipeAllForUserChange()` end-to-end including pre-wipe modal. | None       |
 | P2    | Outbox table + `Repository<T>` base + `Synchronizer` service. No domain yet. Unit + integration tests against a fake REST endpoint.                         | None       |
 | P3    | Pilot domain: tenant list (read-only). Migrates from current HTTP-only path to Repository-backed. Confirms read path, refresh, conflict-free behavior.     | None       |
 | P4    | Migrate user-profile cache from Hive to Drift. First domain that holds real PII; validates encryption-at-rest and wipe path under realistic load.          | None       |
@@ -336,7 +337,7 @@ Under namespace `offline.*` (slang JSON in `apps/tagea_frontend/lib/i18n/`):
   - `apps/tagea_frontend/lib/matrix/matrix_bootstrap.dart` — the bootstrap pattern to mirror in `TageaStorageBootstrap`.
   - `packages/matrix_chat/lib/src/services/hive_*` — current Hive boxes (drafts, user-profile cache) that migrate to Drift in P4.
   - `packages/auth/` — `AuthCubit` emits the user-change / logout transitions that drive `TageaCacheLifecycle`.
-  - `apps/tagea_frontend/pubspec.yaml` — dependencies to add: `drift`, `drift_flutter`, `sqlcipher_flutter_libs`, `flutter_secure_storage`, `connectivity_plus`, `uuid`.
+  - `apps/tagea_frontend/pubspec.yaml` — dependencies to add: `drift`, `sqlite3` (with `hooks.user_defines.sqlite3.source: sqlite3mc` for SQLCipher-compatible encryption), `flutter_secure_storage`, `connectivity_plus`, `uuid`. `drift_flutter` and the deprecated `sqlcipher_flutter_libs` / `sqlite3_flutter_libs` packages are intentionally **not** used — the per-tenant DB path, per-(tenant,user) key, and `NSURLIsExcludedFromBackupKey` flag need explicit control that the wrapper packages do not expose.
 - **Compliance leaflets:**
   - GDPR Art. 9 — special categories of personal data
   - BDSG §22 — application-side encryption requirement
