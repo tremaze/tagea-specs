@@ -2,7 +2,7 @@
 
 > **Status:** 🚧 Spec drafted — awaiting review
 > **Owner:** ltoenjes
-> **Last updated:** 2026-05-08
+> **Last updated:** 2026-05-08 (success-page UX: back button, post-login redirect, login_hint pre-fill)
 
 ## Vision (Elevator Pitch)
 
@@ -35,8 +35,20 @@ Public self-registration form for new clients. Collects first name, last name, e
 
 ### Navigation
 
-- [ ] **Given** the user clicks "Back", **When** the action fires, **Then** navigate to `/booking`.
-- [ ] **Given** the user clicks "Already have an account" (or equivalent), **When** `navigateToLogin()` fires, **Then** `this.router.navigate(['/login'])` runs. `/login` is defined in `PUBLIC_ROUTES` as a `redirectTo: 'auth/callback'` entry, so the effective destination is `/auth/callback` (no `LoginComponent` renders — see the [login spec routing note](../login/spec.md)).
+- [ ] **Given** the user clicks "Back" on the form view, **When** the action fires, **Then** navigate to `/booking`.
+- [ ] **Given** the success view is shown, **When** the user clicks "Zurück zur Startseite", **Then** navigate to `/`.
+- [ ] **Given** the user clicks "Zur Anmeldung" (success view) or the "Anmelden" link (form view), **When** `navigateToLogin()` fires, **Then** `authService.login(options)` runs and triggers a Keycloak redirect (the deprecated direct-route hop through `/login → /auth/callback` no longer applies — the component owns the login call directly).
+
+### Login pre-fill
+
+- [ ] **Given** the email field contains a value, **When** `navigateToLogin()` fires (in either form view or success view), **Then** the email is passed as `loginHint` to `authService.login({ loginHint })`, so Keycloak's login form pre-fills the username field via the `login_hint` OIDC parameter.
+- [ ] **Given** the email field is empty, **When** `navigateToLogin()` fires, **Then** `authService.login()` is called without options.
+
+### Post-login redirect
+
+> **Why this is special:** the OIDC `redirectUri` is bound at app boot to `window.location.origin + window.location.pathname`. A user who loaded the app on `/public/register` will be redirected back there after successful Keycloak login, with the auth code in the query string. Angular's `redirectIfAuthenticatedGuard` does not re-run on a queryParam-only change, so the user would otherwise remain stuck on the success card.
+
+- [ ] **Given** the user clicks "Zur Anmeldung" and Keycloak returns to `/public/register?code=…&state=…`, **When** the auth state flips to authenticated while the component is alive, **Then** the component navigates to `/` with `replaceUrl: true`, so the root + default-mode guards route the user to their post-login landing page (Dashboard, Client-Portal, or Teamspace depending on permissions).
 
 ### Tenant resolution (sent to backend)
 

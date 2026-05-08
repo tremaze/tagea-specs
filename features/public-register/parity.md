@@ -30,3 +30,4 @@
 | ---------- | -------- | ------------------------------------------------------------------------------------------------------------------- |
 | 2026-04-20 | ltoenjes | Spec created                                                                                                        |
 | 2026-05-08 | ltoenjes | Documented junction-table persistence of `institutionId`; deprecated `clients.institution_id` column was dropped    |
+| 2026-05-08 | ltoenjes | Success-page UX: "Zurück zur Startseite" button, post-Keycloak-return navigation to `/`, `loginHint` pre-fill          |

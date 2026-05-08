@@ -4,6 +4,8 @@
 
 Base URL: `${environment.apiUrl}/public/clients`. All calls are unauthenticated.
 
+The page also calls `authService.login(options)` (from `UnifiedAuthService` / `@tagea/auth`) on the "Zur Anmeldung" buttons. The relevant option for this spec is `{ loginHint?: string }`, which is forwarded as the OIDC `login_hint` query parameter to Keycloak so the username field is pre-filled.
+
 | Method                                | Endpoint                                   | Purpose                                                                               |
 | ------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------- |
 | `register(data: RegistrationRequest)` | `POST /public/clients/register`            | Submit the registration                                                               |
