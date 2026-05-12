@@ -4,6 +4,8 @@
 
 Base URL: `${environment.apiUrl}/public/clients`. All calls are unauthenticated.
 
+The page also calls `authService.login(options)` (from `UnifiedAuthService` / `@tagea/auth`) on the "Zur Anmeldung" buttons. The relevant option for this spec is `{ loginHint?: string }`, which is forwarded as the OIDC `login_hint` query parameter to Keycloak so the username field is pre-filled.
+
 | Method                                | Endpoint                                   | Purpose                                                                               |
 | ------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------- |
 | `register(data: RegistrationRequest)` | `POST /public/clients/register`            | Submit the registration                                                               |
@@ -70,3 +72,7 @@ interface PublicInstitution {
 2. Backend sends verification email.
 3. User clicks the link → server-side verify → redirect to [/public/email-verified](../email-verification/spec.md) with `?success=true` or failure.
 4. User presses "Zur Anmeldung" on the verification page → standard IdP flow.
+
+## Institution persistence
+
+The wire field `institutionId` is optional. When present, the backend persists the client's institution membership in the `client_institution_assignments` junction table — never on the client row. (The legacy `clients.institution_id` column was dropped in tenant migration `20260508100000-DropClientsInstitutionId`.) The same junction is written for both new registrations and reactivations of soft-deleted clients; reactivation is idempotent thanks to the unique `(client_id, institution_id)` index.

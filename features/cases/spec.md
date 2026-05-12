@@ -21,13 +21,14 @@ Staff cases list at `/einrichtung/:institutionId/cases`. Searchable/filterable c
 - [ ] **Given** the page loads, **When** `CasesDataService.loadIfNeeded()` resolves, **Then** cases render with status chip (colored via `getCaseStatusColor`, labeled via `getCaseStatusLabel`), case-template icon/category (via `CATEGORY_ICONS` fallback `'folder'`), assigned-employee chips (colored via `getEmployeeColor`) and timestamps.
 - [ ] **Given** the result set exceeds `MAX_AUTO_LOAD = 300`, **When** more results would be fetched, **Then** auto-load stops and a "load more" affordance is shown — prevents accidental large fetches.
 - [ ] **Given** filter chips render, **When** filters (status, case template, assigned employee, department, date range, sort order, has-tasks) change, **Then** the list reloads via `CasesDataService.applyFilters()`.
+- [ ] **Given** the department filter dropdown loads, **When** options render, **Then** the source is `GET /institutions/:id/departments/assignable` — see [department-picker](../department-picker/spec.md). Users with `institution.departments.access_all` see all active departments of the institution; others see only their own memberships in the active institution.
 - [ ] **Given** a text search is entered, **When** the user pauses (debounce), **Then** the server searches and the list updates.
 - [ ] **Given** the viewport is mobile, **When** the FAB fires, **Then** `CaseFiltersBottomSheetComponent` opens.
 - [ ] **Given** a row is tapped, **When** navigation resolves, **Then** open `/einrichtung/:institutionId/cases/:id` (redirects to `/overview` — see Case Detail Tabs inventory, P2, separate spec).
 
 ### Create / delete
 
-- [ ] **Given** the user presses "New case", **When** the action fires, **Then** `CaseEditService` drives the creation flow (dialog or route — verify).
+- [ ] **Given** the user presses "New case", **When** the action fires, **Then** `CaseEditService` drives the creation flow (dialog or route — verify). The department dropdown inside the case dialog follows [department-picker](../department-picker/spec.md): scoped to the active institution, contents gated by `institution.departments.access_all`.
 - [ ] **Given** the user chooses "Delete" from a row's menu, **When** `DeleteConfirmationDialogComponent` resolves with `{ confirmed: true }`, **Then** `CaseManagementService.deleteCase(caseId)` fires, a success snackbar shows and `CasesDataService.refresh()` reloads the list.
 
 ## UI States

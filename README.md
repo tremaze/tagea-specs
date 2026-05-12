@@ -47,6 +47,7 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 | Session Expired    | ✅      | ⏳      | [session-expired/](./features/session-expired/spec.md)       |
 | Auth Error         | ✅      | ⏳      | [auth-error/](./features/auth-error/spec.md)                 |
 | No Tenant          | ✅      | ⏳      | [no-tenant/](./features/no-tenant/spec.md)                   |
+| Cloud Tenant Selection | 🚧  | ⏳      | [tenant-selection/](./features/tenant-selection/spec.md)     |
 | Blocked Access     | ✅      | ⏳      | [blocked-access/](./features/blocked-access/spec.md)         |
 | Awaiting Approval  | ✅      | ⏳      | [awaiting-approval/](./features/awaiting-approval/spec.md)   |
 | Password Reset     | ✅      | ⏳      | [password-reset/](./features/password-reset/spec.md)         |
@@ -74,6 +75,7 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 | Chat Invite        | ✅      | ⏳      | [chat-invite/](./features/chat-invite/spec.md)         |
 | Chat Attachment Source Menu | N/A | 🚧 | [chat-attachment-source-menu/](./features/chat-attachment-source-menu/spec.md) |
 | Chat E2EE Media    | 🚧      | ✅      | [chat-e2ee-media/](./features/chat-e2ee-media/spec.md) |
+| Chat E2EE Recovery File Enforcement | N/A | ⏳ | [chat-e2ee-recovery-enforcement/](./features/chat-e2ee-recovery-enforcement/spec.md) |
 | AI Chat (Tagea AI) | ✅      | ⏳      | [ai-chat/](./features/ai-chat/spec.md)                 |
 
 ### Teamspace
@@ -102,6 +104,7 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 | Profile Detail (11 tabs) | ✅      | ❌      | [profile-detail/](./features/profile-detail/spec.md)       |
 | Employees List           | ✅      | ❌      | [employees/](./features/employees/spec.md)                 |
 | Pending Employees        | ✅      | ❌      | [pending-employees/](./features/pending-employees/spec.md) |
+| Employee Status Lifecycle | 🚧      | ❌      | [employee-status-lifecycle/](./features/employee-status-lifecycle/spec.md) |
 | PEP                      | ✅      | ❌      | [pep/](./features/pep/spec.md)                             |
 | Bulk Messaging           | ✅      | ❌      | [bulk-messaging/](./features/bulk-messaging/spec.md)       |
 | Reports                  | ✅      | ❌      | [reports/](./features/reports/spec.md)                     |
@@ -109,7 +112,9 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 | Files (Global)           | ✅      | ❌      | [files-global/](./features/files-global/spec.md)           |
 | Employee Profile (Own)   | ✅      | ❌      | [employee-profile/](./features/employee-profile/spec.md)   |
 | Admin: Submission Cats.  | 🚧      | ❌      | [admin-submission-categories/](./features/admin-submission-categories/spec.md) |
+| Admin: Institution Features | ✅   | ❌      | [institution-features/](./features/institution-features/spec.md)               |
 | Department Membership    | ✅      | ❌      | [department-membership/](./features/department-membership/spec.md)             |
+| Department Picker        | ⏳      | ❌      | [department-picker/](./features/department-picker/spec.md)                     |
 
 ### Public (P2)
 
@@ -124,6 +129,7 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 | Feature            | Angular | Flutter | Spec                                                         |
 | ------------------ | ------- | ------- | ------------------------------------------------------------ |
 | Appointment Detail    | ✅      | ⏳      | [appointment-detail/](./features/appointment-detail/spec.md)       |
+| Case Prompt After Quick-Client | 🚧 | ⏳      | [case-prompt-after-quick-client/](./features/case-prompt-after-quick-client/spec.md) |
 | Employee Availability | 🚧      | ⏳      | [employee-availability/](./features/employee-availability/spec.md) |
 | News Detail           | ✅      | ⏳      | [news-detail/](./features/news-detail/spec.md)                     |
 | Knowledge Base        | ✅      | ❌      | [knowledge-base/](./features/knowledge-base/spec.md)               |
@@ -152,6 +158,7 @@ These bundles describe behavior that spans every feature — routing, HTTP, auth
 | Context Resolution | ✅      | ⏳      | [context-resolution/](./cross-cutting/context-resolution/spec.md) |
 | i18n & Theming     | ✅      | ⏳      | [i18n-and-theming/](./cross-cutting/i18n-and-theming/spec.md)     |
 | Bootstrap & Push   | ✅      | ⏳      | [bootstrap-and-push/](./cross-cutting/bootstrap-and-push/spec.md) |
+| Offline Support    | N/A     | ⏳      | [offline-support/](./features/offline-support/spec.md)            |
 
 ### Backend infrastructure
 
