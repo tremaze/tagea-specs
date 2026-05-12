@@ -42,6 +42,7 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 
 | Feature            | Angular | Flutter | Spec                                                         |
 | ------------------ | ------- | ------- | ------------------------------------------------------------ |
+| Auth Session Refactor (M1–M5 + Cluster 3) | ✅ | ⏳ | [auth-session/](./features/auth-session/spec.md) |
 | Login              | ✅      | ⏳      | [login/](./features/login/spec.md)                           |
 | Auth Callback      | ✅      | ⏳      | [auth-callback/](./features/auth-callback/spec.md)           |
 | Session Expired    | ✅      | ⏳      | [session-expired/](./features/session-expired/spec.md)       |

@@ -1,8 +1,37 @@
 # Cross-Cutting: Bootstrap And Push
 
-> **Status:** 🚧 Spec drafted — awaiting review
+> **Status:** 🚧 Spec drafted — partially superseded by auth-session refactor
 > **Owner:** ltoenjes
-> **Last updated:** 2026-04-21
+> **Last updated:** 2026-05-12
+
+> ## ⚠️ Out of sync with Auth-Session refactor (2026-05-12)
+>
+> This spec was authored 2026-04-21 against the legacy `UnifiedAuthService` /
+> `AuthorizationStore` / `/auth/current` + `/auth/context` chain. That chain has
+> been replaced by the consolidated `GET /session` endpoint and the
+> `auth-session/` Angular module. The push-notification, service-worker, and
+> cold-start-tap sections are still accurate; the **Bootstrap chain** section
+> is stale.
+>
+> **Authoritative source for the new bootstrap chain:**
+> [`specs/features/auth-session/spec.md`](../../features/auth-session/spec.md) §2, §10–§12, §14.4 + [`contracts.md`](../../features/auth-session/contracts.md).
+>
+> Status by section in this file:
+>
+> | Section | Status |
+> | --- | --- |
+> | Vision | ✅ still accurate |
+> | Acceptance Criteria → "Bootstrap chain" bullets | ❌ replaced — see auth-session §10–§14 |
+> | Acceptance Criteria → "Push notifications" | ✅ still accurate; `pushBrandId` now arrives via `session.tenant.pushBrandId`, init is invoked by `PostSessionHydrationService` instead of `SecureShellComponent`'s constructor |
+> | Acceptance Criteria → "Cold-start push tap" | ✅ still accurate |
+> | Acceptance Criteria → "Service Worker (web only)" | ✅ still accurate |
+> | Flow #1 "Bootstrap chain" | ❌ replaced — `SessionBootstrap.hydrate()` orchestrates: OIDC `ensureAuthenticated` → `GET /session` → `SessionStore.set` → `PostSessionHydrationService.run` (Sentry + Push + Matrix + Preferences-prime + Theme-apply) → `SessionRouter.resolveLandingCommands` → `router.navigate(landing)` |
+> | Flow #2 "Push subscribe flow" | ✅ still accurate |
+> | References (UnifiedAuthService, AuthorizationStore, ThemeService.loadAndApplyTenantTheme) | ❌ all deleted in M5 / Cluster-3 cleanup |
+>
+> **Do not edit the stale sections directly** — fold corrections into the
+> auth-session spec instead. This page will be either rewritten or split into
+> a Push-only spec once the refactor PR (#78) lands on develop.
 
 ## Vision (Elevator Pitch)
 
