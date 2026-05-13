@@ -196,14 +196,15 @@ Drei Felder leben auf dem Snapshot rein als Cold-Boot-Optimierung — sie ersetz
 | ------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `tenant.pushBrandId`      | `GET /tenants/current/push-brand`                        | direkt vom Snapshot, `PostSessionHydrationService` ruft `pushNotifications.init(token, brandId)`         |
 | `tenant.theme`            | `GET /tenants/current/theme` (ehemals dead code)         | direkt vom Snapshot, `PostSessionHydrationService` ruft `themeService.applyTheme(theme)`                 |
-| `preferences` (employees) | `GET /employees/me/preferences` (lazy on first consumer) | direkt vom Snapshot, `PostSessionHydrationService` primt `EmployeeSelfService.personalPreferences{$,()}` |
+| `preferences` (employees) | `GET /employees/me/preferences` (lazy on first consumer) | direkt vom Snapshot, `PostSessionHydrationService` primt `EmployeeSelfService.personalPreferences{$,()}` und ruft `LanguageService.setLanguage(preferences.interface_language)` |
 
 **Update-Pfad bleibt unverändert** — `PUT /employees/me/preferences` und die SuperAdmin-Theme-Endpoints sind weiterhin die Schreib-Operationen. Der Snapshot ist ein Read-Cache, der bei jedem `/session`-Resolve (Cold-Boot ODER Tenant-Switch) frisch befüllt wird. Damit ist `runPostHydration` der explizite Lifecycle-Hook für „nach Snapshot, vor Shell-Render".
 
 **Vertrag für `preferences`:**
 
 - Mitarbeiter: `Record<string, unknown>` (immer object, leeres `{}` wenn `Employee.preferences` null/leer)
-- Clients: `null` (Clients haben heute keine Preferences-Spalte)
+- Clients: `null` (Clients haben heute keine Preferences-Spalte). Für Clients fällt `PostSessionHydrationService` für die UI-Sprache auf `LanguageService.loadClientPreference()` zurück (ein extra `GET /clients/me`-Roundtrip).
+- **`interface_language`-Pflicht-Hook:** Für eingeloggte Mitarbeiter wendet PostHydration die Sprache via `setLanguage()` an — entweder `preferences.interface_language` (wenn nicht-leerer String) oder als Fallback `DEFAULT_LANGUAGE` ('de'). Dies überschreibt **bewusst** den pre-bootstrap-default, den `LanguageService`-Constructor aus `localStorage` / `navigator.language` setzt: pre-Login (Welcome / Login) darf navigator-locale honorieren, post-Login wird tenant-default ('de') zur Wahl, weil die Tagea-Tenants deutsch-first sind. Erst wenn der User explizit eine andere Sprache wählt (`PUT /employees/me/preferences`), bleibt sie auf dem Snapshot über die Sessions hinweg.
 
 **Vertrag für `tenant.theme`:**
 
@@ -561,7 +562,7 @@ Commit `0076461e5` (vollständige Liste im Diff):
 | Service | Ersetzt | Verantwortung |
 |---|---|---|
 | `SessionStore` | `UnifiedAuthService` (state-Anteil), `AuthorizationStore` (state-Anteil) | Single source of truth für das `/session`-Snapshot. Pure state, keine HTTP. Writer: `SessionBootstrap`/`SessionSwitcher`. |
-| `SessionAuthz` | `UserPermissionsService`, `AuthorizationStore.has*`, `UnifiedAuthService.has*Permission` | Permission- + Feature-Lookup. **Scope-explicit**: `can`/`canInTenant`/`canInInstitution`/`canInTeamspace`/`canAsClient`/`canInActiveInstitution`. Elevation-Reads: `isSuperAdmin`/`isTenantAdmin`/`isSchulungAdmin`/`isClient`/`isEmployee`. |
+| `SessionAuthz` | `UserPermissionsService`, `AuthorizationStore.has*`, `UnifiedAuthService.has*Permission` | Permission- + Feature-Lookup. **Scope-explicit**: `can`/`canInTenant`/`canInInstitution`/`canInTeamspace`/`canAsClient`/`canInActiveInstitution`. Elevation-Reads: `isSuperAdmin`/`isTenantAdmin`/`isSchulungAdmin`/`isClient`/`isEmployee`. **Elevation-Bypass**: super-admins und tenant-admins lesen `true` auf jeder permission in jedem nicht-Client-Scope (`can`, `canIn*`) — spiegelt Backend `PermissionResolverService.hasPermission` (Z. 13) `if (isSuperAdmin || isTenantAdmin) return true;`. Backend `composePermissions` projiziert **nur die assigned-role-Permissions** ohne Elevation-Expansion ins DTO; die Bypass-Logik lebt also auf Lookup-Ebene, nicht auf Daten-Ebene. Einzige Ausnahme: `canAsClient` — Client-Permissions sind ein separater Scope, Admin-Mitarbeiter lesen ihn nie positiv. |
 | `SessionIdentity` | `UnifiedAuthService.userName`/`userEmail`/`userRole`, `CurrentUserService` (display-Teil) | Display-Reads für Header, Sidebar, User-Menu, Profile-Karten. `identity()` + `displayName()` als signals. |
 | `NavigationMode` | `NavigationModeService` + `localStorage['navigation-mode']` | Mode = `teamspace` ⊕ `einrichtung`. URL-derived, sticky auf ambiguous routes (`/chat`, `/einstellungen`, ...). Keine localStorage-Persistenz mehr. Setter weg — Mode folgt URL. |
 | `InstitutionContext` | `InstitutionContextService` (relocated, nicht gelöscht — siehe M5) | URL-derived `:institutionId` Signal. Listener auf `NavigationEnd`, Override-API für Dialog-Flows. |
