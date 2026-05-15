@@ -47,6 +47,20 @@ Inline composer at the top of the teamspace news feed that lets **any teamspace 
 
 - [ ] **Given** a user with `tenant.articles.engage` views a `QUICK_POST` they have feed-access to, **When** they like or comment, **Then** the existing article-engagement endpoints handle it identically to `NEWS`.
 
+### Redaktion listing
+
+The Redaktion (Editorial) page lists `NEWS` and `QUICK_POST` together under the **"Informationen"** article-type filter. They are not split into separate filter values — semantically "Informationen" covers both editorial news and quick posts. `KNOWLEDGE` (Wissensdatenbank) remains a separate filter value.
+
+- [ ] **Given** a user with `news.edit` permission in any teamspace opens the Redaktion and selects "Informationen", **When** the list resolves, **Then** both `NEWS` and `QUICK_POST` articles are returned interleaved by the active sort order.
+- [ ] **Given** a `QUICK_POST` appears in the Redaktion list, **When** the card renders, **Then** a "Schnellbeitrag" chip is visible distinguishing it from `NEWS` (which renders without a type chip).
+- [ ] **Given** a user clicks on a `NEWS` card in the Redaktion, **When** the click resolves, **Then** the Redaktion editor opens for that article (unchanged from today).
+- [ ] **Given** a user clicks on a `QUICK_POST` card in the Redaktion, **When** the click resolves, **Then** the feed-detail page (`/teamspace/news/:id`) opens — the Redaktion editor is never used for quick posts since post-publish editing is out of scope.
+- [ ] **Given** the overflow menu opens on a `QUICK_POST` card, **When** it renders, **Then** only "Löschen" is offered (no Edit, Duplicate, Archive, Unarchive — none apply to quick posts).
+- [ ] **Given** the overflow menu opens on a `NEWS` card, **When** it renders, **Then** the existing actions (Edit, Duplicate, Archive/Unarchive, Delete) are offered (unchanged from today).
+- [ ] **Given** the user filters by `Status = Draft` while "Informationen" is selected, **When** the list resolves, **Then** only `NEWS` drafts appear — `QUICK_POST` is always `PUBLISHED` and naturally absent from non-Published status buckets.
+- [ ] **Given** the user filters by a specific category while "Informationen" is selected, **When** the list resolves, **Then** only `NEWS` rows appear in that category — `QUICK_POST` has no `category_id` and naturally drops out.
+- [ ] **Given** the user clicks the "Neuer Artikel"-Button while "Informationen" is selected, **When** it resolves, **Then** the Redaktion editor opens to create a `NEWS` article — quick posts are created exclusively via the inline composer on the news feed.
+
 ### Moderation (delete)
 
 - [ ] **Given** the post author views their own `QUICK_POST`, **When** the overflow menu opens, **Then** "Löschen" is offered. Confirming deletes the article (existing soft-delete or cascade pattern).
@@ -76,6 +90,13 @@ Inline composer at the top of the teamspace news feed that lets **any teamspace 
 | Legacy       | `title` empty (pre-2026-05-15)     | HTML content as lead, no title block + attachment list |
 | With images  | One or more image attachments      | Thumbnail strip below content                     |
 | With files   | One or more non-image attach.      | Download chips with filename + size below content |
+
+### Redaktion card (editorial listing)
+
+| State                 | When?                                                | What does the user see?                                              |
+| --------------------- | ---------------------------------------------------- | -------------------------------------------------------------------- |
+| News row              | `article_type = NEWS`                                | Status chip (Draft/Scheduled/Published/Archived), full overflow menu (Edit, Duplicate, Archive, Delete). Click → Redaktion editor. |
+| Quick-Post row        | `article_type = QUICK_POST`                          | "Schnellbeitrag" type chip alongside status chip; overflow menu limited to **Delete**. Click → feed-detail (`/teamspace/news/:id`). |
 
 ## Flows
 
