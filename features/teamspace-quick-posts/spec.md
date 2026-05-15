@@ -1,18 +1,18 @@
 # Feature: Teamspace Quick Posts
 
-> **Status:** 🚧 Spec drafted — awaiting review
+> **Status:** 🚧 Revised 2026-05-15 — title now required (min 3 chars), content is rich text (TipTap)
 > **Owner:** baumgart
-> **Last updated:** 2026-05-06
+> **Last updated:** 2026-05-15
 
 ## Vision (Elevator Pitch)
 
-Inline composer at the top of the teamspace news feed for casual social-media-style posts. Staff write a short text (optionally with title and image/file attachments) and broadcast it to one or several of their teamspaces in a single action. Carriers ("Träger") that already use the news feed as an open social channel get a low-friction posting surface without having to navigate into the heavyweight Redaktion editor.
+Inline composer at the top of the teamspace news feed that lets **any teamspace member** (not just editorial staff) publish a titled, rich-text post and broadcast it to one or several of their teamspaces in a single action. Quick-Posts use the same TipTap editor and content shape as Redaktion News — the differentiator is the **permission axis** (`tenant.posts.create` instead of `news.create`) and the **lack of editorial workflow** (no drafts, no scheduling, no categories, no acknowledgment, no feature image). Carriers ("Träger") that want every member of a teamspace to be able to post — without giving them news-editor rights — opt their teamspace into quick-posts via a per-teamspace flag.
 
 ## User Stories
 
-- As a **staff member** I want to share a quick text/image post inline above the feed, so that I don't have to open the full Redaktion editor for a casual update.
+- As a **staff member** I want to publish a titled, formatted post inline above the feed, so that I don't have to navigate into the full Redaktion editor or learn a different toolset.
 - As a **staff member** I want to post into multiple teamspaces I'm a member of, so that I can reach colleagues in both my public team and my institution-bound team in one shot.
-- As a **teamspace-Verantwortlicher** I want to opt my teamspace into or out of quick-posting, so that clinical teamspaces stay editorial-only while social ones open up.
+- As a **teamspace-Verantwortlicher** I want to opt my teamspace into or out of quick-posting, so that editorial-only teamspaces stay closed while open ones let any member contribute.
 - As a **teamspace-Verantwortlicher** I want to delete unwanted posts that touch my teamspace, so that I can keep the feed appropriate.
 - As a **tenant administrator** I want to delete inappropriate posts tenant-wide, so that I have a final-instance moderation tool independent of teamspace ownership.
 
@@ -22,13 +22,13 @@ Inline composer at the top of the teamspace news feed for casual social-media-st
 
 - [ ] **Given** the user has `tenant.posts.create` AND is member of at least one teamspace where `quick_posts_enabled = true`, **When** the news page renders, **Then** an inline composer appears above the feed.
 - [ ] **Given** the user lacks `tenant.posts.create` OR has no eligible teamspaces, **When** the news page renders, **Then** the composer is not rendered at all (no placeholder, no disabled card).
-- [ ] **Given** the composer is collapsed, **When** the user clicks the placeholder ("Was möchtest du teilen?"), **Then** it expands to show: textarea, optional-title toggle, attachment button, multi-teamspace chip-picker, "Posten" button.
+- [ ] **Given** the composer is collapsed, **When** the user clicks the placeholder ("Was möchtest du teilen?"), **Then** it expands to show: required title input, TipTap rich-text editor, attachment button, multi-teamspace chip-picker, "Posten" button.
 - [ ] **Given** the user opens the composer in the context of an eligible teamspace, **When** the picker initializes, **Then** that teamspace is preselected; otherwise no preselection.
-- [ ] **Given** the user types content of length ≥ 1, **When** the post button is examined, **Then** it is enabled. With empty content it is disabled.
-- [ ] **Given** the user expands the title field and types, **When** the post is created, **Then** the title is stored on the article. Otherwise the article's `title` is empty string.
+- [ ] **Given** the user types a title of length ≥ 3 AND content of length ≥ 1 AND has at least one teamspace selected, **When** the post button is examined, **Then** it is enabled. If any of the three conditions fails, the post button is disabled.
+- [ ] **Given** the user submits with title < 3 chars, **When** validation runs, **Then** the title input shows a required-min-length error and submission is blocked (matches NEWS validation).
 - [ ] **Given** the user attaches one or more files via drag-and-drop or file-picker, **When** the upload completes, **Then** thumbnails (images) or filename chips (other files) appear above the post button. Each chip is removable.
-- [ ] **Given** the user submits, **When** the request resolves, **Then** the new post appears at the top of the current feed, the composer collapses, and content/title/attachments reset.
-- [ ] **Given** the request fails (network/validation), **When** the error returns, **Then** content/attachments are preserved and an inline error message appears under the textarea.
+- [ ] **Given** the user submits, **When** the request resolves, **Then** the new post appears at the top of the current feed, the composer collapses, and title/content/attachments reset.
+- [ ] **Given** the request fails (network/validation), **When** the error returns, **Then** title/content/attachments are preserved and an inline error message appears under the editor.
 
 ### Per-teamspace setting
 
@@ -39,8 +39,8 @@ Inline composer at the top of the teamspace news feed for casual social-media-st
 ### Feed rendering
 
 - [ ] **Given** the news feed loads, **When** the filter resolves, **Then** both `NEWS` and `QUICK_POST` articles appear interleaved by `published_at DESC`.
-- [ ] **Given** a `QUICK_POST` with empty title renders, **When** the card is shown, **Then** content is the lead, no title block, no feature-image block, compact padding.
-- [ ] **Given** a `QUICK_POST` with title renders, **When** the card is shown, **Then** the title appears above content but the rest of the compact treatment still applies (no feature-image block, no category chip).
+- [ ] **Given** a `QUICK_POST` renders, **When** the card is shown, **Then** the title appears above content, content renders as rich text (HTML), and the compact treatment applies (no feature-image block, no category chip).
+- [ ] **Given** a legacy `QUICK_POST` with empty title exists in the database (pre-2026-05-15 records), **When** the card is shown, **Then** the title block is omitted gracefully (no broken layout) and content remains the lead. No data migration is performed.
 - [ ] **Given** a multi-teamspace `QUICK_POST` exists, **When** any of its teamspace feeds loads, **Then** the post appears once in that feed.
 
 ### Engagement
@@ -59,23 +59,23 @@ Inline composer at the top of the teamspace news feed for casual social-media-st
 
 ### Composer
 
-| State        | When?                                          | What does the user see?                           | A11y notes                |
-| ------------ | ---------------------------------------------- | ------------------------------------------------- | ------------------------- |
-| Hidden       | No `tenant.posts.create` or no eligible TS     | Nothing — feed begins immediately                 | —                         |
-| Collapsed    | Initial render with permission + eligible TS   | Single-line placeholder card                      | `role="button"`           |
-| Expanded     | After click into composer                      | Textarea + title-toggle + attachments + picker    | Focus on textarea         |
-| Uploading    | Attachment upload in progress                  | Per-chip spinner; post button disabled            | Live region for progress  |
-| Posting      | Submit in flight                               | Post button shows spinner; form fields readonly   | `aria-busy="true"`        |
-| Error        | Submit failed                                  | Inline error below textarea, content preserved    | `role="alert"`            |
+| State        | When?                                          | What does the user see?                              | A11y notes                |
+| ------------ | ---------------------------------------------- | ---------------------------------------------------- | ------------------------- |
+| Hidden       | No `tenant.posts.create` or no eligible TS     | Nothing — feed begins immediately                    | —                         |
+| Collapsed    | Initial render with permission + eligible TS   | Single-line placeholder card                         | `role="button"`           |
+| Expanded     | After click into composer                      | Title input (required) + TipTap editor + attachments + picker | Focus on title input |
+| Uploading    | Attachment upload in progress                  | Per-chip spinner; post button disabled               | Live region for progress  |
+| Posting      | Submit in flight                               | Post button shows spinner; form fields readonly      | `aria-busy="true"`        |
+| Error        | Submit failed                                  | Inline error below editor, title/content preserved   | `role="alert"`            |
 
 ### Card (compact variant for QUICK_POST)
 
-| State        | When?                          | What does the user see?                           |
-| ------------ | ------------------------------ | ------------------------------------------------- |
-| With title   | `title` non-empty              | Title (prominent) + content + attachment list     |
-| No title     | `title` empty                  | Content as lead + attachment list                 |
-| With images  | One or more image attachments  | Thumbnail strip below content                     |
-| With files   | One or more non-image attach.  | Download chips with filename + size below content |
+| State        | When?                              | What does the user see?                           |
+| ------------ | ---------------------------------- | ------------------------------------------------- |
+| Standard     | `title` non-empty (all new posts)  | Title (prominent) + HTML content + attachment list |
+| Legacy       | `title` empty (pre-2026-05-15)     | HTML content as lead, no title block + attachment list |
+| With images  | One or more image attachments      | Thumbnail strip below content                     |
+| With files   | One or more non-image attach.      | Download chips with filename + size below content |
 
 ## Flows
 
@@ -84,15 +84,16 @@ Inline composer at the top of the teamspace news feed for casual social-media-st
 ```
 Composer collapsed
    └─click placeholder──> expanded
-                              ├─type content ────────────┐
-                              ├─toggle title ────────────┤
-                              ├─add attachments ─────────┤   (pending uploads)
-                              ├─pick teamspace(s) ───────┤
-                              └─click "Posten" ──────────┘
+                              ├─type title (required, min 3) ─┐
+                              ├─type rich content (TipTap) ───┤
+                              ├─add attachments ──────────────┤   (pending uploads)
+                              ├─pick teamspace(s) ────────────┤
+                              └─click "Posten" ───────────────┘
                                           │
                                           ▼
                               POST /articles
                               (article_type=QUICK_POST,
+                               title=…, content=<html>,
                                status=PUBLISHED,
                                teamspace_ids=[…],
                                attachment_ids=[…])
@@ -131,14 +132,16 @@ View post
 
 ## Non-Goals
 
-- **Rich text** — content is plain text with line breaks. No TipTap, no markdown rendering, no embeds.
 - **Drafts / scheduling** — posts go straight to PUBLISHED. No DRAFT/SCHEDULED states for `QUICK_POST`.
 - **Categories** — `category_id` is ignored for `QUICK_POST`.
 - **Translations** — content is stored in tenant's primary language only. No `ArticleTranslation` rows.
 - **Acknowledgment workflow** — `requires_acknowledgment` is forced false.
+- **Feature image / video** — `feature_image_url`, `video_url` are ignored for `QUICK_POST`.
+- **Tags / context keys / related articles** — all editorial-tooling-only fields are stripped server-side.
 - **Per-teamspace partial delete** — deleting a multi-teamspace post removes it from *all* targeted teamspaces. There is no "remove from my teamspace only" mode.
 - **Edit after publish** — post-creation editing is out of scope for v1. The author can delete and repost.
 - **Mentions / hashtags** — no `@user` or `#tag` parsing in v1.
+- **Legacy data migration** — pre-2026-05-15 quick posts with empty `title` are not backfilled. UI and push-notification path render them gracefully (see Card/Legacy state and Notifications section).
 
 ## Edge Cases
 
@@ -148,7 +151,8 @@ View post
 - **Author loses membership in a target teamspace after posting** — post stays. Engagement and moderation by others continue normally.
 - **Teamspace deleted** — existing Article deletion cascade handles `teamspace_ids` cleanup; if the post had multiple targets, it survives in remaining ones.
 - **Attachment upload fails mid-compose** — chip shows error state; user can remove it. Pending attachments without an article are cleaned up by the existing pending-attachment lifecycle.
-- **Content length cap** — match existing `Article.content` validator (≥ 1 char for QUICK_POST), max length matches existing column constraint. No quick-post-specific cap.
+- **Title length cap** — required, min 3 chars (matches `CreateArticleDto.title` for NEWS). Max length matches the existing column constraint.
+- **Content length cap** — match existing `Article.content` validator (≥ 1 char for QUICK_POST), max length matches existing column constraint. No quick-post-specific cap. Content is HTML produced by TipTap, identical sanitization as NEWS.
 - **Cross-visibility post** — picker may include public and institution-bound teamspaces simultaneously; the resulting article's `teamspace_ids[]` mixes both. Audience filtering downstream is unchanged.
 - **Currently posting in a teamspace that's institution-bound** — the article inherits no `institution_id` (multi-teamspace path); existing access control evaluates per-teamspace membership for read.
 
@@ -184,6 +188,7 @@ The existing `/teamspace/news` route guard remains unchanged (`teamspace_news.vi
 
 - New `QUICK_POST` triggers the same teamspace-news unread-count increment as `NEWS` — see [teamspace-home](../teamspace-home/spec.md).
 - Push notifications: same delivery as `NEWS`, deep-linking to `/teamspace/news/:id`.
+- Push body uses `article.title` (guaranteed non-empty for new posts). For legacy pre-2026-05-15 quick-posts with empty title, the push pipeline falls back to a text preview of `article.content` to satisfy the push gateway's required-fields contract — see `articles.service.ts`, `article.processor.ts`, `article-scheduler.service.ts`.
 - **Non-goal in v1:** distinct notification copy for "Schnellbeitrag" vs. "Beitrag" — same wording.
 
 ## i18n Keys
@@ -191,8 +196,8 @@ The existing `/teamspace/news` route guard remains unchanged (`teamspace_news.vi
 > User-facing strings remain in German.
 
 - `quickPostComposer.placeholder` ("Was möchtest du teilen?")
+- `quickPostComposer.titlePlaceholder`, `.titleRequiredError`, `.titleMinLengthError`
 - `quickPostComposer.contentPlaceholder`
-- `quickPostComposer.titleToggle`, `.titlePlaceholder`
 - `quickPostComposer.attachmentButton`
 - `quickPostComposer.teamspacePickerLabel`, `.teamspacePickerEmpty`
 - `quickPostComposer.submit`, `.submitting`, `.error`
