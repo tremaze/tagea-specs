@@ -117,7 +117,7 @@ interface CategoryWithTeamspace {
 | Action | True when |
 |---|---|
 | `read` | User has read access to the submission (already enforced by `applyAccessControl` — when this map is serialized, `read` is always `true`). |
-| `update` | User has `submissions.edit` in the submission's teamspace OR `isTenantAdmin`. |
+| `update` | User has `submissions.process` in the submission's teamspace OR `isTenantAdmin`. |
 | `delete` | User has `submissions.delete` in the submission's teamspace OR `isTenantAdmin`. |
 | `changeStatus` | Same as `update`; UI gates the status-change button by this action. |
 | `assign` | Same as `update`; UI gates the assignment dialog by this action. |
@@ -127,7 +127,7 @@ interface CategoryWithTeamspace {
 
 ### Fields
 
-The Submissions pilot does NOT serialize `_fieldPermissions`. Per-action gating is sufficient for the existing workflows: if a user lacks `submissions.edit` in the relevant teamspace, all mutation endpoints (status, assignment, response, custom-field updates) return `403` via `_permissions` symmetry. There is currently no "you can edit some fields but not others" requirement for submissions; if one appears later (e.g. terminal-state freezing of `custom_field_values`), it is a small extension to the Ability's forbidden-fields computation and a new acceptance criterion — not a pattern change.
+The Submissions pilot does NOT serialize `_fieldPermissions`. Per-action gating is sufficient for the existing workflows: if a user lacks `submissions.process` in the relevant teamspace, all mutation endpoints (status, assignment, response, custom-field updates) return `403` via `_permissions` symmetry. There is currently no "you can edit some fields but not others" requirement for submissions; if one appears later (e.g. terminal-state freezing of `custom_field_values`), it is a small extension to the Ability's forbidden-fields computation and a new acceptance criterion — not a pattern change.
 
 ### Endpoints affected
 
