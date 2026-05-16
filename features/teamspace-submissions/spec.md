@@ -178,7 +178,7 @@ URL convention: `/teamspaces/:teamspaceId/...` for everything in the teamspace s
 | `GET    /teamspaces/:tsId/submissions/stats` | `submissions.view_all` | Admin dashboard data |
 | `GET    /teamspaces/:tsId/submissions/export/csv` | `submissions.view_all` | Admin export |
 | `GET    /teamspaces/:tsId/submissions/:id` | `submissions.view_own` (+ tier check in service) | Detail |
-| `GET    /teamspaces/:tsId/submissions/:id/assignable-employees` | `submissions.edit` | Picker for assignment dialog |
+| `GET    /teamspaces/:tsId/submissions/:id/assignable-employees` | `submissions.process` | Picker for assignment dialog |
 | `GET    /teamspaces/:tsId/submissions/:id/attachments/:aid/download` | `submissions.view_own` (+ tier) | File download |
 | `GET    /teamspaces/:tsId/submissions/:id/filled-pdf` | `submissions.view_own` (+ tier) | PDF receipt |
 | `GET    /teamspaces/:tsId/submissions/:id/filled-pdf/signed-url` | `submissions.view_own` (+ tier) | Signed URL |
@@ -187,14 +187,14 @@ URL convention: `/teamspaces/:teamspaceId/...` for everything in the teamspace s
 | `GET    /teamspaces/:tsId/submissions/:id/custom-fields/at-time` | `submissions.view_own` (+ tier) | Forensic snapshot |
 | `GET    /teamspaces/:tsId/submissions/:id/custom-fields/v2/groups/:gid/rows` | `submissions.view_own` (+ tier) | Repeating-group read |
 | `POST   /teamspaces/:tsId/submissions` | `submissions.create` | Submit a new entry |
-| `PATCH  /teamspaces/:tsId/submissions/:id/status` | `submissions.edit` | Status change (admin) |
-| `PATCH  /teamspaces/:tsId/submissions/:id/assignment` | `submissions.edit` | Reassign |
-| `POST   /teamspaces/:tsId/submissions/:id/response` | `submissions.edit` | Add response |
-| `PUT    /teamspaces/:tsId/submissions/:id/custom-fields/v2/bulk` | `submissions.edit` | Bulk-update CF values |
-| `PATCH  /teamspaces/:tsId/submissions/:id/custom-fields/v2/:k` | `submissions.edit` | Single-field update |
-| `POST   /teamspaces/:tsId/submissions/:id/custom-fields/v2/groups/:gid/rows` | `submissions.edit` | Repeating-group create |
-| `PUT    /teamspaces/:tsId/submissions/:id/custom-fields/v2/groups/:gid/rows/:rowId` | `submissions.edit` | Repeating-group update |
-| `DELETE /teamspaces/:tsId/submissions/:id/custom-fields/v2/groups/:gid/rows/:rowId` | `submissions.edit` | Repeating-group delete |
+| `PATCH  /teamspaces/:tsId/submissions/:id/status` | `submissions.process` | Status change (admin) |
+| `PATCH  /teamspaces/:tsId/submissions/:id/assignment` | `submissions.process` | Reassign |
+| `POST   /teamspaces/:tsId/submissions/:id/response` | `submissions.process` | Add response |
+| `PUT    /teamspaces/:tsId/submissions/:id/custom-fields/v2/bulk` | `submissions.process` | Bulk-update CF values |
+| `PATCH  /teamspaces/:tsId/submissions/:id/custom-fields/v2/:k` | `submissions.process` | Single-field update |
+| `POST   /teamspaces/:tsId/submissions/:id/custom-fields/v2/groups/:gid/rows` | `submissions.process` | Repeating-group create |
+| `PUT    /teamspaces/:tsId/submissions/:id/custom-fields/v2/groups/:gid/rows/:rowId` | `submissions.process` | Repeating-group update |
+| `DELETE /teamspaces/:tsId/submissions/:id/custom-fields/v2/groups/:gid/rows/:rowId` | `submissions.process` | Repeating-group delete |
 
 **Service-side tier filter** for `submissions.view_*` (per-teamspace endpoint):
 - `view_all`: sees every submission in the teamspace
@@ -250,7 +250,7 @@ Tenant-admin path complements the per-TS path; both write to the same DB table. 
 | `submissions-verwaltung-page` | Status filter, search, sort | (page is gated already; controls visible) |
 | `submissions-verwaltung-page` | "Konfiguration" button | `hasTeamspacePermission(tsId, 'settings.manage')` |
 | `submission-categories-page` | Create/Edit/Delete category | `hasTeamspacePermission(tsId, 'settings.manage')` |
-| `submission-detail-page` | "Antworten" / "Status ändern" / "Zuweisen" | `hasTeamspacePermission(tsId, 'submissions.edit')` |
+| `submission-detail-page` | "Antworten" / "Status ändern" / "Zuweisen" | `hasTeamspacePermission(tsId, 'submissions.process')` |
 | `global-submissions-verwaltung-page` | All admin actions | `isTenantAdmin ∨ specific tenant.submission_categories.*` |
 
 ### Routes
