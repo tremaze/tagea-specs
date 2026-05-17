@@ -107,6 +107,9 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 | Pending Employees        | ✅      | ❌      | [pending-employees/](./features/pending-employees/spec.md) |
 | Employee Status Lifecycle | 🚧      | ❌      | [employee-status-lifecycle/](./features/employee-status-lifecycle/spec.md) |
 | PEP                      | ✅      | ❌      | [pep/](./features/pep/spec.md)                             |
+| Personnel: Zeitkonten    | ⏳      | ❌      | [personnel-zeitkonten/](./features/personnel-zeitkonten/spec.md) |
+| Personnel: Schichten     | ⏳      | ❌      | [personnel-schichten/](./features/personnel-schichten/spec.md)   |
+| Personnel: Zeiterfassung | ⏳      | ❌      | [personnel-zeiterfassung/](./features/personnel-zeiterfassung/spec.md) |
 | Bulk Messaging           | ✅      | ❌      | [bulk-messaging/](./features/bulk-messaging/spec.md)       |
 | Reports                  | ✅      | ❌      | [reports/](./features/reports/spec.md)                     |
 | Files (Institution)      | ✅      | ❌      | [files-institution/](./features/files-institution/spec.md) |
@@ -159,6 +162,7 @@ These bundles describe behavior that spans every feature — routing, HTTP, auth
 | Context Resolution | ✅      | ⏳      | [context-resolution/](./cross-cutting/context-resolution/spec.md) |
 | i18n & Theming     | ✅      | ⏳      | [i18n-and-theming/](./cross-cutting/i18n-and-theming/spec.md)     |
 | Bootstrap & Push   | ✅      | ⏳      | [bootstrap-and-push/](./cross-cutting/bootstrap-and-push/spec.md) |
+| Personnel Permissions | ⏳   | ❌      | [personnel-permissions/](./cross-cutting/personnel-permissions/spec.md) |
 | Offline Support    | N/A     | ⏳      | [offline-support/](./features/offline-support/spec.md)            |
 
 ### Backend infrastructure
