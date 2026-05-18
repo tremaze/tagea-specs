@@ -282,10 +282,14 @@ Specifically for submissions:
 
 These are seed defaults; tenants can override via the permission editor at `/einstellungen/teamspaces/rollen-rechte`.
 
-## Notifications (Push / In-App)
+## Notifications (Push / In-App / Email)
 
 - Status-change notifications deep-link to the detail route.
 - Submissions influence the teamspace-home badge via `TeamspaceUnreadCountService`.
+- **Submitter notifications** are sent on all three channels (PUSH + IN_APP + EMAIL) whenever the workflow advances visibly to the original employee:
+  - `submission_responded` — fires when a processor adds a `response` via `POST .../response`. If the same call also closes the submission (`should_close=true`), the body line announces both events; no separate status-change notification is sent.
+  - `submission_status_changed` — fires when `PATCH .../status` moves the submission between `pending` / `in_review` / `closed` (re-openings included). Approval flows continue to use the dedicated `approval_granted` / `approval_denied` types; rejected is a terminal state and cannot transition.
+  - Self-notify is suppressed: when the actor equals `employee_id`, no notification is created.
 
 ## i18n Keys
 
