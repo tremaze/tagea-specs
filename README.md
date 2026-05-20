@@ -54,6 +54,7 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 | Password Reset     | ✅      | ⏳      | [password-reset/](./features/password-reset/spec.md)         |
 | Email Verification | ✅      | ⏳      | [email-verification/](./features/email-verification/spec.md) |
 | Public Register    | ✅      | ⏳      | [public-register/](./features/public-register/spec.md)       |
+| Social Login & Onboarding | 🚧 | ⏳   | [social-login-onboarding/](./features/social-login-onboarding/spec.md) |
 
 ### Client Portal
 
