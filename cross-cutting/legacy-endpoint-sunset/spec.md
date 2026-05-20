@@ -45,6 +45,9 @@ Defense-in-depth before deletion: check that the legacy endpoint is genuinely un
 | `GET /submissions?visibility=institution_supervisor` (query-param shortcut) | entity-permissions pilot 2026-05-16 | `GET /submissions/supervised` | 2026-06-13 | 🟡 live | (this branch) |
 | `GET /tenants/current/theme` | Auth-Hydration backward-compat | `/session` DTO `tenant.theme` | unscheduled — pin when next Auth-Hydration cleanup runs | 🟡 live | `a076949aa` |
 | `GET /auth/me/institutions` | Auth-Hydration backward-compat | `/session` DTO | unscheduled — pin when next Auth-Hydration cleanup runs | 🟡 live | `a076949aa` |
+| `GET /teamspaces/:teamspaceId/submission-categories` | submission-template-refactor Stage 1 2026-05-20 | `GET /teamspaces/:teamspaceId/submission-templates` | sunset together with submission-template-refactor Stage 2 (DB cleanup) | 🟡 live | (this branch) |
+| `GET /teamspaces/:teamspaceId/submission-categories/:id` | submission-template-refactor Stage 1 2026-05-20 | `GET /teamspaces/:teamspaceId/submission-templates/:id` | sunset together with submission-template-refactor Stage 2 (DB cleanup) | 🟡 live | (this branch) |
+| `POST /submissions` body field `category_id` (dual-accept with `template_id`) | submission-template-refactor Stage 1 2026-05-20 | `POST /submissions` with `template_id` | sunset together with submission-template-refactor Stage 2 (DB cleanup) | 🟡 live | (this branch) |
 
 Status legend:
 - `🟡 live` — endpoint exists, marked deprecated, still served
