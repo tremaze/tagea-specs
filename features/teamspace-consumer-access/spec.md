@@ -1,8 +1,8 @@
 # Feature: Teamspace Two-Scope Access Enforcement
 
-> **Status:** 🟢 Implemented (PR 1 Guard, PR 2 Wiring, PR 3 Submissions-Permission-Cut)
+> **Status:** 🟢 Implemented (PR 1 Guard, PR 2 Wiring, PR 3 Submissions-Permission-Cut) — 🟡 Extension in progress: Public-Consume Permission Gate (PR-A foundation merged, PR-B cut in progress)
 > **Owner:** svenarbeit
-> **Last updated:** 2026-05-04
+> **Last updated:** 2026-05-18
 
 ## Vision (Elevator Pitch)
 
@@ -199,6 +199,138 @@ E2E pinned in:
 - `outsider-cannot-list-submission-categories.spec.ts` (3 cells, dito)
 - `bearbeiter-sees-only-own-submissions.spec.ts` (filter floor: bearbeiter ohne ts.submissions.* sieht nur eigene via tenant.submissions.view_own)
 - `traegermanager-resets-defaults-restores-matrix.spec.ts` (post-cut role-permission counts: admin 16, bearbeiter 7, redakteur 7)
+
+## Extension: Public-Consume Permission Gate (2026-05-18)
+
+### Motivation
+
+Scope A as originally defined was unconditional for `type=public` teamspaces: every authenticated tenant user could enter every public teamspace and saw its content in cross-teamspace feeds. This was fine when all "Mitarbeiter" had a comparable relationship to the organization — but the role of "Ehrenamtler" (volunteer) breaks that assumption. Volunteers are real tenant users with logins, but operationally they should not see public teamspaces created by internal departments (e.g. HR-Mitteilungen, Geschäftsführung-News).
+
+This extension introduces a tenant-scoped permission that gates the public-teamspace branch of Scope A. The two-scope model itself is unchanged; the public branch simply becomes permission-conditional.
+
+### New permission
+
+`tenant.teamspace_public.consume` — capability to access public-type teamspaces as a Scope-A consumer. Default-mapped to all three standard tenant roles (`mitarbeiter`, `personalverwalter`, `traeger_manager`) and any custom tenant role that has at least one other `tenant.teamspace_*` permission at migration time, so the rollout is non-breaking for existing tenants. Tenant admins bypass the check entirely (via the standard admin-elevation bypass in `PermissionResolverService`).
+
+UI placement (Träger-Rollen-Konfiguration): new category **"Teamspace-Öffentliche Teamspaces"** with a single "Konsumieren" action, ordered *before* the per-module Teamspace categories.
+
+### Observable behavior changes
+
+Two surfaces change. **Scope B (assignment-based access) is untouched** in both — Fachbereichsleitung and any other Scope-B-only role keeps full access regardless of this permission.
+
+**Surface 1 — Single-teamspace routes (covered by `TeamspaceAccessGuard`):**
+
+For `type=public` teamspaces, a user who has neither Scope-B assignment nor an institution-link AND lacks `tenant.teamspace_public.consume` receives:
+
+```
+403 Forbidden
+code: TEAMSPACE_PUBLIC_CONSUME_FORBIDDEN
+```
+
+(Distinct from `TEAMSPACE_NOT_ACCESSIBLE` so the frontend can show a permission-specific message rather than a generic "no access".)
+
+Applies to: `GET /teamspaces/:id`, `GET /teamspaces/:id/employees`, and every route decorated with `@RequireTeamspaceAccess()` (news/events/knowledge/submissions reads).
+
+**Surface 2 — Cross-teamspace aggregator routes (covered by `findAccessibleTeamspaces` / `TeamspaceVisibilityService.getConsumerVisibleTeamspaceIds`):**
+
+For users without the permission, `type=public` teamspaces are filtered out of the visibility list. The downstream feeds therefore exclude their content:
+
+| Route | Effect for user without permission |
+|---|---|
+| `GET /teamspaces/accessible` | public teamspaces omitted from sidebar/nav list |
+| `GET /articles` | articles whose `teamspace_id` belongs to a public teamspace omitted |
+| `GET /articles/categories`, `/articles/categories/tree` | categories under public teamspaces omitted |
+| `GET /events` | events under public teamspaces omitted |
+| `GET /feed` | feed items under public teamspaces omitted |
+| `GET /teamspaces/institution-based` | unchanged in shape (already excludes `public`); permission has no effect here |
+
+### What explicitly does NOT change
+
+- `findEditableTeamspaces` / `getEditorialVisibleTeamspaceIds` — Scope B; editorial workflows are unaffected. A volunteer who is explicitly assigned (`teamspace_employee_assignment`) to a public teamspace as a `redakteur` still creates news there.
+- Write routes (`POST /articles`, `POST /events`, …) — already gated by `@Auth({ scope: 'teamspace', permissions: [...] })`. Adding the public-consume gate here would lock out pure-Scope-B roles, which is the exact opposite of the intent.
+- `GET /appointments/calendar` — participant-based, not teamspace-aggregated. Volunteers continue to see appointments they are participants in.
+- Cross-tenant submission listings (`/submissions/managed|supervised|own` etc.) — use the dedicated `applyAccessControl` path which is permission-driven (Scope B); no public-consume check added. *Note:* Single-teamspace submission reads (`GET /teamspaces/:tsId/submissions/...`, `GET /teamspaces/:tsId/submission-categories`) sit behind `@RequireTeamspaceAccess()` and therefore ARE filtered for non-consumers of public teamspaces — this is intentional and matches the surface-1 contract.
+- Notifications, LMS, global search, tenant-wide activities — not teamspace-aggregated.
+- Institution-based teamspaces — Scope A via institution-link is unchanged. A volunteer who works in an institution sees teamspaces bound to that institution.
+
+### Acceptance Criteria
+
+- [ ] All three standard tenant roles (`mitarbeiter`, `personalverwalter`, `traeger_manager`) retain pre-extension behavior post-migration (no regression).
+- [ ] Tenant admin sees all public teamspaces in sidebar, feed, articles, events (bypass).
+- [ ] A user in a custom role *without* `tenant.teamspace_public.consume`:
+  - [ ] `GET /teamspaces/accessible` does not contain any `type=public` entries.
+  - [ ] `GET /teamspaces/{public-ts-id}` → 403 with code `TEAMSPACE_PUBLIC_CONSUME_FORBIDDEN`.
+  - [ ] `GET /articles` does not contain any article from a public teamspace.
+  - [ ] `GET /articles/categories` does not contain categories of public teamspaces.
+  - [ ] `GET /events` does not contain events from public teamspaces.
+  - [ ] `GET /feed` does not contain items from public teamspaces.
+- [ ] Same user, but additionally with a `teamspace_employee_assignment` on a public teamspace (Scope B):
+  - [ ] `GET /teamspaces/{public-ts-id}` → 200 (Scope B beats the permission gate).
+  - [ ] `GET /articles/editorial` lists that teamspace (Scope B editorial path unaffected).
+  - [ ] `GET /teamspaces/accessible` still omits it (Scope A and Scope B remain orthogonal — assignment does not grant consumer visibility).
+- [ ] Same user, but member of an institution linked to an `INSTITUTION_BASED` teamspace: sees that teamspace as today (Scope A via institution-link unaffected).
+- [ ] Existing E2E suite (`apps/tagea-frontend-e2e/src/tests/teamspaces/*.spec.ts`) remains green.
+- [ ] New E2E suite under `apps/tagea-frontend-e2e/src/tests/teamspaces/public-consume-gate/` covers all of the above.
+- [ ] Pre-merge migration verification: every existing tenant role that has at least one `tenant.teamspace_*` permission also has `tenant.teamspace_public.consume`.
+
+### Design
+
+#### Service-layer cut (Cross-teamspace aggregator surface)
+
+`TeamspacesService.findAccessibleTeamspaces()` resolves the permission via `PermissionResolverService.hasPermission(authContext, TEAMSPACE_PUBLIC_CONSUME, 'tenant')` once at the top of the method. The existing two-branch WHERE clause becomes:
+
+```sql
+-- has institution memberships:
+(teamspace.type = :institutionType AND EXISTS (... institution-link ...))
+OR (teamspace.type = :publicType AND :canConsumePublic = true)
+
+-- no institution memberships:
+teamspace.type = :publicType AND :canConsumePublic = true
+```
+
+Because `TeamspaceVisibilityService.getConsumerVisibleTeamspaceIds()` is a thin wrapper around `findAccessibleTeamspaces()`, the four cross-teamspace aggregators (`articles.service.ts`, `article-categories.controller.ts`, `events.service.ts`, `feed.service.ts`) inherit the filter automatically — no per-aggregator change required.
+
+#### Predicate-layer cut (Single-teamspace surface)
+
+`hasTeamspaceAccessQuery` gains a third parameter `{ canConsumePublic: boolean }`. The `t.type = 'public'` branch of the OR-chain becomes `(t.type = 'public' AND :canConsumePublic = true)`. The function stays pure (no service injection) — callers resolve the permission and pass the boolean.
+
+`TeamspaceAccessGuard` resolves the permission once per request via `PermissionResolverService` (request-scoped) and threads it through. The existing tenant-admin bypass remains *before* the predicate call, so admins are unaffected.
+
+When the predicate returns false specifically because of the public-consume branch (teamspace is public, user has no institution-link, no assignment, but lacks the permission), the guard throws `ForbiddenException('TEAMSPACE_PUBLIC_CONSUME_FORBIDDEN')` instead of the generic `TEAMSPACE_NOT_ACCESSIBLE`. This requires the predicate to return a small reason object (`{ accessible: false, reason: 'public_consume_missing' | 'no_relation' }`) rather than a bare boolean — the existing boolean callers are adapted to read `.accessible`.
+
+#### Migration
+
+`20260518xxxxxx-AddTeamspacePublicConsumePermission.ts`:
+1. Insert row in `permissions` table with name `tenant.teamspace_public.consume`.
+2. For every existing tenant role that has ≥1 permission with prefix `tenant.teamspace_` OR is a built-in role (`tenant-admin`, `mitarbeiter`, `personalverwalter`, `traeger_manager`), insert a corresponding `role_permissions` row.
+3. Update `default-role-permissions.ts` so future tenants provision the permission for the three standard tenant roles.
+
+Audit query `tools/permission-audit/verify-public-consume-seed.sql` lists any tenant role that has ≥1 `tenant.teamspace_*` permission but lacks `tenant.teamspace_public.consume`. Expected output post-migration: empty. Operators run it per tenant DB after deploying PR-A.
+
+#### API backwards compatibility
+
+- No endpoints removed, renamed, or method-changed.
+- No request fields added or made required.
+- Response shapes unchanged.
+- Only response *content* changes for users without the new permission (shorter lists, 403 for direct URLs to forbidden teamspaces). Mobile/Capacitor clients continue to function — they render what the server returns.
+
+### Frontend impact
+
+- **Träger-Rollen-Matrix UI**: new category row + i18n keys for the action label and description (16 locales). German authoritative; other locales fall back to German until professionally translated (per LMS-i18n precedent).
+- **Sidebar / Teamspace navigation**: zero changes — it already consumes `/teamspaces/accessible`.
+- **Articles list, Events list, Feed page**: zero changes — they already render server-filtered data.
+- **403 handler**: optional refinement to show a specific message for code `TEAMSPACE_PUBLIC_CONSUME_FORBIDDEN` ("Diese Funktion ist für deine Rolle nicht freigeschaltet") vs. the generic "Kein Zugriff" — small enhancement, not strictly required.
+
+### Rollout
+
+Four-PR sequence:
+
+1. **PR-A — Foundation** (zero behavior change): spec extension (this section), permission constant, migration with default-seed for all existing tenant roles, baseline-currency-hash regen, audit script.
+2. **PR-B — Backend cut** (behavior change only for newly created roles without the permission): predicate signature change, guard wiring, service filter, unit tests.
+3. **PR-C — Frontend matrix UI**: surfaces the permission in the Träger-Rollen-Konfiguration so tenant-admins can create roles without it (e.g. for volunteers).
+4. **PR-D — E2E**: new `ehrenamtler` static test user (3-file pattern + seed SQL) and the 8 acceptance specs.
+
+Risk profile: minimal. The filter is purely subtractive (users without the permission see less, never more). Default-seed of existing roles means zero observable change at deploy time of PR-A and PR-B. PR-C is additive UI. PR-D is test-only.
 
 ## Future work (out of this spec)
 

@@ -32,7 +32,8 @@ type EligibleResponse = EligibleTeamspaceForQuickPost[];
 
 Existing endpoint. New behavior when `article_type = QUICK_POST`:
 
-- `title` is optional (`@ValidateIf` skips min-length).
+- `title` is **required** (`@Length(3, 200)`), identical to NEWS. As of 2026-05-15 — the prior optional-title behavior is dropped; legacy DB rows with empty title remain readable but cannot be re-created.
+- `content` is **required** (`@MinLength(1)`) and is **HTML** (TipTap output, identical sanitization as NEWS).
 - `category_id` is optional and ignored.
 - `status` is forced to `PUBLISHED` server-side.
 - `target_audience` is forced to `EMPLOYEES` server-side.
@@ -87,15 +88,15 @@ Requires `ts.settings.edit` for the teamspace as today.
 
 ```ts
 class CreateArticleDto {
-  @ValidateIf((o) => o.article_type !== ArticleType.QUICK_POST)
+  // Title is required for ALL article types (including QUICK_POST since 2026-05-15)
   @IsString()
   @Length(3, 200)
   title!: string;
 
-  @ValidateIf((o) => o.article_type === ArticleType.QUICK_POST)
+  // Content shape: HTML for editorial articles AND quick posts. Per-type min length:
+  // - QUICK_POST: ≥ 1 char
+  // - other types: ≥ 10 chars (existing)
   @IsString()
-  @MinLength(1)
-  // For non-QUICK_POST: @MinLength(10) — preserved as separate decorator below
   content!: string;
 
   @ValidateIf((o) => o.article_type !== ArticleType.QUICK_POST)

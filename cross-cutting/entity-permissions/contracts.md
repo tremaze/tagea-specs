@@ -1,6 +1,6 @@
 # Contracts: Entity-Level Permissions
 
-> Wire contract for `_permissions` / `_fieldPermissions`, plus the pilot vocabulary for Appointments.
+> Wire contract for `_permissions`, `_fieldPermissions`, and `_visibility`. The Submissions-specific action / visibility vocabulary lives in [`features/teamspace-submissions/contracts.md`](../../features/teamspace-submissions/contracts.md) (first pilot). The Appointments vocabulary further below remains as a worked example for a future adoption.
 
 ## Shared Shape
 
@@ -13,9 +13,15 @@ type ActionPermissions<A extends string> = Record<A, boolean>;
 // Only forbidden fields appear; value is always `false`. Missing key = writable.
 type FieldPermissions<F extends string> = Partial<Record<F, false>>;
 
-interface WithPermissions<A extends string, F extends string = never> {
+// Access-origin discriminator. Per-entity vocabulary; lowercase snake_case;
+// names the SOURCE of access, not the role of the viewer.
+type VisibilityOrigin<V extends string> = V;
+
+// Augmentation for detail responses ONLY. Collection items do not extend this.
+interface WithPermissions<A extends string, V extends string, F extends string = never> {
   _permissions: ActionPermissions<A>;
   _fieldPermissions?: FieldPermissions<F>;
+  _visibility: VisibilityOrigin<V>;
 }
 ```
 
@@ -27,8 +33,8 @@ interface WithPermissions<A extends string, F extends string = never> {
 
 ```ts
 // Documentation-only shape.
-interface EntityDetailResponse<T, A extends string, F extends string = never>
-  extends WithPermissions<A, F> {
+interface EntityDetailResponse<T, A extends string, V extends string, F extends string = never>
+  extends WithPermissions<A, V, F> {
   // ...concrete entity fields for T...
 }
 ```
@@ -39,18 +45,46 @@ interface EntityDetailResponse<T, A extends string, F extends string = never>
 
 **Request:** partial entity body.
 
-**Response:** the updated entity (augmented with `_permissions` / `_fieldPermissions` computed from the **post-update** state).
+**Response:** the updated entity (augmented with `_permissions` / `_fieldPermissions` / `_visibility` computed from the **post-update** state).
 
 **Error codes:**
 
 - `403 Forbidden` — user may not `update` this entity (symmetry with `_permissions.update === false`).
 - `422 Unprocessable Entity` — body touches a field where `_fieldPermissions[field] === false`. Error body names the forbidden field(s).
 
-### `GET /<resource>` (list)
+### Collection endpoints — scoped-list convention
 
-**Response:** items MUST NOT contain `_permissions` or `_fieldPermissions`.
+Every list endpoint serves exactly one visibility scope, encoded in the URL. There is **no** default-OR collection.
 
-## Pilot Vocabulary: Appointment
+**Pattern:** `GET /<resource>/<scope>` where `<scope>` matches an entity-specific `_visibility` value.
+
+**Response shape:** items are the plain entity DTO. No `_permissions`, no `_fieldPermissions`, no `_visibility` — the URL already names the scope.
+
+```ts
+// Documentation-only shape.
+interface ScopedListResponse<T> {
+  items: T[];
+  // ...pagination / facets / etc...
+}
+```
+
+**Error codes:**
+
+- `401 Unauthorized` — not authenticated.
+- `403 Forbidden` — authenticated, but no permission to use this scope (e.g. `GET /submissions/supervised` when user has no `institution.submissions.view_institution_members`).
+- `400 Bad Request` — only for genuinely malformed query (`?limit=abc` etc.). NOT used to switch scopes — `?visibility=…` is forbidden by Server Invariant 7.
+
+### Why no meta-fields on collection items?
+
+- **DSGVO-clean.** Items the user shouldn't manage don't appear in `/managed`, period. No client-side filter race; nothing leaks via network-tab, browser-logs, Sentry, etc.
+- **Pagination honest.** Page-size is the page-size; no "wir liefern 100 aber zeigen 30".
+- **Cache-friendly.** Each URL maps to one scoped result set. CDN / browser-cache / Redis can key on the path without query-param folding.
+- **`@Auth` precise per URL.** `/managed` checks teamspace-manage permissions; `/supervised` checks institution-supervisor permission. Mixed-scope routes force the broadest annotation (or none) and shift enforcement into the service.
+
+## Pilot Vocabulary: Appointment (planned, not first to land)
+
+> The Submissions vocabulary lives in [`features/teamspace-submissions/contracts.md`](../../features/teamspace-submissions/contracts.md) — that is the first pilot. The Appointments vocabulary below is the original design and remains as a worked example for the planned second adoption.
+
 
 Source for rules: `apps/tagea-frontend/src/app/pages/appointment-detail/appointment-detail.component.ts:259–342` and `apps/tagea-frontend/src/app/services/calendar-event.service.ts:205–214`.
 

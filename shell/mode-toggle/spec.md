@@ -1,8 +1,45 @@
 # Feature: Mode Toggle
 
-> **Status:** 🚧 Spec drafted — awaiting review
+> **Status:** 🚧 UX still accurate; persistence and default-mode redirect superseded
 > **Owner:** ltoenjes
-> **Last updated:** 2026-04-21
+> **Last updated:** 2026-05-12
+
+> ## ⚠️ Persistence & default-mode redirect superseded (2026-05-12)
+>
+> The visible UX of the mode toggle (icon, tooltip, switching logic, institution
+> picker for multi-inst users) is **unchanged**. What changed:
+>
+> 1. **No more `localStorage['navigation-mode']`** — the new `NavigationMode`
+>    service derives mode purely from the URL with sticky behavior on ambiguous
+>    routes. Cold-boot default is `teamspace`.
+> 2. **No more `defaultModeRedirectGuard` / FE-computed default-mode redirect** —
+>    the backend `LandingResolver` computes `landing.mode` + `landing.scope`,
+>    and `sessionLandingRedirectGuard` does a 5-line delegation.
+> 3. **`NavigationModeService.setMode()` is gone** — mode follows URL. The
+>    toggle navigates the router (`router.navigate(['/teamspace'])` or
+>    `router.navigate(['/einrichtung', id, 'dashboard'])`), the next
+>    `NavigationEnd` flips the signal automatically.
+> 4. **Service path** moved: `services/navigation-mode.service.ts` →
+>    `auth-session/navigation-mode.service.ts`, class renamed
+>    `NavigationModeService` → `NavigationMode`.
+>
+> **Authoritative source:**
+> [`specs/features/auth-session/spec.md`](../../features/auth-session/spec.md) §12.2 (NavigationMode bruchstellen) + §11 (sessionLandingRedirectGuard).
+>
+> Status by section in this file:
+>
+> | Section | Status |
+> | --- | --- |
+> | Vision | ✅ still accurate |
+> | AC "Visibility of the toggle" | ✅ still accurate |
+> | AC "Toggle icon reflects current mode" | ✅ still accurate |
+> | AC "Switching Einrichtung → Teamspace" | ✅ still accurate (call shape: `router.navigate`) |
+> | AC "Switching Teamspace → Einrichtung" | ✅ still accurate |
+> | AC "Automatic mode inference from URL" | ✅ still accurate |
+> | AC "Initialization order on app bootstrap" | ❌ no localStorage anymore — see auth-session §12.2 |
+> | AC "Persistence" | ❌ no localStorage anymore — see auth-session §12.2 |
+> | AC "Default-mode redirect (landing on `/`)" | ❌ now backend-driven via `LandingResolver` — see auth-session §4 + §11 |
+> | References (`navigation-mode.service.ts`, `default-mode-redirect.guard.ts`) | ❌ paths moved / file deleted — see auth-session §12.1 |
 
 ## Vision (Elevator Pitch)
 
