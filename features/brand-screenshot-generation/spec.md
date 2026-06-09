@@ -121,20 +121,30 @@ sequenceDiagram
 
 ## Keycloak Setup (Manual, One-Time)
 
-The operator (Lennart) configures the following in Keycloak before the feature can be used. The brand-manager does not provision any of this automatically.
+The operator (Lennart) configures the following in Keycloak before the feature can be used. The brand-manager does not provision any of this automatically. No legacy or preview Keycloak features are required.
 
-1. **Token Exchange feature enabled** on the Keycloak server (`--features=token-exchange`).
-2. **Confidential client `brand-manager-screenshots`** per Keycloak realm:
+1. **Confidential client `brand-manager-screenshots`** per Keycloak realm:
+   - `clientAuthentication: ON` (confidential)
    - `serviceAccountsEnabled: true`
-   - Grant type: `client_credentials` + `urn:ietf:params:oauth:grant-type:token-exchange`
    - Service account assigned the `realm-management.impersonation` role.
-3. **Screenshot users** per tenant — manually created via Keycloak Admin UI, with the same role/group memberships a real production user of that tenant would have. The admin enters that user's `preferred_username` in the dialog. The brand-manager uses Token Exchange's `requested_subject` parameter to impersonate them.
+2. **Screenshot users** per tenant — manually created via Keycloak Admin UI, with the same role/group memberships a real production user of that tenant would have. The admin enters that user's `preferred_username` in the dialog.
+3. **Mobile client(s)** must allow `SCREENSHOT_REDIRECT_URI` (default `http://localhost/screenshot-callback`) in their **Valid Redirect URIs** list, so the OIDC code flow during impersonation can return a code.
+
+The brand-manager impersonates a user via the standard Admin REST API:
+
+1. Service-account `client_credentials` token (with `impersonation` realm-role)
+2. `POST /admin/realms/{realm}/users/{userId}/impersonation` → captures the `KEYCLOAK_IDENTITY` session cookie
+3. Standard OIDC Authorization Code + PKCE flow against the mobile client with `prompt=none` and the session cookie → Keycloak returns an `?code=...` immediately because the session is already authenticated
+4. Code → access token at `/token`
+
+The resulting access token is issued for the mobile-client audience the tagea-backend expects, so `GET /session/v2` accepts it natively.
 
 The brand-manager stores the service-account credentials in env vars:
 - `KEYCLOAK_BASE_URL`
 - `KEYCLOAK_SCREENSHOT_CLIENT_ID` (= `brand-manager-screenshots`)
 - `KEYCLOAK_SCREENSHOT_CLIENT_SECRET`
 - `KEYCLOAK_REALM` (per env — same realm the user logs in against)
+- `SCREENSHOT_REDIRECT_URI` (must be whitelisted on the mobile client)
 
 ## Token Injection on Native
 
