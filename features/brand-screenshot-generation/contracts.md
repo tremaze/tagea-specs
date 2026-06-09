@@ -131,7 +131,7 @@ Multipart upload of a single PNG produced by snapshot/screengrab.
 **Behavior:** the brand-manager writes the file via `FileStorageService` to:
 
 ```
-screenshots/<tenantId>/<platform>/<deviceClass>/<label>.png
+<platform>/screenshots/<tenantId>/<deviceClass>/<label>.png
 ```
 
 (brand-scoped at the file-storage root; brand-id is implicit in the storage context).

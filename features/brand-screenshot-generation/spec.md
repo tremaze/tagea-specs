@@ -28,7 +28,7 @@ The route catalog that selects screens by tenant-feature is designed for, but no
 - [ ] **Given** a screenshot run is in progress, **When** the admin views the brand detail page, **Then** the current status (queued / running / success / failed) is visible and updates without a manual refresh.
 - [ ] **Given** any tenant's configured screenshot user is missing or invalid, **When** the run is triggered, **Then** the trigger endpoint returns 422 with a per-tenant list of validation errors and no GitHub workflow is dispatched.
 - [ ] **Given** Keycloak Token Exchange fails for one tenant during the run, **When** the run completes, **Then** that tenant's section is marked failed with the Keycloak error message, but other tenants' screenshots succeed independently.
-- [ ] **Given** a screenshot run finishes successfully, **When** the admin views the brand's file storage, **Then** each tenant has a folder under `screenshots/<tenantId>/` containing the platform/device subfolders with one `01-landing.png` per (platform, device).
+- [ ] **Given** a screenshot run finishes successfully, **When** the admin views the brand's file storage, **Then** for each platform `<platform>/screenshots/<tenantId>/<deviceClass>/01-landing.png` exists.
 - [ ] **Given** the admin re-triggers a run, **When** the new run finishes successfully, **Then** previous screenshots for the same brand+tenant+platform+device+label are overwritten (no version history in V1).
 - [ ] **Given** the GitHub workflow returns an error before any screenshot is produced, **When** the run completes, **Then** the run status is `failed` and the `failureReason` field contains the workflow's error message.
 
@@ -95,7 +95,7 @@ sequenceDiagram
             APP->>APP: navigate to <path>
             SIM->>GH: snapshot saved
             GH->>BM: POST /runs/:runId/upload (multipart, tenantId/platform/device/label)
-            BM->>FS: write screenshots/<brand>/<tenant>/<platform>/<device>/<label>.png
+            BM->>FS: write <platform>/screenshots/<tenant>/<device>/<label>.png
         end
     end
     GH->>BM: POST /runs/:runId/complete
@@ -191,17 +191,19 @@ Concrete integration point (which service to extend) is decided during implement
 ## File Storage Layout
 
 ```
-screenshots/                          ← existing system folder (system-folders.const.ts:19)
-  <tenantId>/                         ← NEW: per-tenant subfolder
-    ios/
+ios/                                  ← existing system folder
+  screenshots/                        ← default user subfolder (system-folders.const.ts:20)
+    <tenantId>/
       iphone-6.7/
         01-landing.png
-    android/
+android/                              ← existing system folder
+  screenshots/                        ← default user subfolder
+    <tenantId>/
       phone/
         01-landing.png
 ```
 
-The brand context is implicit: each brand has its own file storage root, so `screenshots/` is already brand-scoped.
+The brand context is implicit: each brand has its own file storage root. Slotting the PNGs into the existing `<platform>/screenshots/` default subfolders means they appear natively in the brand-file-storage UI under `dateien → ios|android → screenshots → ...`.
 
 V1 device defaults (one per platform):
 - iOS: `iphone-6.7` (1290×2796 — required by App Store)
