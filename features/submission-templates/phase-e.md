@@ -121,6 +121,13 @@ Heute produziert jeder v2-Edit `[object Object]` in per Mail versandten Belegen;
 | **E6 — FE Consumer + Verwalter** | Submit-Wiring (Part immer senden), Detail-read-only, Verwalter-save-all | keine | FE-Unit Mapper; Playwright: Submission mit 2 Rows → Detail zeigt Rows → Receipt enthält Rows | FE-only Revert |
 | **E7 — Unlock + E2E-Welle** | Server-Flag öffnen + alle 3 `showRepeating`-Sites; Admin-E2E (Toggle, Key-Anzeige, 409 im UI); `submissions-content-edit.spec.ts` um Row-Welle erweitern (dort Z. 11 ausgeklammert) | keine | volle Kette Admin→Consumer→Edit→Export | Server-Flag schließen = echter Kill-Switch (FE-Revert allein gated nur NEUE Konfiguration, nicht das Feature — Rollout-F4) |
 
+### §7a E2′-Review-Findings als Input für E4/E5/E7 (Code-Review 2026-06-11, latent hinter geschlossenem Flag)
+
+1. **Deaktiviertes Repeating-Feld = Catch-22 (E4):** Rows validieren in `saveAllCustomFields` gegen `is_active=true`-Definitionen → kürzlich deaktiviertes Feld in einer Row ⇒ „Unknown field" ⇒ 400 + Rollback der ganzen Submission. Es gibt (anders als flach, PO #5) keinen Lenient-Pfad für Rows. E4 muss die HYBRID-Semantik auf den Rows-Zweig ausdehnen, bevor E7 das Flag öffnet.
+2. **Phantom-Row (E4, betrifft auch Cases heute):** Eine created Row, deren Werte sämtlich leer sind, schreibt 0 `custom_field_values`, zählt aber `repeating_groups_created` hoch und verfälscht die max_rows-Rechnung derselben Request. Leere created-Rows vor dem Write filtern.
+3. **Row-Write-Batching (E5-Perf):** Pro Value ein einzelner `save()` ⇒ Cache-Trigger O(k²) pro Create/save-all. Für große Templates Inserts pro Entity bündeln (deckt sich mit M-E3-Hinweis „Inserts pro Entity bündeln").
+4. **Flag-Konsistenz dokumentiert:** Create-Part wirft 400 (Plan §4e wörtlich), Row-Routen werfen 403 (konsistent zu Modul-Guards). Bewusste Asymmetrie, kein Bug.
+
 **Deploy-Choreografie (zwingend, übernimmt Rollout-Sequenz):**
 1. E0 sofort (Live-Bugs).
 2. E1.
@@ -172,7 +179,7 @@ Heute produziert jeder v2-Edit `[object Object]` in per Mail versandten Belegen;
 | 2 | (a) AcroField-Konvention mit dokumentiertem Cap | — |
 | 3 | (a) Orphans loggen + weiter | **NUR Log-Tabelle, KEIN Sentry** |
 | 4 | (a) `custom_fields_full` unverändert | — |
-| 5 | **HYBRID** (geschärft): Regelverstoß auf aktivem, bekanntem Feld → **400 mit Feldfehlern**; unbekannter field_key → **verwerfen + Log** (EAV braucht ohnehin eine Definition); kürzlich deaktiviertes Feld → **speichern** (Eingabe nicht verlieren) | ersetzt (b); §4c entsprechend anpassen — kein `validation_state='invalid'`-Pfad im Create, kein Sentry für Drift-Events |
+| 5 | **HYBRID** (geschärft): Regelverstoß auf aktivem, bekanntem Feld → **400 mit Feldfehlern**; unbekannter field_key → **verwerfen + Log** (EAV braucht ohnehin eine Definition); kürzlich deaktiviertes Feld → **speichern** (Eingabe nicht verlieren). Implementierungs-Schärfung (E2′): deaktiviertes Feld mit INVALIDEM Wert → **verwerfen + Log** statt 400 — der Nutzer kann ein nicht mehr gerendertes Feld nicht korrigieren, ein 400 wäre eine Sackgasse | ersetzt (b); §4c entsprechend anpassen — kein `validation_state='invalid'`-Pfad im Create, kein Sentry für Drift-Events |
 | 6 | (b) 400-Schutz | **OHNE Admin-Warnhinweis** (kein UI-Hinweis, keine i18n-Keys dafür) |
 | 7 | Nein — Werte nur als PDF-Anhang | — |
 | 8 | `max_rows` admin-konfigurierbar, Default unbegrenzt | — |
