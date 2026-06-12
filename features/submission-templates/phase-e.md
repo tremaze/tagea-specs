@@ -129,6 +129,16 @@ Heute produziert jeder v2-Edit `[object Object]` in per Mail versandten Belegen;
 4. **Flag-Konsistenz dokumentiert:** Create-Part wirft 400 (Plan §4e wörtlich), Row-Routen werfen 403 (konsistent zu Modul-Guards). Bewusste Asymmetrie, kein Bug.
 5. **Gruppen-Governance (aus E4+E5-Review, Follow-up-Ticket):** `is_repeating` ist nach Anlage mutierbar — ein Flip flat→repeating mit Bestandsdaten versteckt die alten Flach-Werte in den Exporten, ein Flip repeating→flat lässt Row-History wieder in history/at-time einsickern. Phase E behandelt Flips populierter Gruppen als unsupported; ein Guard im Gruppen-Update gehört in ein eigenes Ticket.
 
+### §7b E6-Review-Findings (Code-Review 2026-06-12) — gefixt vs. E7-Pflicht
+
+**In E6 gefixt:** Consumer-Form nutzt den Gruppen-Renderer jetzt auch bei EINER Repeating-Sektion (sonst flacher Render → Create-400); Submit liest flache Werte via `getCurrentValues()` (kein Debounce-Stale mehr); Detail-Read-only filtert geflättete Repeating-Felder raus (kein Doppel-Render) und `repeatingSections` filtert `is_active`; Save-Reload-Fehler bleibt nicht mehr stumm (Edit-Modus offen + Warnung).
+
+**E7-Pflicht (vor Flag-Öffnung verifizieren):**
+1. **Consumer-Repeating-UI im Flag-Fenster:** Solange `FEATURE_SUBMISSION_REPEATING_SECTIONS` zu ist, kann ein gefüllter Row-Submit nur einen generischen „submitFailed"-Snackbar zeigen (Backend 400 „nicht aktiv"). E7 muss entweder die Row-UI hinter eine server-getriebene Capability gaten oder die spezifische 400-Meldung durchreichen. (Heute nicht auslösbar, weil der `is_repeating`-Toggle bis E7 versteckt ist — kein Template hat Repeating-Sektionen.)
+2. **Save-all-Edit-Pfad löst flache Keys GLOBAL auf (E4-Lücke):** Die save-all-Route prüft Template-Binding, ruft `saveAllCustomFields` aber im strikten Modus mit `getFieldDefinitionByKey` (global, kein Template-Scope). Bei legal duplizierten aktiven `field_key`s über zwei Submission-Templates kann die EAV-Row unter der fremden Definition landen. Fix = template-scoped STRIKT-Modus (kein Lenient) im Edit-Pfad. Selbe Klasse wie F6, aber auf dem Edit- statt Create-Pfad.
+
+**Akzeptiert/pre-existing (kein E6-Fix):** Date-TZ-Round-Trip bei unberührten Datumsfeldern im Edit (`new Date('YYYY-MM-DD')` UTC vs. lokale Re-Serialisierung — geteilte `TageaCustomFieldsComponent`, betrifft Cases gleichermaßen); auto-added leere Rows im Consumer (Backend-Phantom-Guard aus E4 verwirft sie); fehlende Required-Validatoren auf Row-Controls (geteilte Komponente).
+
 **Deploy-Choreografie (zwingend, übernimmt Rollout-Sequenz):**
 1. E0 sofort (Live-Bugs).
 2. E1.
