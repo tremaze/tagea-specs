@@ -127,6 +127,7 @@ Heute produziert jeder v2-Edit `[object Object]` in per Mail versandten Belegen;
 2. **Phantom-Row (E4, betrifft auch Cases heute):** Eine created Row, deren Werte sämtlich leer sind, schreibt 0 `custom_field_values`, zählt aber `repeating_groups_created` hoch und verfälscht die max_rows-Rechnung derselben Request. Leere created-Rows vor dem Write filtern.
 3. **Row-Write-Batching (E5-Perf):** Pro Value ein einzelner `save()` ⇒ Cache-Trigger O(k²) pro Create/save-all. Für große Templates Inserts pro Entity bündeln (deckt sich mit M-E3-Hinweis „Inserts pro Entity bündeln").
 4. **Flag-Konsistenz dokumentiert:** Create-Part wirft 400 (Plan §4e wörtlich), Row-Routen werfen 403 (konsistent zu Modul-Guards). Bewusste Asymmetrie, kein Bug.
+5. **Gruppen-Governance (aus E4+E5-Review, Follow-up-Ticket):** `is_repeating` ist nach Anlage mutierbar — ein Flip flat→repeating mit Bestandsdaten versteckt die alten Flach-Werte in den Exporten, ein Flip repeating→flat lässt Row-History wieder in history/at-time einsickern. Phase E behandelt Flips populierter Gruppen als unsupported; ein Guard im Gruppen-Update gehört in ein eigenes Ticket.
 
 **Deploy-Choreografie (zwingend, übernimmt Rollout-Sequenz):**
 1. E0 sofort (Live-Bugs).
