@@ -165,9 +165,10 @@ These bundles describe behavior that spans every feature — routing, HTTP, auth
 
 Backend-only architecture specs. No Angular/Flutter parity — these describe server-side behavior that frontends do not implement.
 
-| Bundle                    | Status | Spec                                                                              |
-| ------------------------- | ------ | --------------------------------------------------------------------------------- |
-| Scheduler Queue Migration | ⏳     | [scheduler-queue-migration/](./cross-cutting/scheduler-queue-migration/spec.md)   |
+| Bundle                         | Status | Spec                                                                              |
+| ------------------------------ | ------ | --------------------------------------------------------------------------------- |
+| Scheduler Queue Migration      | ⏳     | [scheduler-queue-migration/](./cross-cutting/scheduler-queue-migration/spec.md)   |
+| Tenant Domains & On-Demand TLS | 🚧     | [tenant-domains-tls/](./cross-cutting/tenant-domains-tls/spec.md)                 |
 
 ## Scripts
 
