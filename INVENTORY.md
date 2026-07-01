@@ -49,11 +49,12 @@ Behaviors that span every feature. Live under `specs/cross-cutting/<slug>/` rath
 
 | Bundle             | Slug                 | Scope                                                                                   | Spec?                                                            | Port Priority |
 | ------------------ | -------------------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ------------- |
-| Routing & Guards   | `routing-and-guards` | Full route tree + ~32 guard catalogue + entry-redirect logic                            | [routing-and-guards](./cross-cutting/routing-and-guards/spec.md) | **P0** ✅     |
+| Auth Session Refactor | `auth-session`    | `GET /session` consolidated DTO + `SessionStore`/`SessionAuthz`/`SessionBootstrap`/`SessionSwitcher` + factory guards. **Supersedes the bootstrap-chain, context-resolution, and guard-layer sections of the three legacy specs below.** | [auth-session](./features/auth-session/spec.md) | **P0** ✅ |
+| Routing & Guards   | `routing-and-guards` | Full route tree + guard catalogue + entry-redirect logic. ⚠️ Guard layer superseded by `auth-session`; route tree still valid. | [routing-and-guards](./cross-cutting/routing-and-guards/spec.md) | **P0** 🚧 |
 | HTTP Interceptors  | `http-interceptors`  | Auth/tenant/sentry interceptor chain + headers + race-protection                        | [http-interceptors](./cross-cutting/http-interceptors/spec.md)   | **P0** ✅     |
-| Context Resolution | `context-resolution` | Tenant/Institution/Employee/Permission state services + bootstrap + switch flows        | [context-resolution](./cross-cutting/context-resolution/spec.md) | **P0** ✅     |
+| Context Resolution | `context-resolution` | Tenant/Institution/Employee/Permission state services + bootstrap + switch flows. ⚠️ Fully superseded by `auth-session`. | [context-resolution](./cross-cutting/context-resolution/spec.md) | **P0** ❌ |
 | i18n & Theming     | `i18n-and-theming`   | Transloco (16 languages, RTL) + Material M3 + per-tenant brand colors                   | [i18n-and-theming](./cross-cutting/i18n-and-theming/spec.md)     | **P0** ✅     |
-| Bootstrap & Push   | `bootstrap-and-push` | App bootstrap chain + FCM/APNs registration + cold-start route capture + Service Worker | [bootstrap-and-push](./cross-cutting/bootstrap-and-push/spec.md) | **P0** ✅     |
+| Bootstrap & Push   | `bootstrap-and-push` | App bootstrap chain + FCM/APNs registration + cold-start route capture + Service Worker. ⚠️ Bootstrap chain superseded by `auth-session`; push sections still valid. | [bootstrap-and-push](./cross-cutting/bootstrap-and-push/spec.md) | **P0** 🚧 |
 
 ## Public (Pre-Auth)
 

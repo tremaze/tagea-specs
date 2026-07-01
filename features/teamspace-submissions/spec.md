@@ -1,14 +1,22 @@
 # Feature: Teamspace Submissions
 
-> **Status:** 🟡 Permission architecture complete; UI acceptance criteria still validating
-> **Owner:** ltoenjes (UI), svenarbeit (permission architecture)
-> **Last updated:** 2026-05-04
+> **Status:** 🚧 Permission architecture complete; first pilot for the entity-permissions cross-cutting pattern in progress
+> **Owner:** ltoenjes (UI), svenarbeit (permission architecture, entity-permissions pilot)
+> **Last updated:** 2026-05-16
 >
 > **Pattern reference:** This feature is the canonical permission-pattern example
 > for the teamspace scope. The institution scope already follows the pattern
 > consistently (see `cases.controller.ts`, `appointments.controller.ts`);
 > submissions now matches it. Other teamspace features (events, news, articles, …)
 > follow the same template — see Drift-Pins section below for the open work.
+>
+> **Cross-cutting pattern:** Submissions is the **first pilot** for the cross-cutting
+> [entity-permissions](../../cross-cutting/entity-permissions/spec.md) pattern.
+> The pilot stress-tests both pattern additions made 2026-05-16: `_visibility`
+> origin discriminator on detail responses, and the collection-scoping convention
+> (split scoped-list endpoints; URL is scope authority; collection items carry
+> no meta-fields). The Submissions-specific action vocabulary, visibility values,
+> and scoped-list endpoints live in [contracts.md](./contracts.md).
 >
 > **Permission-architecture status:**
 > - ✅ Backend: every `/teamspaces/:tsId/submissions[-categories]/*` endpoint
@@ -25,6 +33,12 @@
 >   marked for removal; clients no longer call it but controller still exists.
 > - ⏳ Open: original UI Acceptance Criteria (Card-Click, Wizard, Deep-Link)
 >   not yet covered by E2E tests — owned by UI team.
+> - 🚧 In progress (2026-05-16): entity-permissions pilot adoption — `SubmissionAbility`,
+>   `_visibility` + `_permissions` on detail, split scoped-list endpoints
+>   (`/submissions/{managed,supervised,own}` replace legacy `/submissions`),
+>   removal of the `?mode=admin` query-param heuristic in
+>   `submission-detail-page.component.ts`, removal of the `?visibility=…`
+>   query-param shortcut in the frontend service.
 
 ## Vision (Elevator Pitch)
 
@@ -72,6 +86,38 @@ Staff-facing hub for creating and tracking submissions (e.g. incident reports, e
 - [ ] Every action button (Create, Edit, Delete, Status change, Assign, Configure, Verwaltung CTA) is gated with `*appHasPermission` or programmatic `hasTeamspacePermission(...)` — no `role === 'admin'` or `hasAdminRole()` checks on submission UI elements.
 - [ ] Every submission route in `app/routes/` carries `permissionGuard` with the `data.requiredPermission` listed in the route table above; no implicit "logged-in is enough" routes.
 - [ ] When a tenant-admin removes `submissions.view_all` from a role and the affected user reloads `/auth/context`, the "Verwaltung" surface stops appearing in their UI.
+
+### Entity-permissions pilot — detail endpoints
+
+> Adopts [`cross-cutting/entity-permissions`](../../cross-cutting/entity-permissions/spec.md). Vocabulary in [contracts.md](./contracts.md).
+
+- [ ] **Given** a user fetches `GET /teamspaces/:tsId/submissions/:id` or `GET /submissions/:id` **When** they have read access **Then** the response carries `_permissions` (all declared submission actions) and `_visibility` (one of `own | teamspace_member | institution_supervisor | tenant_admin`). The Submissions pilot does NOT serialize `_fieldPermissions` — there is currently no per-field mutation rule (terminal-state field freezing is out of scope for this pilot).
+- [ ] **Given** a user holds the institution-supervisor permission for a submission category that opts into supervisor visibility **When** they fetch the submission **Then** `_visibility === 'institution_supervisor'` and `_permissions.changeStatus === false` (read-only supervisor view).
+- [ ] **Given** a user is a teamspace-admin in the submission's teamspace **When** they fetch the submission **Then** `_visibility === 'teamspace_member'` and `_permissions.changeStatus === true` (subject to terminal-state rules).
+- [ ] **Given** a user owns the submission **When** they fetch it **Then** `_visibility === 'own'` (regardless of other origins — `own` has highest precedence in the per-entity visibility resolution).
+- [ ] **Given** a user is tenant-admin or super-admin without any of the above origins **When** they fetch the submission **Then** `_visibility === 'tenant_admin'`.
+- [ ] **Given** `_permissions.changeStatus === false` **When** the client calls `PATCH /teamspaces/:tsId/submissions/:id/status` **Then** the backend rejects with `403 Forbidden` (symmetry with the response hint).
+- [ ] **Given** the detail page (`/teamspace/submissions/:id`) loads with arbitrary query-params **When** the user opens it **Then** the view mode is derived from `_visibility` exclusively; `?mode=admin` and `?mode=supervisor` query-params are removed from the codebase and ignored if present.
+
+### Entity-permissions pilot — scoped-list endpoints
+
+> Implements the [collection-scoping convention](../../cross-cutting/entity-permissions/spec.md#collection-scoping-convention).
+
+- [ ] **Given** the backend is migrated **When** a client calls `GET /submissions` (legacy default-OR) or `GET /submissions?visibility=institution_supervisor` (legacy shortcut) **Then** the endpoint returns `404 Not Found` — both are deleted in the same change.
+- [ ] **Given** a user calls `GET /submissions/managed` **When** they have `tenant.submissions.view_all` or `tenant.submissions.view_scoped` in at least one teamspace (or are tenant-admin) **Then** they receive submissions in those teamspaces — inclusive of items they also own (their own request in a teamspace where they are admin appears here, with detail-`_visibility: 'own'` on click). Institution-supervisor-only items (no other origin qualifying) are NOT in the response. List items contain NO `_permissions` / `_visibility` (Invariant 5 strict). (Inclusion semantics: see [Per-scope inclusion semantics](../../cross-cutting/entity-permissions/spec.md#per-scope-inclusion-semantics).)
+- [ ] **Given** a user calls `GET /submissions/managed` **When** they have none of the required permissions **Then** the backend returns `403 Forbidden`.
+- [ ] **Given** a user calls `GET /submissions/supervised` **When** they hold `institution.submissions.view_institution_members` in at least one institution **Then** they receive ONLY submissions whose detail-response would have `_visibility === 'institution_supervisor'` (exclusive scope — own / managed items are NOT in the response, even if also supervisor-visible). List items contain NO meta-fields.
+- [ ] **Given** a user calls `GET /submissions/own` **When** authenticated **Then** they receive submissions where they are the submitter (matches `_visibility === 'own'` on detail; inclusive of items that would also appear in `/managed`). List items contain NO meta-fields.
+- [ ] **Given** an item appears in `GET /submissions/managed` **When** the same item is opened via `GET /submissions/:id` **Then** detail-`_visibility` is `'own'`, `'teamspace_member'`, or `'tenant_admin'` — never `'institution_supervisor'` (inclusive-scope consistency).
+- [ ] **Given** the global Verwaltungsseite (`/teamspace/submissions/verwaltung`) **When** it loads **Then** it calls `GET /submissions/managed` (NOT `GET /submissions` with client-side filter). No items beyond the user's manage-scope ever cross the wire.
+- [ ] **Given** the supervisor section in `/teamspace/:slug/submissions` and the sidebar badge in secure-main **When** they load **Then** they call `GET /submissions/supervised`. The old `getAllSubmissions({ visibility: 'institution_supervisor' })` shape is migrated to the new URL.
+
+### Entity-permissions pilot — teamspace-scoped collections
+
+> The pre-existing per-teamspace list (`GET /teamspaces/:tsId/submissions`) stays as it is in URL — its scope is the teamspace itself. List items still carry no meta-fields per Invariant 5.
+
+- [ ] **Given** a user calls `GET /teamspaces/:tsId/submissions` **When** they are a member of that teamspace with at least one `submissions.view_*` permission **Then** the service returns submissions visible to them within that teamspace (own + tier-filtered by the `applyAccessControl` permission map), and items contain NO `_permissions` / `_visibility` (Invariant 5 strict).
+- [ ] **Given** the per-teamspace list endpoint **When** a user has only institution-supervisor visibility into the teamspace (no teamspace membership) **Then** the per-teamspace list does NOT return institution-supervisor-only items — those live on `GET /submissions/supervised` instead. (Cross-teamspace supervisor visibility is not a per-teamspace concept.)
 
 ### Custom-Fields integration
 
@@ -132,7 +178,7 @@ URL convention: `/teamspaces/:teamspaceId/...` for everything in the teamspace s
 | `GET    /teamspaces/:tsId/submissions/stats` | `submissions.view_all` | Admin dashboard data |
 | `GET    /teamspaces/:tsId/submissions/export/csv` | `submissions.view_all` | Admin export |
 | `GET    /teamspaces/:tsId/submissions/:id` | `submissions.view_own` (+ tier check in service) | Detail |
-| `GET    /teamspaces/:tsId/submissions/:id/assignable-employees` | `submissions.edit` | Picker for assignment dialog |
+| `GET    /teamspaces/:tsId/submissions/:id/assignable-employees` | `submissions.process` | Picker for assignment dialog |
 | `GET    /teamspaces/:tsId/submissions/:id/attachments/:aid/download` | `submissions.view_own` (+ tier) | File download |
 | `GET    /teamspaces/:tsId/submissions/:id/filled-pdf` | `submissions.view_own` (+ tier) | PDF receipt |
 | `GET    /teamspaces/:tsId/submissions/:id/filled-pdf/signed-url` | `submissions.view_own` (+ tier) | Signed URL |
@@ -141,20 +187,39 @@ URL convention: `/teamspaces/:teamspaceId/...` for everything in the teamspace s
 | `GET    /teamspaces/:tsId/submissions/:id/custom-fields/at-time` | `submissions.view_own` (+ tier) | Forensic snapshot |
 | `GET    /teamspaces/:tsId/submissions/:id/custom-fields/v2/groups/:gid/rows` | `submissions.view_own` (+ tier) | Repeating-group read |
 | `POST   /teamspaces/:tsId/submissions` | `submissions.create` | Submit a new entry |
-| `PATCH  /teamspaces/:tsId/submissions/:id/status` | `submissions.edit` | Status change (admin) |
-| `PATCH  /teamspaces/:tsId/submissions/:id/assignment` | `submissions.edit` | Reassign |
-| `POST   /teamspaces/:tsId/submissions/:id/response` | `submissions.edit` | Add response |
-| `PUT    /teamspaces/:tsId/submissions/:id/custom-fields/v2/bulk` | `submissions.edit` | Bulk-update CF values |
-| `PATCH  /teamspaces/:tsId/submissions/:id/custom-fields/v2/:k` | `submissions.edit` | Single-field update |
-| `POST   /teamspaces/:tsId/submissions/:id/custom-fields/v2/groups/:gid/rows` | `submissions.edit` | Repeating-group create |
-| `PUT    /teamspaces/:tsId/submissions/:id/custom-fields/v2/groups/:gid/rows/:rowId` | `submissions.edit` | Repeating-group update |
-| `DELETE /teamspaces/:tsId/submissions/:id/custom-fields/v2/groups/:gid/rows/:rowId` | `submissions.edit` | Repeating-group delete |
+| `PATCH  /teamspaces/:tsId/submissions/:id/status` | `submissions.process` | Status change (admin) |
+| `PATCH  /teamspaces/:tsId/submissions/:id/assignment` | `submissions.process` | Reassign |
+| `POST   /teamspaces/:tsId/submissions/:id/response` | `submissions.process` | Add response |
+| `PUT    /teamspaces/:tsId/submissions/:id/custom-fields/v2/bulk` | `submissions.process` | Bulk-update CF values |
+| `PATCH  /teamspaces/:tsId/submissions/:id/custom-fields/v2/:k` | `submissions.process` | Single-field update |
+| `POST   /teamspaces/:tsId/submissions/:id/custom-fields/v2/groups/:gid/rows` | `submissions.process` | Repeating-group create |
+| `PUT    /teamspaces/:tsId/submissions/:id/custom-fields/v2/groups/:gid/rows/:rowId` | `submissions.process` | Repeating-group update |
+| `DELETE /teamspaces/:tsId/submissions/:id/custom-fields/v2/groups/:gid/rows/:rowId` | `submissions.process` | Repeating-group delete |
 
-**Service-side tier filter** for `submissions.view_*`:
+**Service-side tier filter** for `submissions.view_*` (per-teamspace endpoint):
 - `view_all`: sees every submission in the teamspace
 - `view_scoped` + `institution_ids[]`: sees own + submissions whose submitter belongs to one of the scoped institutions
 - `view_scoped` without scope: sees all in the teamspace
-- `view_own`: sees only own submissions (+ institution-supervisor visibility for categories with `visible_to_institution_supervisors=true`)
+- `view_own`: sees only own submissions
+
+Per-teamspace endpoint does NOT add institution-supervisor visibility — that path lives on the global scoped-list endpoints (see below).
+
+### Global (tenant-wide) scoped-list endpoints
+
+> Implements the [collection-scoping convention](../../cross-cutting/entity-permissions/spec.md#collection-scoping-convention). Replaces the pre-existing default-OR `GET /submissions` and `?visibility=institution_supervisor` query-param shortcut, both of which are deleted in the same change.
+
+| Method + Path | Permission | Returns submissions whose detail-`_visibility` would be |
+|---|---|---|
+| `GET /submissions/managed` | any of `tenant.submissions.view_all`, `tenant.submissions.view_scoped` in at least one teamspace (or tenant-admin) | `teamspace_member` (or `tenant_admin` via bypass) |
+| `GET /submissions/supervised` | `institution.submissions.view_institution_members` in at least one institution | `institution_supervisor` |
+| `GET /submissions/own` | authenticated (any employee) | `own` |
+| `GET /submissions/:id` | union of the above (Ability resolves which `_visibility` applies) | computed per-request; carries `_permissions` + `_visibility` |
+| `PATCH /submissions/:id/status` | enforced via `_permissions.changeStatus` on the detail response | — |
+| `PATCH /submissions/:id/assignment` | enforced via `_permissions.assign` | — |
+| `POST /submissions/:id/response` | enforced via `_permissions.respond` | — |
+| `DELETE /submissions/:id` | enforced via `_permissions.delete` | — |
+
+Detail and mutation endpoints under `/teamspaces/:tsId/submissions/:id` (already exist) continue to work in parallel — same Ability service, same `_visibility` result. The global `/submissions/:id` detail endpoint is added so the scoped lists have a tenant-wide detail companion.
 
 ### Cross-TS Tenant-Admin path
 
@@ -185,7 +250,7 @@ Tenant-admin path complements the per-TS path; both write to the same DB table. 
 | `submissions-verwaltung-page` | Status filter, search, sort | (page is gated already; controls visible) |
 | `submissions-verwaltung-page` | "Konfiguration" button | `hasTeamspacePermission(tsId, 'settings.manage')` |
 | `submission-categories-page` | Create/Edit/Delete category | `hasTeamspacePermission(tsId, 'settings.manage')` |
-| `submission-detail-page` | "Antworten" / "Status ändern" / "Zuweisen" | `hasTeamspacePermission(tsId, 'submissions.edit')` |
+| `submission-detail-page` | "Antworten" / "Status ändern" / "Zuweisen" | `hasTeamspacePermission(tsId, 'submissions.process')` |
 | `global-submissions-verwaltung-page` | All admin actions | `isTenantAdmin ∨ specific tenant.submission_categories.*` |
 
 ### Routes
@@ -217,10 +282,14 @@ Specifically for submissions:
 
 These are seed defaults; tenants can override via the permission editor at `/einstellungen/teamspaces/rollen-rechte`.
 
-## Notifications (Push / In-App)
+## Notifications (Push / In-App / Email)
 
 - Status-change notifications deep-link to the detail route.
 - Submissions influence the teamspace-home badge via `TeamspaceUnreadCountService`.
+- **Submitter notifications** are sent on all three channels (PUSH + IN_APP + EMAIL) whenever the workflow advances visibly to the original employee:
+  - `submission_responded` — fires when a processor adds a `response` via `POST .../response`. If the same call also closes the submission (`should_close=true`), the body line announces both events; no separate status-change notification is sent.
+  - `submission_status_changed` — fires when `PATCH .../status` moves the submission between `pending` / `in_review` / `closed` (re-openings included). Approval flows continue to use the dedicated `approval_granted` / `approval_denied` types; rejected is a terminal state and cannot transition.
+  - Self-notify is suppressed: when the actor equals `employee_id`, no notification is created.
 
 ## i18n Keys
 

@@ -14,17 +14,24 @@
 
 ## Backend
 
-- **Status:** ✅ Pilot landed (Appointments)
-- **Primitives:** `apps/tagea-backend/src/permissions/ability/` — base class, types, field-permission helper, tests.
-- **Pilot Ability:** `apps/tagea-backend/src/appointments/abilities/appointment.ability.ts` (+ mapper in the same folder).
-- **Wired endpoints:** `GET /einrichtung/:id/appointments/:id` returns `_permissions`; `PATCH /einrichtung/:id/appointments/:id` enforces `_fieldPermissions` with `422`.
+- **Status:** ⏳ Planned, not yet implemented. Verified 2026-05-16: `apps/tagea-backend/src/permissions/ability/` folder does not exist, no `_permissions` / `_fieldPermissions` / `_visibility` field is serialized anywhere in the repo, no `toDtoWithPermissions` call site exists. Earlier `✅ Pilot landed` claim was spec-drift — there was never a landed implementation.
+- **Primitives (planned):** `apps/tagea-backend/src/permissions/ability/` — base class, types, field-permission helper, visibility-origin helper, tests.
+- **First Pilot (chosen 2026-05-16):** Submissions — see [`features/teamspace-submissions/`](../../features/teamspace-submissions/spec.md). Submissions was chosen over Appointments because it stress-tests the pattern under (a) per-detail visibility variance via `_visibility`, and (b) the new collection-scoping convention (split scoped-list endpoints, no client-side filtering).
+- **Wired endpoints (planned for first pilot):**
+  - `GET /teamspaces/:tsId/submissions/:id` and `GET /submissions/:id` return `_permissions` + `_visibility`
+  - Collection list endpoints are SPLIT by scope per the [collection scoping convention](./spec.md#collection-scoping-convention): `GET /submissions/managed`, `GET /submissions/supervised`, `GET /submissions/own`. Each is scoped server-side via its own `@Auth` annotation; items contain NO meta-fields (Server Invariant 5 strict).
+  - The legacy `GET /submissions` (default-OR over all visibility paths) and the `?visibility=institution_supervisor` query-param shortcut are removed in the same change.
+  - `PATCH /teamspaces/:tsId/submissions/:id/status` (and other mutation routes) enforce permission/field rules with `403` / `422` symmetric to detail-response hints.
+- **Earlier candidate (Appointments):** the worked vocabulary in [contracts.md](./contracts.md) remains as a planned future Ability adoption — not the first to land.
 
 ## Known Divergences
 
 - Frontend will continue computing permissions locally until migrated. During that window, the backend is the authority; client-side state-based checks act as UI polish, not enforcement.
+- Submissions detail page currently uses a `?mode=admin` query-param heuristic to choose UI variant (`submission-detail-page.component.ts:1386`). After the first pilot lands, that heuristic is removed and the UI variant is derived from `_visibility`.
 
 ## Port Log
 
-| Date       | Who      | What                                                           |
-| ---------- | -------- | -------------------------------------------------------------- |
-| 2026-04-21 | ltoenjes | Spec created; pilot entity = Appointments; backend-only rollout |
+| Date       | Who        | What                                                                                                                                            |
+| ---------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-04-21 | ltoenjes   | Spec created; original pilot candidate = Appointments; backend-only rollout                                                                     |
+| 2026-05-16 | svenarbeit | Parity drift corrected (pilot never actually landed). Pattern extended with `_visibility` (detail-response origin discriminator) and the collection-scoping convention (URL is scope authority; collection items carry no meta-fields). First pilot reassigned to Submissions. |

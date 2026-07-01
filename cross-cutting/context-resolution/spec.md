@@ -1,8 +1,38 @@
 # Cross-Cutting: Context Resolution
 
-> **Status:** 🚧 Spec drafted — awaiting review
+> **Status:** ❌ Superseded by auth-session refactor — kept for historical reference
 > **Owner:** ltoenjes
-> **Last updated:** 2026-04-21
+> **Last updated:** 2026-05-12
+
+> ## ⚠️ Fully superseded by Auth-Session refactor (2026-05-12)
+>
+> Every service named in this spec — `UnifiedAuthService`,
+> `AuthorizationStore`, `UserPermissionsService`, the legacy
+> `InstitutionContextService`, the trio `GET /auth/current`,
+> `GET /auth/context`, `GET /tenants/current/features` — has been deleted
+> or relocated by M5 of the auth-session refactor.
+>
+> **Authoritative replacement:**
+> [`specs/features/auth-session/spec.md`](../../features/auth-session/spec.md) — read §2 (architecture), §3 (DTO), §4 (LandingResolver), §10 (switch flows), §12 (component services), §13 (M5 hard-cut).
+>
+> Mapping from old → new:
+>
+> | Legacy reference | Replacement |
+> | --- | --- |
+> | `UnifiedAuthService.employee()` / `tenantId()` | `SessionStore.identity()` / `SessionStore.tenant()` |
+> | `AuthorizationStore.context()` / `.effectivePermissions()` | `SessionStore.permissions()` — already per-institution scoped on the snapshot |
+> | `UserPermissionsService.hasPermission()` | `SessionAuthz.canInActiveInstitution()` / `.canInTenant()` / `.canInInstitution(id, perm)` |
+> | `TenantFeaturesService.features()` | `SessionStore.features()` |
+> | `InstitutionContextService.institutionId()` | `InstitutionContext.institutionId()` (relocated to `auth-session/`, see §13.3) |
+> | `setCurrentTenant(id)` | `SessionSwitcher.setTenant(id)` |
+> | `setCurrentInstitution(id)` | `SessionSwitcher.setInstitution(id)` |
+> | `setInstitutionFromUrl(id)` | inline inside `sessionInstitutionUrlGuard` |
+> | `GET /auth/current` + `GET /auth/context` + `GET /tenants/current/features` | single `GET /session` ([contracts.md](../../features/auth-session/contracts.md)) |
+>
+> The Acceptance Criteria, Flows, and Edge Cases below describe the
+> **pre-refactor world** and must not be cited as current behavior. They are
+> retained because they document what was true before the refactor and can be
+> a useful comparison point during Flutter port work.
 
 ## Vision (Elevator Pitch)
 

@@ -42,6 +42,7 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 
 | Feature            | Angular | Flutter | Spec                                                         |
 | ------------------ | ------- | ------- | ------------------------------------------------------------ |
+| Auth Session Refactor (M1–M5 + Cluster 3) | ✅ | ⏳ | [auth-session/](./features/auth-session/spec.md) |
 | Login              | ✅      | ⏳      | [login/](./features/login/spec.md)                           |
 | Auth Callback      | ✅      | ⏳      | [auth-callback/](./features/auth-callback/spec.md)           |
 | Session Expired    | ✅      | ⏳      | [session-expired/](./features/session-expired/spec.md)       |
@@ -53,6 +54,7 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 | Password Reset     | ✅      | ⏳      | [password-reset/](./features/password-reset/spec.md)         |
 | Email Verification | ✅      | ⏳      | [email-verification/](./features/email-verification/spec.md) |
 | Public Register    | ✅      | ⏳      | [public-register/](./features/public-register/spec.md)       |
+| Social Login & Onboarding | 🚧 | ⏳   | [social-login-onboarding/](./features/social-login-onboarding/spec.md) |
 
 ### Client Portal
 

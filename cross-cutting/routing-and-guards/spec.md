@@ -1,8 +1,49 @@
 # Feature: Routing and Guards
 
-> **Status:** 🚧 In progress
+> **Status:** 🚧 Partially superseded by auth-session refactor (guard layer rewritten)
 > **Owner:** ltoenjes
-> **Last updated:** 2026-04-21
+> **Last updated:** 2026-05-12
+
+> ## ⚠️ Guard layer superseded by Auth-Session refactor (2026-05-12)
+>
+> The **route tree** is still accurate. The **guard layer** has been replaced
+> by factory guards over the consolidated `SessionStore` snapshot. 26 legacy
+> guards were deleted in M3.3; their replacements live in
+> `apps/tagea-frontend/src/app/auth-session/authz-guards.ts`.
+>
+> **Authoritative source for the new guard layer:**
+> [`specs/features/auth-session/spec.md`](../../features/auth-session/spec.md) §11 + [`contracts.md`](../../features/auth-session/contracts.md) §8.
+>
+> Mapping from old → new:
+>
+> | Legacy guard | Replacement |
+> | --- | --- |
+> | `permissionGuard` (with `data: { requiredPermission: 'x.y' }`) | `requirePermission('x.y')` / `requireInstitutionPermission('x.y')` / `requireTenantPermission('x.y')` |
+> | `tenantPermissionGuard` | `requireTenantPermission` |
+> | `chatFeatureGuard`, `aiChatFeatureGuard`, `fileStorageFeatureGuard`, `schulungenFeatureGuard`, `billingFeatureGuard`, `teamspaceFeatureGuard` | `requireFeature('chat' | 'aiChat' | 'fileStorage' | ...)` |
+> | `institutionUrlGuard` | `sessionInstitutionUrlGuard` |
+> | `defaultModeRedirectGuard` (140 LoC) | `sessionLandingRedirectGuard` (5 LoC; delegates to backend Landing) |
+> | `clientPortalGuard` | `requireClient()` |
+> | `teamspaceAdminOnlyGuard` | `requireTenantPermission` over teamspace-admin perms |
+> | `einstellungenGuard` + redirect helpers | composed factory guards inline in `einstellungen.routes.ts` |
+> | `rootRedirectGuard` | replaced by `SessionBootstrap` (APP_INITIALIZER) + `SessionRouter.resolveLandingCommands(session)` |
+>
+> Status by section in this file:
+>
+> | Section | Status |
+> | --- | --- |
+> | Vision | ✅ still accurate |
+> | Acceptance Criteria (most bullets) | ❌ reference deleted guard names — see auth-session §11 |
+> | Flow "Top-level route tree" | ⚠️ structure unchanged; **guard names in the tree are stale** — fold into auth-session §11.4 when updating |
+> | Flow "Entry-decision flow on `/`" | ❌ replaced — `SessionBootstrap` now owns the entry decision; no more `rootRedirectGuard` |
+> | Flow "Wildcard landing flow" | ❌ replaced — backend `LandingResolver` decides, FE just navigates |
+> | Flow "Institution deep-link flow" | ❌ replaced — see `sessionInstitutionUrlGuard` |
+> | Flow "Guard stacking" examples | ❌ uses deleted guard names |
+> | Flow "Unsaved-changes flow" (`UnsavedChangesGuard`) | ✅ still accurate (untouched by refactor) |
+>
+> **Do not edit the stale sections directly** — fold corrections into the
+> auth-session spec instead. A rewrite of this file is planned once PR #78
+> lands; until then, treat this page as a snapshot of the pre-refactor world.
 
 ## Vision (Elevator Pitch)
 
