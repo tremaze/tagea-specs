@@ -32,8 +32,9 @@ The same `KnowledgeBasePageComponent` + `ArticleDetailPageComponent` run in both
 - [ ] **Given** the page loads, **When** `ArticleService.getArticles({ article_type: ArticleType.KNOWLEDGE, ... })` + `GlobalArticleService.getCategories(...)` resolve, **Then** cards render in a responsive grid with title, excerpt (`getArticleExcerpt`), author, date (`formatArticleDate`), and category badge.
 - [ ] **Given** articles include both local and global entries, **When** they are merged, **Then** each card carries an `is_global` flag that drives a distinct badge/icon.
 - [ ] **Given** the search input receives text, **When** the user pauses (debounce), **Then** `combineLatest` updates both local and global queries and re-renders.
-- [ ] **Given** category chips render, **When** multiple levels exist, **Then** hierarchical `CategoryWithIcon` with children + `articleCount` is shown; selecting a parent filters to its subtree.
-- [ ] **Given** the viewport is mobile, **When** the FAB is tapped, **Then** `KBSimpleFiltersBottomSheetComponent` opens.
+- [ ] **Given** no search term and no category, **When** the page loads, **Then** the root categories (tenant first, then global) render as cards with icon, name, description and the number of direct subcategories; `articleCount` is not computed.
+- [ ] **Given** a category is selected (card tap or filter), **When** its articles load, **Then** only that category's own source (tenant or global) is queried with `category_id` and `include_subcategories=false`; its direct subcategories render above the articles as further cards. Selecting a parent does **not** include the articles of its subtree.
+- [ ] **Given** the viewport is mobile, **When** the filter (`tune`) button next to the search field is tapped, **Then** `KBSimpleFiltersBottomSheetComponent` opens with the category choice, "Filter zurücksetzen" and "Anwenden"; an active category shows as a badge on the button and as a removable chip. (The mobile FAB is the "Wissensdatenbank verwalten" entry for editors, not the filter.)
 
 ### Detail (`.../article/:id`)
 
@@ -58,7 +59,7 @@ The same `KnowledgeBasePageComponent` + `ArticleDetailPageComponent` run in both
 
 - **Tenant without any local articles** — only global articles show; category chips reflect global-only counts.
 - **`is_global` + same title collision** — no dedup; both cards render.
-- **Hierarchical category with no articles** — chip still shows with `articleCount: 0`.
+- **Hierarchical category with no articles** — the category card still shows (no article count is displayed).
 - **Permission gap:** the route only sets `requiredTenantPermission` for the teamspace mount; institution mount has no permission data entry — access is via `institutionUrlGuard` only.
 
 ## Permissions & Tenant/Institution

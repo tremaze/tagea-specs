@@ -9,21 +9,26 @@
 
 ## Flutter
 
-- **Status:** ⏳ Planned
-- **Suggested path:** `lib/features/knowledge_base/`
-- **Integration tests:** `integration_test/knowledge_base_test.dart`
+- **Status:** 🔍 In review — [tagea-next-flutter#69](https://github.com/tremaze/tagea-next-flutter/pull/69) (teamspace mount only)
+- **Path:** `apps/tagea_frontend/lib/features/teamspace/knowledge_base/` (list, filter sheet, detail at `/teamspace/knowledge-base/article/:id`)
+- **Data layer:** `packages/teamspace_core` — `KnowledgeBaseApi`, `KnowledgeBaseCubit`, `KnowledgeArticleRepository` (detail reuses the news-detail cubit/body)
+- **Integration tests:** widget tests under `apps/tagea_frontend/test/features/teamspace/knowledge_base/`
+- **Not yet ported:** manage FAB (Redaktion), helpful/not-helpful feedback, related articles, version history, table of contents, video, share/print; rich-HTML body (plain text for now)
 
 ## Known Divergences
 
 | Topic                | Angular                                                                     | Flutter                                        |
 | -------------------- | --------------------------------------------------------------------------- | ---------------------------------------------- |
-| Local + global merge | `combineLatest` of two observables                                          | `Bloc` subscribing to both streams via `rxdart`'s `Rx.combineLatest2`, emitting the merged list on every update |
-| Category hierarchy   | Recursive `CategoryWithIcon`                                                | Same shape; render via recursive widget        |
-| Mobile filters sheet | `KBSimpleFiltersBottomSheetComponent`                                       | `showModalBottomSheet` with the same filter UI |
-| Navigation after tap | `institutionRoute(id, 'knowledge-base', 'article', :id)` vs teamspace route | Dart router — one function per context         |
+| Local + global merge | `combineLatest` of two observables                                          | `KnowledgeBaseCubit` awaits both sources (`Future.wait`), global is best effort; merged newest first |
+| Category hierarchy   | Flat list + `parent_id`, drill-down via query param                         | Same flat list; parent drill-down in cubit state; system back steps up one level |
+| Mobile filters sheet | `KBSimpleFiltersBottomSheetComponent` (dropdown)                            | `showTageaBottomSheet` with an indented radio tree, actions pinned |
+| Paging               | `fetchAllPages` (limit 100) per category; first page only for a plain search | All pages (limit 100, max 10 per source) in both cases; UI notes a capped count |
+| Article body         | Sanitised rich HTML                                                         | Plain text with tappable http(s) links until the shared rich-HTML renderer lands |
+| Navigation after tap | `institutionRoute(id, 'knowledge-base', 'article', :id)` vs teamspace route | Teamspace mount only: `/teamspace/knowledge-base/article/:id` |
 
 ## Port Log
 
 | Date       | Who      | What         |
 | ---------- | -------- | ------------ |
 | 2026-04-20 | ltoenjes | Spec created |
+| 2026-09-23 | Claude   | Spec aligned with Angular (single-category filter, no `articleCount`, filter button); Flutter teamspace port in review (#69) |
