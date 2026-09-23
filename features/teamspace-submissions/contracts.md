@@ -10,6 +10,19 @@
 
 > Exact signatures in each service file under `apps/tagea-frontend/src/app/services/`. Flutter port reads there.
 
+## Endpoints used by the list and the read-only detail
+
+| Method + path | Response | Used for |
+| --- | --- | --- |
+| `GET /submissions/own` | `Submission[]` (snake_case columns, camelCase relations `employee`, `category`, `attachments`) | „Meine Meldungen“ |
+| `GET /submissions/supervised?limit&offset` | `{ items: Submission[], total, unacknowledged }` | „Mitarbeiter“ tab |
+| `GET /submissions/:id` | `Submission` + `status_history[]`, `respondedByEmployee`, `assignedToEmployee`, `_permissions`, `_visibility` | detail |
+| `GET /submissions/:id/category` | category + `field_groups[]` (`is_repeating`, `key`, `aggregation_config`, `field_definitions[]`) + flat `field_definitions[]` | detail fields |
+| `GET /submissions/:id/attachments/:aid/download?presigned=true` | `{ url }` (without `presigned`: file stream) | attachments |
+| `GET /teamspaces/:tsId/submissions/:id/filled-pdf/signed-url?expiresIn=900` | `{ url, expiresIn }` | PDF receipt |
+
+> **Flutter port note:** `custom_fields_summary` values per field type — select: `{selected_id, selected_key, selected_label}` or id/key string; multiselect: `{selected: [{id, key, label}]}` or id list; employee/institution select: `{id, name}` (or list); file: `{filename}`; enriched values: `{display}`; repeating group: `summary[group.key] = {rows: [{row_id, <field_key>: …}], row_count}`.
+
 ## Data Models
 
 ```ts
