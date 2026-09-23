@@ -111,11 +111,39 @@ interface ClientAppointment {
 | Load appointment (staff or client via DI) | `IAppointmentDetailsService.getAppointmentDetails(id)`                                                                                  |
 | Update details (staff only)               | `IAppointmentDetailsService.updateAppointment(id, dto)`                                                                                 |
 | Cancel (client)                           | `IAppointmentDetailsService.cancelAppointment(id, cancelData, managedClientId?)` — hits `POST /appointments/my-appointments/:id/cancel` |
+| Cancel own booking (booker)               | `AppointmentsService.cancelAppointment(id, cancelData)` — hits `POST /appointments/:id/cancel-participation` (employees only; institution-scoped variant only when an institution context is active, never in teamspace booker mode). Returns the reloaded `Appointment`. |
 | Manage participants (staff save)          | `AppointmentParticipantsService.manageAppointmentParticipants(appointmentId, { employees, clients })`                                   |
 | RSVP via participant patch                | `AppointmentParticipantsService.updateParticipant(...)` — hits `PATCH /appointment-participants/:id` (tenant-level appointments) or `PATCH /teamspaces/:tsId/appointment-participants/:id` (teamspace appointments). Institution-independent (backend checks the row belongs to the caller). Staff `manageAppointmentParticipants` continues to use `updateParticipant` on the institution-scoped path when the staff user is editing someone else's participation. |
 | Load custom field definitions             | `CustomFieldsService.getFieldDefinitions(entityType)` (with `entityType = 'appointment'`)                                               |
 | Create financial support record           | `FinancialSupportService.createFinancialSupport(request)`                                                                               |
 | Start video session                       | `VideoSessionService.startSession(appointmentId)`                                                                                       |
+
+## Cancellation Payload
+
+```ts
+// apps/tagea-backend/src/appointments/dto/cancel-appointment.dto.ts
+// Shared by the client cancel and the staff cancel-participation endpoints.
+class CancelAppointmentDto {
+  cancellation_reason?: string; // free text, max 1000 characters
+  cancellation_categories?: string[]; // each one of 'Krankheit' | 'Terminkonflikt' | 'Notfall' | 'Sonstiges'
+}
+```
+
+The categories are a fixed backend enum (not a tenant table). Both Angular forms (`AppointmentCancelDialogComponent`) offer them as a **single** choice and send a one-element array; both fields are optional on the wire.
+
+After `cancel-participation` the caller's `AppointmentParticipant` carries:
+
+```ts
+// apps/tagea-backend/src/appointments/entities/appointment-participant.entity.ts (excerpt)
+{
+  response_status: 'cancelled_by_counselor';
+  cancelled_at: string; // ISO
+  cancellation_reason?: string;
+  cancellation_categories: string[];
+}
+```
+
+For a booking (`booking_category_id` set) the appointment `status` also becomes `cancelled_by_counselor`; for other staff appointments only when no involved participant is left.
 
 ## Timezone Handling
 
