@@ -1,5 +1,43 @@
 # Contracts: Teamspace Events
 
+## Endpoints (verified against backend `events.controller.ts`, 2026-09-23)
+
+All routes are tenant-scoped (`x-tenant-id`) and guarded by `TeamspaceAccessGuard` + `TeamspaceModuleGuard`.
+
+| Method + path | Permission | Purpose |
+| --- | --- | --- |
+| `GET /events` | teamspace access (consumer access control inside `findAll`) | Paginated list (`EventFiltersDto`) → `EventListResponseDto` |
+| `GET /events/:id` | `tenant.teamspace_events.view` | Single event (`EventResponseDto`) incl. `user_registration` |
+| `POST /events/:eventId/participants/:participantId/cancel` | `tenant.events.register` | Cancel a registration → `204 No Content` |
+
+### `GET /events` query (`EventFiltersDto extends PaginationDto`)
+
+| Param | Type | Notes |
+| --- | --- | --- |
+| `page` | int ≥ 1 | default 1 |
+| `limit` | int 1–100 | default 20; the staff list uses 12 (Angular `BATCH_SIZE`) |
+| `status` | `draft \| published \| cancelled \| completed` | single value; **without it drafts are returned too**, so the staff list sends `published` |
+| `search` | string | ILIKE on title + description (server-side) |
+| `teamspace_ids` | uuid[] (repeat the param) | filtered to the caller's accessible teamspaces; `teamspace_id` for a single one |
+| `upcoming_only` | boolean | `end_datetime >= now` (running and multi-day events stay) |
+| `available_spots_only` | boolean | `max_participants IS NULL OR current_participants_count < max_participants` |
+| `registration_open_only` | boolean | published, not started, deadline not passed |
+| `sort` | `ASC \| DESC` | on `start_datetime`, default `ASC` |
+| `lang` | string | translations → `display_title` / `display_description` when not `de` |
+| `include_participants` | boolean | default `true`; **must stay true** for `user_registration` to be filled on list items |
+
+There is **no** "my registrations" filter — it has to be applied to the loaded items (`user_registration.registration_status` not `cancelled`/`rejected`).
+
+Response: `{ items: EventResponseDto[], total, page, limit, totalPages }`; more pages exist while `page < totalPages`.
+
+### Cancel body (`CancelRegistrationDto`)
+
+```json
+{ "cancellation_reason": "Keine Angabe" }
+```
+
+`cancellation_reason` is **required** (`@IsString() @IsNotEmpty()`). The user-facing reason is optional: Angular (and Flutter) send the localised `defaultCancellationReason` ("Keine Angabe" / "Not specified") when the user leaves it empty. Series registrations ("Modus B", `series.registration_mode = 'series'`) are cancelled via `POST /events/series/:seriesId/registrations/:registrationId/cancel` instead.
+
 ## Service: `EventsService`
 
 Methods relevant to this page (exact signatures in [`events.service.ts`](../../../apps/tagea-frontend/src/app/services/events.service.ts)):
