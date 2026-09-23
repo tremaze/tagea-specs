@@ -4,10 +4,10 @@
 
 | Service               | Methods relevant here                                              | Purpose                                    |
 | --------------------- | ------------------------------------------------------------------ | ------------------------------------------ |
-| `AppointmentsService` | `getCalendarEvents(start, end)` | Range-scoped appointments for calendar. Hits `GET /employees/me/appointments/calendar`. No `employeeId` param — the endpoint is self-scoped. |
+| `AppointmentsService` | `getTenantCalendarEvents(start, end)` | Range-scoped appointments for calendar. Hits `GET /appointments/calendar`. No `employeeId` param — the endpoint is self-scoped. |
 | `AppointmentsService` | `getAppointment(id)`                                               | Full appointment for dialog edit mode. Already has an institution-less fallback to `GET /appointments/:id`. |
 | `AppointmentsService` | `getVirtualOccurrence(anchorId, occurrenceDate)`                   | Materialize virtual series occurrences     |
-| `AppointmentParticipantsService` | `selfRsvp(participantId, { response_status })` | Self-RSVP for staff invitees. Hits `PATCH /employees/me/appointment-participants/:id`. |
+| `AppointmentParticipantsService` | `updateParticipant(...)` | Self-RSVP for staff invitees. Route depends on the appointment scope (see endpoints below). |
 | `WorkingHoursService` | `checkEmployeeAvailability(employeeId, start, end)` | Availability check for dialog conflict warnings. Hits `GET /employees/me/availability/check`. |
 | `TeamspaceService`    | `hasAdminRole()`                                                   | Gate for availability-config FAB           |
 | `UnifiedAuthService`  | `employee()` signal                                                | The "me" scope used in UI state (not sent to the backend — server resolves the caller). |
@@ -16,15 +16,19 @@ Exact method signatures live in the respective service files.
 
 ## Backend endpoints
 
-All three read/write paths below are **institution-independent** — the teamspace calendar surface must not depend on an `institution_id` in the URL. Visibility is participant-based; mutation rights for institution-scoped appointments remain gated by the institution mutation endpoints (which are **not** called from the teamspace calendar).
+The calendar read and RSVP paths below are **institution-independent** — the teamspace calendar surface must not depend on an `institution_id` in the URL. Visibility is participant-based; mutation rights for institution-scoped appointments remain gated by the institution mutation endpoints (which are **not** called from the teamspace calendar).
 
 | Method + Path | Purpose | Controller |
 | ------------- | ------- | ---------- |
-| `GET /employees/me/appointments/calendar?start=<iso>&end=<iso>` | Range-scoped calendar events for the authenticated employee. Participant-based filter. Includes teamspace appointments (`institution_id IS NULL`) and institution appointments where the employee is participant. | `employee-appointments.controller.ts` |
-| `PATCH /employees/me/appointment-participants/:id` | Self-RSVP: updates `response_status` on the caller's own participant row. Institution-independent — backend validates that the participant row belongs to the authenticated employee. | `employee-appointments.controller.ts` (or dedicated `employee-participants.controller.ts`) |
+| `GET /appointments/calendar?start=<iso>&end=<iso>` | Range-scoped calendar events for the authenticated employee (bare JSON array). Participant-based filter (staff participant row). Includes teamspace appointments (`institution_id IS NULL`), institution appointments where the employee is participant, virtual series occurrences (`id = virtual_<anchorId>_<YYYY-MM-DD>`, `is_virtual_series`, `anchor_appointment_id`) and booked events (`template_name = 'Veranstaltung'`). Cancelled appointments are included. | `tenant-appointments.controller.ts` |
+| `GET /appointments/:id` | Detail incl. `participants`, `teamspace_id`, `institution_id`, `booking_category_id`, `recurrence_rule`. Accepts a uuid or `virtual_<anchorId>_<date>`. | `tenant-appointments.controller.ts` |
+| `GET /appointments/:anchorId/occurrences/:dateIso` | Virtual/materialized occurrence detail: `{ isVirtual, appointment, anchorId, occurrenceDate }`. | `tenant-appointments.controller.ts` |
+| `PATCH /appointment-participants/:id` | Self-RSVP on tenant-level appointments (`teamspace_id` and `institution_id` null): body `{ response_status }` only. | `tenant-appointment-participants.controller.ts` |
+| `PATCH /teamspaces/:teamspaceId/appointment-participants/:id` | Self-RSVP on teamspace appointments (`teamspace_id` set). | `teamspace-appointment-participants.controller.ts` |
+| `POST /teamspaces/:teamspaceId/appointment-participants/occurrence-response` | Answer a single occurrence of a teamspace series: `{ anchorId, occurrenceDate, action: 'confirm' \| 'decline' }`. Only available for teamspace series; tenant-level series are answered for the whole series. | `teamspace-appointment-participants.controller.ts` |
 | `GET /employees/me/availability/check?employeeId=<uuid>&start=<iso>&end=<iso>` | Per-employee availability check used by the appointment dialog to warn about conflicts. Documented in [employee-availability spec](../employee-availability/spec.md). | `working-hours-self-service.controller.ts` |
 
-**Visibility rule (authoritative):** an appointment is returned by `GET /employees/me/appointments/calendar` only if the requesting employee has an `AppointmentParticipant` row on it. `institution_id` is not a read-time gate. Teamspace membership alone does not grant visibility — a participant entry is required.
+**Visibility rule (authoritative):** an appointment is returned by `GET /appointments/calendar` only if the requesting employee has an `AppointmentParticipant` row on it. `institution_id` is not a read-time gate. Teamspace membership alone does not grant visibility — a participant entry is required.
 
 **Deprecated for teamspace calendar:** the legacy `GET /institutions/:institutionId/appointments/calendar?include_my_teamspaces=true` is no longer called from `/teamspace/kalender`. It stays in place for the institution calendar (`/calendar-page` — see [calendar contracts](../calendar/contracts.md)). The `include_my_teamspaces` query param is dropped from the new path — participant-based visibility makes it redundant.
 
