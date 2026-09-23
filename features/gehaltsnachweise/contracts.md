@@ -62,7 +62,7 @@ The component opens the dialog with this `data` payload:
 }
 ```
 
-> **Flutter port note:** use the shared preview widget and `syncfusion_flutter_pdfviewer` (or `flutter_pdfview`) with an auth-header-aware loader — payslips are authenticated resources.
+> **Flutter port note:** the PDF is fetched with the bearer header into memory and rendered by `TageaPdfViewer` (`packages/tagea_media`, pdfrx — iOS, Android and web). `syncfusion_flutter_pdfviewer` (commercial licence) and `flutter_pdfview` (no web) were rejected.
 
 ## Backend API
 
@@ -88,5 +88,7 @@ Download response sets:
 
 - `Content-Type: application/pdf`
 - `Content-Disposition: attachment; filename="Gehaltsnachweis-<id>.pdf"`
+
+Error semantics of `documents/:id/download`: an id that is not the employee's yields **403** (`ForbiddenException` in `DvelopDmsService.downloadDocument`), a document without content 404.
 
 Backend DTOs are at `apps/tagea-backend/src/proof-of-salary/dto/proof-of-salary.dto.ts`. The frontend mirrors them exactly (same field names / casing — `content` / `totalElements` / `totalPages` on the list; `id` / `fileName` / `date` on the item).

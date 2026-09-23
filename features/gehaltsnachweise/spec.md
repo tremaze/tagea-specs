@@ -50,7 +50,7 @@ Staff landing page for salary documents (payslips). Lists the employee's payslip
 
 ## Edge Cases
 
-- **Document unavailable / deleted on backend** — 404 on preview; surface a transient error.
+- **Document unavailable / deleted on backend** — the download answers **403** (not 404) when the id does not belong to the employee (`DvelopDmsService.downloadDocument` throws `ForbiddenException`), and 404 when the DMS has no content. Clients treat both as "not (or no longer) available" with retry and a way back to the list; "no access" is shown only when the session itself denies payslip access (feature off, `accessProofOfSalary` false, no personnel number).
 - **Large files** — preview dialog may fall back to "download to view" (same rule as [client-dokumente](../client-dokumente/spec.md)).
 - **Month boundaries** — `sortKey` is stable; monthly grouping handles documents issued across year boundaries correctly.
 
@@ -83,11 +83,11 @@ Staff landing page for salary documents (payslips). Lists the employee's payslip
 
 ## Offline Behavior
 
-**Flutter-specific:**
+**Flutter-specific (privacy: payslips are sensitive personal data):**
 
-- Cached list visible offline.
-- Previews require online unless the file is already cached.
-- Downloads integrate with OS file system (`path_provider` + `open_file`).
+- **No offline cache.** Neither the list nor the PDFs are persisted; offline the list shows its error state with retry.
+- Previews are downloaded with the bearer header into memory and rendered from there (no temp file, no token in a URL, no file name in the route).
+- "Herunterladen" hands the same bytes to the OS save dialog (iOS export picker, Android `ACTION_CREATE_DOCUMENT`) or a browser download on web. Any temporary copy the platform needs (iOS export) is deleted right after the dialog closes. No `open_file` / external viewer.
 
 ## References
 
