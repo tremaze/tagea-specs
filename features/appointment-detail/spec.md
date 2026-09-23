@@ -68,13 +68,18 @@ The `AppointmentDetailComponent` route-driven modes read `route.data.mode` (`'st
 
 ### RSVP (Staff Invited)
 
-> RSVP (Accept / Decline) is surfaced on the **appointment detail page** (`TermineDetailComponent` at `/teamspace/kalender/:id`), **not** in the notification center. The notification center is strictly informational: clicking a notification marks it read and navigates to the detail page. RSVP persists by `PATCH /employees/me/appointment-participants/:id` with `{ response_status }` ('confirmed' | 'no_show_with_notice' | 'no_show_short_notice'). The endpoint is institution-independent: the backend validates that the participant row belongs to the authenticated employee, so the RSVP works for employees without any institution assignment (e.g. staff invited only via teamspace membership).
+> RSVP (Accept / Decline) is surfaced on the **appointment detail page** (`TermineDetailComponent` at `/teamspace/kalender/:id`), **not** in the notification center. The notification center is strictly informational: clicking a notification marks it read and navigates to the detail page. RSVP persists with `{ response_status }` ('confirmed' | 'no_show_with_notice' | 'no_show_short_notice') on the self-RSVP route matching the appointment: `PATCH /teamspaces/:teamspaceId/appointment-participants/:id` when `teamspace_id` is set, otherwise the tenant-level `PATCH /appointment-participants/:id`. Both are institution-independent: the backend validates that the participant row belongs to the authenticated employee, so the RSVP works for employees without any institution assignment (e.g. staff invited only via teamspace membership).
 
 - [ ] **Given** the user is listed as a staff participant on a teamspace appointment, **When** the detail renders, **Then** their own participant entry is resolved via `participants.find(p => p.participant_employee_id === me && p.participant_type === 'staff')`.
 - [ ] **Given** the resolved participant has `role !== 'organizer'` and the appointment is in the future, **When** the detail renders, **Then** Accept and Decline buttons are visible with the current `response_status` shown alongside.
 - [ ] **Given** the user presses Accept, **When** the request fires, **Then** the backend patches `response_status` to `'confirmed'` and the UI refreshes the response state read-only.
 - [ ] **Given** the user presses Decline, **When** the request fires, **Then** the backend patches `response_status` to `'no_show_with_notice'` (or `'no_show_short_notice'` depending on the time until start) and the UI refreshes the response state read-only.
-- [ ] **Given** the appointment is in the past, **When** the detail renders, **Then** the Accept and Decline buttons are hidden (RSVP is no longer actionable).
+- [ ] **Given** the appointment has ended (`end_datetime` < now; for a series anchor: its `UNTIL` date has passed), **When** the detail renders, **Then** the Accept and Decline buttons are hidden (RSVP is no longer actionable). A running appointment can still be answered.
+- [ ] **Given** the appointment is cancelled (`status` is `cancelled_by_counselor`, `cancelled_by_client` or `partially_cancelled`), **When** the detail renders, **Then** the Accept and Decline buttons are hidden and the cancellation is shown instead.
+- [ ] **Given** the user has already answered, **When** the detail renders, **Then** the button for the current answer is hidden and the other one stays available, so the answer can be changed.
+- [ ] **Given** the user declines, **When** the start is more than 24 hours away, **Then** `response_status` is `'no_show_with_notice'`, otherwise `'no_show_short_notice'`.
+- [ ] **Given** the appointment is an occurrence of a **teamspace** series (`teamspace_id` set and `recurrence_rule` or `anchor_appointment_id` set), **When** the user presses Accept or Decline, **Then** they choose "Nur dieser Termin" or "Gesamte Serie". "Nur dieser Termin" posts `POST /teamspaces/:teamspaceId/appointment-participants/occurrence-response` with `{ anchorId, occurrenceDate, action }`; "Gesamte Serie" patches the anchor participant row. Dismissing the choice cancels the RSVP.
+- [ ] **Given** the appointment belongs to a tenant-level series (`teamspace_id` null), **When** the user answers, **Then** the answer applies to the whole series without a scope choice (the backend has no per-occurrence answer for these).
 - [ ] **Given** the user is the organizer (own participant entry has `role === 'organizer'`), **When** the detail renders, **Then** no Accept/Decline buttons are shown — the organizer label is displayed instead.
 - [ ] **Given** the user receives an `appointment_invitation` notification, **When** they click the notification item, **Then** the notification is marked as read and the user is navigated to `/teamspace/kalender/:id` — there is no inline Accept/Decline inside the notification item itself.
 
@@ -119,7 +124,8 @@ TermineDetailComponent renders with Accept / Decline buttons
 user presses Accept / Decline
             │
             ▼
-PATCH /employees/me/appointment-participants/:participantId
+PATCH /appointment-participants/:participantId            (teamspace_id null)
+PATCH /teamspaces/:tsId/appointment-participants/:participantId (teamspace_id set)
 { response_status: 'confirmed' | 'no_show_with_notice' | 'no_show_short_notice' }
 (institution-independent — backend validates the participant row
  belongs to the authenticated employee)
@@ -180,7 +186,7 @@ Owned by component templates + child view components. Full list should be compil
 - **Client view:** `AppointmentDetailClientViewComponent`
 - **Services:**
   - `APPOINTMENT_DETAILS_SERVICE` interface — injected `AppointmentsService` or `ClientAppointmentsService`
-  - `AppointmentParticipantsService` — participant CRUD. `manageAppointmentParticipants` runs during staff save (institution-scoped). RSVP uses `selfRsvp(participantId, { response_status })` which hits the institution-independent `PATCH /employees/me/appointment-participants/:id`.
+  - `AppointmentParticipantsService` — participant CRUD. `manageAppointmentParticipants` runs during staff save (institution-scoped). RSVP uses the self-RSVP route matching the appointment scope (`PATCH /appointment-participants/:id` or `PATCH /teamspaces/:tsId/appointment-participants/:id`).
   - `AppointmentTimeService`, `AppointmentFormService`, `CustomFieldsService`, `FinancialSupportService`
   - `VideoSessionService` — `startSession(appointmentId)` opens the pre-join dialog and shows the floating video widget
 - **Related commits of interest:**

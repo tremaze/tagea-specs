@@ -2,7 +2,7 @@
 
 > **Status:** 🚧 Spec drafted — awaiting review
 > **Owner:** ltoenjes
-> **Last updated:** 2026-04-22 (institution-independence: participant-scoped endpoints under `employees/me/…`)
+> **Last updated:** 2026-09-23 (read/RSVP endpoints corrected to the tenant-level routes the backend implements; mobile day list and tap routing specified for the Flutter port)
 
 ## Vision (Elevator Pitch)
 
@@ -26,9 +26,24 @@ Personal calendar for staff appointments — Outlook-style. Appointments are cro
 - [ ] **Given** the user navigates months/weeks, **When** `DatesSetArg` fires, **Then** appointments for the visible range load via `AppointmentsService.getCalendarEvents(...)`.
 - [ ] **Given** the user clicks an event (desktop) **and** is the organizer (has a participant entry with `role === 'organizer'` for this appointment), **When** the handler fires, **Then** `AppointmentDialogV2Component` opens in edit mode.
 - [ ] **Given** the user clicks an event (desktop) **and** is not the organizer (any other participant, or not a participant at all), **When** the handler fires, **Then** the user is navigated to `/teamspace/kalender/:id` (the detail page) — the dialog does **not** open.
-- [ ] **Given** the user clicks an event (mobile), **When** the handler fires, **Then** navigate to `/teamspace/kalender/:id`.
+- [ ] **Given** the user clicks an event (mobile), **When** the handler fires, **Then** navigate to `/teamspace/kalender/:id` — for invited participants **and** for organizers (read-only detail on mobile; editing stays a desktop/dialog concern). Decision 2026-09-23. Virtual series occurrences navigate to `/teamspace/kalender/:anchorId?occurrence=<ISO start>`.
 - [ ] **Given** the appointment has `booking_category_id` and the user is not a provider, **When** the click handler fires, **Then** navigate to `/teamspace/buchung/:id` (booker read-only view) — overrides the organizer rule above.
 - [ ] **Given** the user presses "Neuer Termin", **When** action fires, **Then** navigate to `/teamspace/kalender/neu` (`TermineNeuComponent`).
+
+### Mobile day list (Angular `app-mobile-calendar`, Flutter port)
+
+- [ ] **Given** the list opens, **When** the first request fires, **Then** it loads **today − 30 days … today + 30 days** in one request and shows today at the top.
+- [ ] **Given** the user scrolls near the start or end of the loaded range, **When** the edge is reached, **Then** the next **7 days** in that direction are loaded and merged by appointment `id` (already-loaded ranges are not refetched).
+- [ ] **Given** a day in the loaded range has no appointments, **When** the list renders, **Then** the day is still shown with the hint "Keine Termine".
+- [ ] **Given** an appointment spans several days, **When** the list renders, **Then** it appears under every day it covers; an end at exactly local midnight is exclusive.
+- [ ] **Given** a day section renders, **When** it has appointments, **Then** its header shows the day number (highlighted for today), the weekday in capitals, the long date ("23. September 2026") and the count ("1 Termin" / "n Termine").
+- [ ] **Given** an appointment row renders, **When** it is timed, **Then** it shows a colour bar, start and end time (`HH:mm`), the title (single line, ellipsis), a status line for non-`scheduled` statuses ("Abgesagt", "Durchgeführt", "Nicht erschienen"), location and template name. All-day items show "Ganztägig" instead of times; restricted items (`has_full_access = false`) show "Termin belegt" without details.
+- [ ] **Given** today is not visible, **When** the user taps "Heute", **Then** the list jumps to today.
+- [ ] **Given** the user picks a date in the date picker, **When** the date is outside the loaded range, **Then** the range is reset to ± 30 days around that date and the list shows that date at the top.
+- [ ] **Given** an event (`is_event` or `template_name = 'Veranstaltung'`) is tapped, **When** the event detail is not available, **Then** the app shows a "coming soon" hint instead of a dead route.
+- [ ] **Given** loading a range fails, **When** the error is shown, **Then** the already loaded days stay visible and the user can retry.
+
+Times are shown and grouped in the **device's local time zone**, matching the Angular app (see Edge Cases).
 
 ### Visibility rule (backend-enforced)
 
@@ -44,11 +59,11 @@ Teamspace appointments are persisted with `institution_id IS NULL` and `teamspac
 
 ### Institution independence
 
-The teamspace calendar is a personal surface — it must load for any authenticated employee, including employees without any institution assignment. All read endpoints used by this surface live under `employees/me/…` and do not take an `institution_id` in the path.
+The teamspace calendar is a personal surface — it must load for any authenticated employee, including employees without any institution assignment. The read and RSVP endpoints used by this surface are tenant-level (`/appointments/…`, `/appointment-participants/…`) and do not take an `institution_id` in the path. The `employees/me/…` paths planned on 2026-04-22 were never implemented; the tenant-level routes below fulfil the same institution-independence requirement (employee-only, participant-filtered).
 
 - [ ] **Given** the employee has zero institution assignments but is a member of at least one teamspace, or is a participant on at least one appointment, **When** `/teamspace/kalender` loads, **Then** the calendar renders without attempting to set an institution context and without throwing `"No institution context available"`.
 - [ ] **Given** the page previously seeded the institution context via `AuthorizationStore.accessibleInstitutionIds()[0]` in `TerminePageComponent.ngOnInit`, **When** the new participant-scoped endpoints are in place, **Then** this bootstrap fallback is removed — the teamspace calendar no longer writes to `InstitutionContextService`.
-- [ ] **Given** the calendar fetches events, **When** the request fires, **Then** it hits `GET /employees/me/appointments/calendar?start=<iso>&end=<iso>` — the legacy path `GET /institutions/:id/appointments/calendar?include_my_teamspaces=true` is **not** used from `/teamspace/kalender` (that path remains in place for the institution calendar — see [calendar spec](../calendar/spec.md)).
+- [ ] **Given** the calendar fetches events, **When** the request fires, **Then** it hits `GET /appointments/calendar?start=<iso>&end=<iso>` (tenant-level, participant-filtered, returns a bare JSON array) — the legacy path `GET /institutions/:id/appointments/calendar?include_my_teamspaces=true` is **not** used from `/teamspace/kalender` (that path remains in place for the institution calendar — see [calendar spec](../calendar/spec.md)).
 
 ### Creation dialog behavior (`AppointmentDialogV2Component` in teamspace mode)
 
@@ -68,7 +83,7 @@ The teamspace calendar is a personal surface — it must load for any authentica
 ### Detail (`/teamspace/kalender/:id`)
 
 - [ ] **Given** a specific appointment id is opened on mobile, **When** the detail loads, **Then** `TermineDetailComponent` renders the appointment (reuses the shared `AppointmentDetailComponent` pattern in booker mode — verify exact wiring).
-- [ ] **Given** a staff invitee RSVPs on `/teamspace/kalender/:id` (Accept or Decline), **When** the request fires, **Then** it hits `PATCH /employees/me/appointment-participants/:id` — the self-RSVP endpoint — **not** the institution-scoped `PATCH /institutions/:id/appointment-participants/:id`. The RSVP must work for employees without any institution assignment. See [appointment-detail spec — RSVP section](../appointment-detail/spec.md) for the full semantics.
+- [ ] **Given** a staff invitee RSVPs on `/teamspace/kalender/:id` (Accept or Decline), **When** the request fires, **Then** it hits the self-RSVP route that matches the appointment: `PATCH /teamspaces/:teamspaceId/appointment-participants/:id` when `teamspace_id` is set, otherwise the tenant-level `PATCH /appointment-participants/:id` (the normal case — teamspace-calendar appointments persist with `teamspace_id IS NULL`). Institution appointments (`institution_id` set, `teamspace_id` null) use `PATCH /institutions/:institutionId/appointment-participants/:id`. The RSVP must work for employees without any institution assignment. See [appointment-detail spec — RSVP section](../appointment-detail/spec.md) for the full semantics.
 
 ### New booking (`/teamspace/kalender/neu`)
 
@@ -93,7 +108,7 @@ The teamspace calendar is a personal surface — it must load for any authentica
 
 ## Edge Cases
 
-- **Timezone:** all times rendered in `Europe/Berlin` (tenant standard — see [appointment-detail spec](../appointment-detail/spec.md)).
+- **Timezone:** times are rendered and grouped by day in the device's local time zone (Angular uses the browser time zone; the backend widens the requested range to whole days using the `X-Timezone` header, falling back to `Europe/Berlin`). For the tenant standard `Europe/Berlin` this is identical on German devices.
 - **Employee context:** `employeeId()` signal drives the scope (sourced from `UnifiedAuthService.employee()?.id`). If null/undefined, `loadAppointments` logs a warning and returns early; mobile calendar renders nothing rather than crashing.
 - **Series action dialog result is `{ scope: 'cancel' }` or `undefined`** (user dismissed without picking) → the edit/delete is cancelled silently.
 - **AuthorizationStore guard** — some actions may be gated by auth-store permissions; verify in implementation.
