@@ -2,7 +2,7 @@
 
 > **Status:** 🚧 Spec drafted — awaiting review
 > **Owner:** ltoenjes
-> **Last updated:** 2026-04-22
+> **Last updated:** 2026-09-23
 
 ## Vision (Elevator Pitch)
 
@@ -15,11 +15,11 @@ A detail view of an appointment for several user roles — staff (full edit), bo
 | Mode                   | Route                                                | Component                                                                           | Notes                                                                                            |
 | ---------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | `staff`                | `/einrichtung/:institutionId/staff/appointments/:id` | `AppointmentDetailComponent` → `AppointmentDetailStaffViewComponent`                | Full staff edit affordances. Uses `APPOINTMENT_DETAILS_SERVICE: AppointmentsService`.            |
-| `booker`               | `/teamspace/buchung/:id`                             | `AppointmentDetailComponent` → `AppointmentDetailStaffViewComponent` (booker flavor) | Teamspace booking detail for the booker role.                                                   |
+| `booker`               | `/teamspace/buchung/:id`                             | `AppointmentDetailComponent` → `AppointmentDetailClientViewComponent` (read-only) + booker actions | Booking overview for the employee who booked a teamspace offer; offers "Termin stornieren". Uses `APPOINTMENT_DETAILS_SERVICE: AppointmentsService`. |
 | `client`               | `/client-portal/termine/:id`                         | `AppointmentDetailComponent` → `AppointmentDetailClientViewComponent`               | Client self-serve view. Uses `APPOINTMENT_DETAILS_SERVICE: ClientAppointmentsService`.           |
 | `termine-detail` (staff invitee) | `/teamspace/kalender/:id`                            | `TermineDetailComponent` (uses `AppointmentDetailClientViewComponent` for layout)  | Read-only detail for staff invited to a teamspace appointment; adds Accept/Decline RSVP buttons. |
 
-The `AppointmentDetailComponent` route-driven modes read `route.data.mode` (`'staff' | 'booker' | 'client'`) and branch rendering between `AppointmentDetailStaffViewComponent` and `AppointmentDetailClientViewComponent`. The `termine-detail` mode is a separate component (`TermineDetailComponent`) that reuses the client view's layout and layers in participant RSVP logic; it is not a route-data branch.
+The `AppointmentDetailComponent` route-driven modes read `route.data.mode`. The editable staff full-page view was removed (staff edit via the calendar dialog), so today both `'client'` and `'booker'` render the read-only `AppointmentDetailClientViewComponent`; the mode only switches the actions (client: per-person accept/decline; booker: cancel the own booking). The `termine-detail` mode is a separate component (`TermineDetailComponent`) that reuses the client view's layout and layers in participant RSVP logic; it is not a route-data branch.
 
 ## User Stories
 
@@ -32,6 +32,7 @@ The `AppointmentDetailComponent` route-driven modes read `route.data.mode` (`'st
 ### Booker (Teamspace)
 
 - As a **teamspace staff member** I want to see appointment context for bookings I'm involved in, so that I can prepare.
+- As a **teamspace staff member who booked an offer** I want to cancel my booking with a reason, so that the provider knows and the slot becomes bookable again.
 - As an **invited staff participant** I want to RSVP directly from the detail, so that I don't need a separate UI.
 
 ### Client
@@ -47,7 +48,7 @@ The `AppointmentDetailComponent` route-driven modes read `route.data.mode` (`'st
 - [ ] **Given** the detail route loads, **When** the data fetch resolves, **Then** core fields render (title, date/time in `Europe/Berlin` timezone, location, organizer, participants).
 - [ ] **Given** the appointment is cancelled, **When** the detail renders, **Then** a prominent "cancelled" banner + cancellation reason (if any) is shown, and most edit affordances are hidden.
 - [ ] **Given** a managed-client context is passed via query param `?managedClientId=`, **When** the detail loads, **Then** the data is scoped to that managed client.
-- [ ] **Given** the component reads `route.data.mode`, **When** the value is `'staff' | 'booker'`, **Then** render the staff view; **when** it is `'client'`, **Then** render the client view.
+- [ ] **Given** the component reads `route.data.mode`, **When** the value is `'booker'` or `'client'`, **Then** render the read-only client view with the mode's actions.
 
 ### Staff Mode
 
@@ -64,7 +65,18 @@ The `AppointmentDetailComponent` route-driven modes read `route.data.mode` (`'st
 
 ### Booker Mode
 
-- [ ] **Given** the user has `teamspace_calendar.view`, **When** they access `/teamspace/buchung/:id`, **Then** the staff view renders with mode-specific UI (verify details against `AppointmentDetailStaffViewComponent`).
+A **booked offer** is an appointment with `booking_category_id` set whose `assigned_to_employee_ids` does not contain the caller (the caller is the booker, not the provider). The booker holds a `staff` participant row of their own.
+
+- [ ] **Given** the user has `teamspace_calendar.view`, **When** they access `/teamspace/buchung/:id`, **Then** the booking overview renders: title, date and time (`Europe/Berlin`), location or "Online" (`is_video_meeting`), and the provider (staff participants whose employee id is in `assigned_to_employee_ids`).
+- [ ] **Given** the user taps a booked offer in the teamspace calendar (or the next-appointment card), **When** it opens, **Then** the booking overview is shown instead of the invitee detail (Angular: `termine-page` / `teamspace-v2-page` load the appointment and route bookers to `/teamspace/buchung/:id`; providers keep the regular detail).
+- [ ] **Given** the booking is still upcoming (`start_datetime` > now), the caller's own staff participant row exists, it is not withdrawn (`cancelled_at` null and `response_status` not in `no_show_*` / `cancelled_by_*`) and the appointment itself is not cancelled, **When** the overview renders, **Then** "Termin stornieren" is offered. Otherwise it is hidden. (Angular checks only the own row; Flutter additionally hides it on an appointment the provider already cancelled.)
+- [ ] **Given** the user taps "Termin stornieren", **When** the cancel form opens, **Then** it asks for one reason out of `Krankheit`, `Terminkonflikt`, `Notfall`, `Sonstiges` (single choice) and an optional remark (max. 1000 characters). Dismissing the form aborts without a request.
+- [ ] **Given** the form is confirmed, **When** the request is sent, **Then** it is `POST /appointments/:id/cancel-participation` with `{ cancellation_categories: [<reason>], cancellation_reason?: <remark> }` (tenant-level, no institution context). The backend sets the own row to `cancelled_by_counselor` with `cancelled_at`, and — because the appointment is a booking — sets the appointment status to `cancelled_by_counselor`, which frees the provider's slot.
+- [ ] **Given** the cancellation succeeded, **When** the overview reloads, **Then** it shows the cancelled state with the reason (categories), the remark and the cancellation time, the action is gone, and the calendar is refreshed on return. A success message says „Termin storniert. Der Zeitslot ist wieder frei.“
+- [ ] **Given** the request fails, **When** the error arrives, **Then** a message „Termin konnte nicht storniert werden“ is shown (Flutter: with a retry action that resends the same reason and remark).
+- [ ] **Given** the backend rejects the request (400 already cancelled / already started, 404 not a participant), **When** the error arrives, **Then** the overview is reloaded so it reflects the server state.
+
+Backend guards (authoritative, the UI checks are convenience only): the participant row is looked up by the caller's employee id (foreign booking → 404), an already cancelled participation → 400, an appointment that has started → 400. The endpoint takes a real appointment UUID (`ParseUUIDPipe`); virtual series occurrence ids are not accepted — series bookings are out of scope.
 
 ### RSVP (Staff Invited)
 
@@ -94,6 +106,7 @@ The `AppointmentDetailComponent` route-driven modes read `route.data.mode` (`'st
 | Loaded (cancelled) | `status ∈ { 'cancelled', 'cancelled_by_client', 'cancelled_by_counselor', 'partially_cancelled' }` (union spans both staff + client shapes) | "Cancelled" banner + reason + read-only content | Banner uses `role="alert"` |
 | Saving             | Edit action in-flight                                                                                                                       | Progress bar + disabled form                    | —                          |
 | RSVP changing      | Accept/decline request in-flight                                                                                                            | Buttons disabled with inline spinner            | `aria-busy`                |
+| Cancelling booking | Booker's cancel request in-flight                                                                                                           | Cancel action replaced by a spinner             | `aria-busy`                |
 | Error              | Fetch/save error                                                                                                                            | Snackbar + retry affordance                     | `role="alert"`             |
 
 ## Flows
@@ -101,9 +114,28 @@ The `AppointmentDetailComponent` route-driven modes read `route.data.mode` (`'st
 ### Mode resolution
 
 ```
-route.data.mode ──┬── 'staff' / 'booker'  ──▶ AppointmentDetailStaffViewComponent
+route.data.mode ──┬── 'booker' ──▶ AppointmentDetailClientViewComponent + "Termin stornieren"
                   │
-                  └── 'client'             ──▶ AppointmentDetailClientViewComponent
+                  └── 'client' ──▶ AppointmentDetailClientViewComponent + per-person accept/decline
+```
+
+### Booker cancels a booking
+
+```
+/teamspace/buchung/:id  ──  GET /appointments/:id
+            │
+            ▼
+own staff row upcoming & not withdrawn? ── no ──▶ read-only (cancelled notice if withdrawn)
+            │ yes
+            ▼
+"Termin stornieren" ──▶ cancel form (reason required, remark optional)
+            │ confirm                     │ dismiss ──▶ nothing happens
+            ▼
+POST /appointments/:id/cancel-participation
+{ cancellation_categories: ['Krankheit'], cancellation_reason?: '…' }
+            │
+            ├── 200 ──▶ reload ──▶ cancelled state with reason; slot freed
+            └── error ─▶ „Termin konnte nicht storniert werden“ (+ retry)
 ```
 
 ### Staff participant RSVP (via detail page)
@@ -177,7 +209,7 @@ Owned by component templates + child view components. Full list should be compil
 **Flutter-specific:**
 
 - Read-only view offline (cached detail).
-- Cancel / RSVP / edit actions require online.
+- Cancel / RSVP / edit actions require online. The booker's "Termin stornieren" is shown disabled with a short offline hint while the device is offline.
 - Video-join requires online + WebRTC capability.
 
 ## References
