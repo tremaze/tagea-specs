@@ -56,6 +56,7 @@ reach the person by e-mail or phone in one tap.
 | Populated         | ≥ 1 row                                     | Card list; spinner row while the next page loads                       | Card is one button labelled with the name |
 | Error             | First page failed                           | Error icon, "Fehler beim Laden der Mitarbeitenden", "Erneut versuchen"  |                                           |
 | Offline           | No network                                  | Same as Error (no cache)                                                |                                           |
+| No access         | List answers 403 (no `tenant.employees.list`) | Lock icon, "Kein Zugriff", "Du hast keine Berechtigung, das Personenverzeichnis zu sehen." — no retry | Pull-to-refresh stays |
 
 Filter sheet: title "Filter", multi-select list of active institutions,
 footer "Filter zurücksetzen" / "Anwenden". Closing without "Anwenden"
@@ -104,7 +105,19 @@ Detail: avatar (64), full name; contact rows (e-mail, mobile, landline);
   translated, "Verschiedene Rollen" for several, or the legacy `role` when
   the list is empty.
 - **Detail 403/404:** the person is outside the caller's scope or was
-  deleted meanwhile → detail error state; the list is unchanged.
+  deleted meanwhile → not-found state "Person nicht verfügbar" ("Die Person
+  wurde entfernt oder ist für dich nicht sichtbar.") with "Zurück zum
+  Personenverzeichnis" — no retry button, because asking again does not
+  help; pull-to-refresh still reloads. Other errors → error state with
+  "Erneut versuchen". The list is unchanged.
+- **Detail states are pullable:** loading, error and not-found states of
+  the detail keep pull-to-refresh (UX guideline §5).
+- **Institution filter after a transient failure:** a network/5xx error of
+  `GET /tenant/institutions/active` hides the filter only until the next
+  pull-to-refresh or retry, which asks again; only a 403 hides it for the
+  session.
+- **Malformed e-mail:** an `email` that is not exactly one address (a list,
+  a display name, extra headers) gets no `mailto:` action.
 
 ## Permissions & Tenant/Institution
 
@@ -120,7 +133,8 @@ Detail: avatar (64), full name; contact rows (e-mail, mobile, landline);
   `GET /tenant/institutions` is open to every authenticated employee
   (`scope: 'authenticated'`, `allowedUserTypes: [EMPLOYEE]`) behind the
   tenant feature `institutions` — no extra permission needed.
-  401 → session handling; 403 → error state.
+  401 → session handling; 403 on the list → "Kein Zugriff" state without
+  retry (pull-to-refresh stays); 403 on the detail → not-found state.
 
 ## Notifications (Push / In-App)
 
