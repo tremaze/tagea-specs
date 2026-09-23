@@ -2,7 +2,7 @@
 
 > **Status:** 🟡 Permission architecture complete; UI acceptance criteria still validating
 > **Owner:** ltoenjes (UI), svenarbeit (permission architecture)
-> **Last updated:** 2026-05-04
+> **Last updated:** 2026-09-23 (list tabs, detail read-only view, endpoints — Flutter WP6)
 >
 > **Pattern reference:** This feature is the canonical permission-pattern example
 > for the teamspace scope. The institution scope already follows the pattern
@@ -40,11 +40,22 @@ Staff-facing hub for creating and tracking submissions (e.g. incident reports, e
 
 ### List (`/teamspace/submissions`)
 
-- [ ] **Given** the user opens the page, **When** `SubmissionsService` + `SubmissionCategoriesService` + `TeamspaceService` resolve, **Then** submissions render as `TageaSubmissionCardComponent` cards with status, category, submitter, and timestamp.
-- [ ] **Given** multiple teamspaces are accessible, **When** filter chips render, **Then** one chip per teamspace is shown; an active filter scopes the list.
-- [ ] **Given** status chips render, **When** a status chip is selected (e.g. `awaiting_approval`, `pending`, `in_review`, `closed`, `rejected`), **Then** the list additionally filters on `SubmissionStatus`.
-- [ ] **Given** a card is tapped, **When** navigation resolves, **Then** open `/teamspace/submissions/:id`.
-- [ ] **Given** a "New submission" CTA fires, **When** the user is on the list, **Then** they can pick a category and the creation form for that category renders (dynamic fields based on `FieldGroup[]`).
+**Mobile layout (< 600 px):** segmented tabs, in this order:
+
+1. **„Neue Meldung“** — the create wizard (teamspace → category → form). Always visible.
+2. **„Meine Meldungen“** — the user's own submissions (`GET /submissions/own`, newest first, all of them — the Angular page used to cap at 10).
+3. **„Mitarbeiter“** („Meldungen meiner Mitarbeiter“) — `GET /submissions/supervised?limit&offset` (paged, infinite scroll). Shown only when the user holds `institution.submissions.view_institution_members` in any institution (`SessionAuthz.canInAnyInstitution`). These are submissions of employees of institutions the user supervises, in categories with `visible_to_institution_supervisors=true`, excluding the user's own. *(Open product question, Asana „WP6 Entscheidung: Wer sieht den Tab …“: whether `submissions.view_all` / `view_scoped` should also unlock this tab — those currently unlock the „Verwaltung“ surface, `GET /submissions/managed`.)*
+
+Desktop keeps the two-column layout (wizard left, history right).
+
+- [ ] **Given** the user opens the page, **When** the lists resolve, **Then** submissions render as cards with category, status, submitter (supervisor list only) and relative submission time.
+- [ ] **Given** a search term, **When** it is typed, **Then** both lists filter client-side on category name and submitter name.
+- [ ] **Given** status chips (`awaiting_approval`, `pending`, `in_review`, `closed`, `rejected`, plus „Alle“), **When** chips are selected, **Then** the lists filter on those statuses (multi-select; „Alle“ clears). *(Angular computes status groups but renders no chips; Flutter renders them — acceptance criterion of the port.)*
+- [ ] **Given** two or more teamspaces with the submissions module, **When** teamspace chips are selected, **Then** the lists additionally filter on `teamspace_id` (multi-select; „Alle“ clears).
+- [ ] **Given** filters leave no result, **Then** a „Keine Meldungen gefunden“ state with „Filter zurücksetzen“ is shown.
+- [ ] **Given** a card is tapped, **When** navigation resolves, **Then** open `/teamspace/submissions/:id` (Angular appends `?teamspaceId=`; Flutter does not need it).
+- [ ] **Given** a "New submission" CTA fires, **When** the user is on the list, **Then** they can pick a category and the creation form for that category renders (dynamic fields based on `FieldGroup[]`). *(Flutter: „Kommt bald“ until the create work package.)*
+- [ ] **Flutter:** every list supports pull-to-refresh; a failed refresh keeps the shown items and says so.
 
 ### Deep link new (`/teamspace/submissions/new/:teamspaceId/:categoryId`)
 
@@ -56,7 +67,17 @@ Staff-facing hub for creating and tracking submissions (e.g. incident reports, e
 
 ### Detail (`/teamspace/submissions/:id`)
 
-- [ ] **Given** a submission id is present, **When** the detail page loads with `data.mode === 'global'`, **Then** the submission's content, attachments, history, and status are shown (read-only for the submitter).
+Loaded via the global routes `GET /submissions/:id` (with `_permissions`, `_visibility`) and `GET /submissions/:id/category` (field layout: `field_groups[]` + legacy `field_definitions[]`). Values come from the detail's `custom_fields_summary`; `GET …/custom-fields/v2` is not needed for the read-only view.
+
+- [ ] **Given** a submission id is present, **When** the detail page loads with `data.mode === 'global'`, **Then** the submission's content, attachments, answer and status are shown (read-only for the submitter).
+- [ ] Mobile order: header (status, subject „{Kategorie} - {dd.MM.yyyy, HH:mm}“, submitter, „Eingereicht:“, „Letzte Änderung:“, „Zugeteilt:“ if assigned) → „Zusätzliche Informationen“ → „PDF-Beleg“ → „Anhänge (n)“ → „Antwort vom Team“.
+- [ ] Title: „Meine Anfrage“ when `_visibility === 'own'`, else „Anfrage einsehen“.
+- [ ] Fields: active groups by `display_order`; flat groups as label/value rows; repeating groups (with `key` and rows in `summary[key].rows`) per row, plus „Summe {Feld}“ for `aggregation_config.kind === 'sum'`. Conditional fields (`ui_config.visibility_condition`) without a value are skipped. Values resolve per field type (choice labels, names, file name, Ja/Nein, `dd.MM.yyyy`, `ui_config.number_format`); rich text is shown as plain text — API HTML is untrusted and never rendered as markup in Flutter.
+- [ ] **Answer:** there is **one** answer per submission (`response`, `responded_at`, `respondedByEmployee` columns on the submission — no reply thread). With an answer: „Beantwortet von {Name} am {Datum}“ + text. Without: „Deine Anfrage wird noch bearbeitet …“ (submitter) / „Diese Anfrage wird noch bearbeitet …“ (others).
+- [ ] **Status history** („Status-Verlauf“, `status_history[]`) is shown to editors (`submissions.edit`, admin view) only — not to the submitter.
+- [ ] **Files:** attachments open via `GET /submissions/:id/attachments/:aid/download?presigned=true` → `{url}` (15-minute presigned URL; without `presigned` the endpoint streams the file). The PDF receipt via `GET /teamspaces/:tsId/submissions/:id/filled-pdf/signed-url?expiresIn=900` → `{url, expiresIn}`; shown when `generated_receipt_filename` is set or the category has a PDF template. Flutter accepts only http(s) URLs and opens them with the platform (url_launcher).
+- [ ] Opening the detail marks it read (`content-read-status`, type `submission`).
+- [ ] 404/403 → „Meldung nicht gefunden“ with „Zurück zur Übersicht“; other errors → error state with retry. **Flutter:** pull-to-refresh.
 
 ### Permission enforcement (backend)
 
@@ -180,6 +201,7 @@ Tenant-admin path complements the per-TS path; both write to the same DB table. 
 |---|---|---|
 | `teamspace-submissions-page` | "Neue Meldung" CTA | `hasAnyTeamspacePermission('submissions.create')` |
 | `teamspace-submissions-page` | "Verwaltung" link/FAB | `hasAnyTeamspacePermissionOf(['submissions.view_all','submissions.view_scoped'])` |
+| `teamspace-submissions-page` | „Mitarbeiter“ tab (mobile) / card (desktop) | `canInAnyInstitution('institution.submissions.view_institution_members')` |
 | `submissions-page` (slug route) | "Meldung absenden" | `hasTeamspacePermission(tsId, 'submissions.create')` |
 | `submissions-page` | "Verwaltung" button | `hasTeamspacePermission(tsId, 'submissions.view_all') ∨ ...view_scoped` |
 | `submissions-verwaltung-page` | Status filter, search, sort | (page is gated already; controls visible) |
@@ -230,7 +252,7 @@ These are seed defaults; tenants can override via the permission editor at `/ein
 
 **Flutter-specific:**
 
-- List view cached offline.
+- List view cached offline. *(Flutter WP6: not yet — lists and detail show the error state with retry when offline and keep already loaded data on a failed refresh; an offline cache follows with the app-wide caching work.)*
 - Creating a submission requires online; large attachments queue on reconnect (or block — decide during port).
 
 ## Open drifts (tracked in E2E specs as drift-pins)
