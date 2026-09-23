@@ -2,7 +2,7 @@
 
 > **Status:** 🚧 In progress
 > **Owner:** ltoenjes
-> **Last updated:** 2026-04-21
+> **Last updated:** 2026-09-23
 
 ## Vision (Elevator Pitch)
 
@@ -114,7 +114,7 @@ nav.bulkMessaging     nav.clientNews        nav.employees
 nav.pendingEmployees  nav.pep               nav.reports
 nav.billing           nav.settings          nav.myOverview
 nav.myAppointments    nav.myDocuments       nav.newsUpdates
-nav.myMessages        nav.superAdmin
+nav.myMessages        nav.superAdmin        nav.myWorkingTime
 ```
 
 ## Offline Behavior

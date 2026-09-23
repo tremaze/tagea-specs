@@ -7,7 +7,7 @@
 The authoritative TypeScript shape declared in `secure-main.component.ts`. All three presenter components (nav-rail, nav-drawer, bottom-nav) each declare their own subset of this interface locally — the shell passes plain objects shaped by the full definition below.
 
 ```ts
-// Source: apps/tagea-frontend/src/app/layouts/secure-main/secure-main.component.ts
+// Source: apps/tagea-frontend/src/app/layouts/secure-main/navigation-items.ts
 export interface NavigationItem {
   id: string; // stable identifier, used for badge lookup + bottom-nav selection
   icon: string; // Material icon name
@@ -18,6 +18,10 @@ export interface NavigationItem {
   requiredPermissions?: string[]; // institution-scoped permissions (any-of)
   requiredTenantPermission?: string; // tenant-scoped permission
   requiredFeature?: keyof TenantFeatures; // checked against tenant features; in einrichtung mode ALSO checked against institution features
+  requiredFeatures?: (keyof TenantFeatures)[]; // every key must pass the same checks as requiredFeature
+  tenantScopedFeature?: boolean; // skip the institution-feature check (feature has no institution switch)
+  requiredAccess?: (authz: SessionAuthz, institutionId: string | null) => boolean; // custom access rule, e.g. canInAnyTeamspace
+  employeeOnly?: boolean; // hidden for client users
   clientOnly?: boolean; // only visible to client users
   superAdminOnly?: boolean; // only visible to super-admins
   tenantAdminOnly?: boolean; // only visible to super-admins or tenant-admins
@@ -64,24 +68,32 @@ Ordered as declared in `staticNavigationItems`. Columns: **id** / **labelKey** /
 
 ### Teamspace mode
 
-| id                              | labelKey            | route                            | guards                                                          | mobile flags |
-| ------------------------------- | ------------------- | -------------------------------- | --------------------------------------------------------------- | ------------ |
-| `teamspace`                     | `nav.teamspace`     | `/teamspace`                     | tenantPerm `teamspace_home.view`; feature `teamspace`           | —            |
-| `teamspace-news`                | `nav.news`          | `/teamspace/news`                | tenantPerm `teamspace_news.view`; feature `teamspace`           | —            |
-| `teamspace-submissions`         | `nav.submissions`   | `/teamspace/submissions`         | tenantPerm `teamspace_submissions.view`; feature `teamspace`    | —            |
-| `teamspace-events`              | `nav.events`        | `/teamspace/events`              | tenantPerm `teamspace_events.view`; feature `teamspace`         | —            |
-| `teamspace-kalender`            | `nav.calendar`      | `/teamspace/kalender`            | tenantPerm `teamspace_calendar.view`; feature `teamspace`       | —            |
-| `teamspace-personenverzeichnis` | `nav.directory`     | `/teamspace/personenverzeichnis` | tenantPerm `teamspace_directory.view`; feature `teamspace`      | —            |
-| `teamspace-knowledge-base`      | `nav.knowledgeBase` | `/teamspace/knowledge-base`      | tenantPerm `teamspace_knowledge_base.view`; feature `teamspace` | —            |
-| `teamspace-lms`                 | `nav.lms`           | `/teamspace/lms`                 | tenantPerm `teamspace_lms.view`; feature `schulungen`           | —            |
-| `dateien` (teamspace)           | `nav.files`         | `/dateien`                       | tenantPerm `file_storage.access`; feature `fileStorage`         | —            |
-| `einstellungen` (teamspace)     | `nav.settings`      | `/einstellungen`                 | tenantPerm `admin.access`                                       | —            |
+| id                              | labelKey            | route                            | guards                                                                                 | mobile flags |
+| ------------------------------- | ------------------- | -------------------------------- | -------------------------------------------------------------------------------------- | ------------ |
+| `teamspace`                     | `nav.teamspace`     | `/teamspace`                     | tenantPerm `tenant.teamspace_home.view`; feature `teamspace`                           | —            |
+| `meine-arbeitszeit`             | `nav.myWorkingTime` | `/meine-arbeitszeit`             | feature `timeTracking` (`tenantScopedFeature`); `employeeOnly`                         | —            |
+| `teamspace-news`                | `nav.news`          | `/teamspace/news`                | tenantPerm `tenant.teamspace_news.view`; feature `teamspace`                           | —            |
+| `teamspace-submissions`         | `nav.submissions`   | `/teamspace/submissions`         | tenantPerm `tenant.teamspace_submissions.view`; features `teamspace` AND `submissions` | —            |
+| `teamspace-events`              | `nav.events`        | `/teamspace/events`              | tenantPerm `tenant.teamspace_events.view`; feature `teamspace`                         | —            |
+| `teamspace-kalender`            | `nav.calendar`      | `/teamspace/kalender`            | tenantPerm `tenant.teamspace_calendar.view`; feature `teamspace`                       | —            |
+| `teamspace-personenverzeichnis` | `nav.directory`     | `/teamspace/personenverzeichnis` | tenantPerm `tenant.teamspace_directory.view`; feature `teamspace`                      | —            |
+| `teamspace-knowledge-base`      | `nav.knowledgeBase` | `/teamspace/knowledge-base`      | tenantPerm `tenant.teamspace_knowledge_base.view`; feature `teamspace`                 | —            |
+| `dateien` (teamspace)           | `nav.files`         | `/dateien`                       | feature `fileStorage`; `canInAnyTeamspace('files.view')`                               | —            |
+
+`chat` and `ai-chat` (see *Both / common*) are declared between `teamspace-knowledge-base` and `dateien`; the mobile drawer drops `chat` (`bottomNavOnly`) and moves `ai-chat` to the end. The teamspace drawer therefore reads: Teamspace, Meine Arbeitszeit, Informationen, Meldungen, Veranstaltungen, Kalender, Personenverzeichnis, Wissensdatenbank, Dateien, (Träger-Verwaltung for super-admins), Tagea AI.
+
+`canInAnyTeamspace('files.view')` is true with `tenant.teamspaces.access_all`, with any teamspace membership granting `files.view`, or with the tenant bridge `tenant.teamspaces.all.files.view` (`auth-session/file-storage-access.ts`).
+
+> **Meine Arbeitszeit** is declared three times on purpose (#3085): `meine-arbeitszeit` (`mode: 'teamspace'`), `meine-arbeitszeit-einrichtung` (`mode: 'einrichtung'`) and `lms-meine-arbeitszeit` (LMS bar). They share the route but each sits second in its own list, which a single `mode: 'both'` entry cannot do. The route is personal and never prefixed with `/einrichtung/:id`. `employeeOnly` (#3084) keeps it out of the client portal; `tenantScopedFeature` skips the institution-feature check because `timeTracking` has no institution switch.
+>
+> The former `teamspace-lms` and teamspace-mode `einstellungen` rows no longer exist in `navigation-items.ts`: LMS has its own bar, and `einstellungen` is einrichtung-only.
 
 ### Einrichtung mode
 
 | id                            | labelKey               | route                | guards                                                                   | mobile flags   |
 | ----------------------------- | ---------------------- | -------------------- | ------------------------------------------------------------------------ | -------------- |
 | `dashboard`                   | `nav.dashboard`        | `/dashboard`         | perm `dashboard.view`                                                    | —              |
+| `meine-arbeitszeit-einrichtung` | `nav.myWorkingTime`  | `/meine-arbeitszeit` | feature `timeTracking` (`tenantScopedFeature`); `employeeOnly`; route not prefixed | —      |
 | `calendar`                    | `nav.calendar`         | `/calendar`          | perm `appointments.view`                                                 | —              |
 | `tasks`                       | `nav.tasks`            | `/tasks`             | perm `institution.access`; feature `tasks`                               | —              |
 | `institution-dateien`         | `nav.files`            | `/dateien`           | tenantPerm `file_storage.access`; feature `fileStorage`                  | —              |
