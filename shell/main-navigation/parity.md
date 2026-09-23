@@ -53,3 +53,4 @@ lib/features/shell/navigation/
 | ---------- | -------- | --------------------------------------------------------------------- |
 | 2026-04-21 | ltoenjes | Spec created — schema, full catalogue, 9-step filter pipeline, badges |
 | 2026-04-27 | sven     | v0.1-alpha minimal nav shipped (4 destinations, adaptive bottom-nav/rail at 720 dp, drawer + rail user menu). Filter pipeline, badges, mode-aware items, route prefixing all deferred. |
+| 2026-09-23 | claude   | Catalogue: added `meine-arbeitszeit` (teamspace + einrichtung twins), synced teamspace guards with `navigation-items.ts`. Flutter WP0: teamspace-mode pill (Teamspace / Veranstaltungen / Chat) + gated drawer from `GET /session/v2`, coming-soon pages for unported entries. |
