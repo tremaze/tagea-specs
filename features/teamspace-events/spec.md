@@ -33,7 +33,11 @@ Staff events feed: browse upcoming events across teamspaces, see who has registe
 - [ ] **Given** the user can register, **When** they press "Anmelden", **Then** an RSVP is recorded and the UI updates.
 - [ ] **Given** the user is already registered, **When** they press "Abmelden", **Then** the RSVP is removed.
 - [ ] **Given** an active own registration (`pending`, `approved`, `waitlist`) on a non-cancelled single event, **When** the event has not started yet, **Then** "Abmelden" is offered; it asks for confirmation with an optional reason and sends the localised default reason when empty (the backend requires one). After success the status shows "Nicht angemeldet".
-- [ ] **Given** the event has started, **Then** no "Abmelden" is offered (Angular: `cannotCancelAfterStart`). The registration deadline does **not** limit cancelling.
+- [ ] **Given** the event has started, **Then** no "Abmelden" is offered (Angular: `cannotCancelAfterStart`). The backend refuses every cancel after the start, organizers included.
+- [ ] **Given** the registration deadline (`registration_deadline`) has passed, **Then** no "Abmelden" is offered and a hint says the deadline passed. The backend (`EventParticipantsService.cancelRegistration`) refuses a self-cancel after the deadline with `403`. **Exception:** callers acting as organizer (`tenant.teamspaces.access_all` or teamspace permission `events.process` in one of the event's teamspaces) may still cancel until the start — the backend does not check whether the registration is their own and then treats it as an organizer cancel ("cancelled by organizer" notification).
+  - Angular deviates: it offers "Abmelden" until the start regardless of the deadline; non-organizers then get the `403`.
+  - Flutter hides "Abmelden" after the deadline for everyone. Whether organizers should see it for their own registration is an open product question (Asana "Entscheidungen offen").
+- [ ] **Given** the confirmation is sent after cancelling became impossible (the sheet stayed open past start or deadline), **Then** the user gets the "no longer possible" message instead of a silent no-op.
 - [ ] **Given** the event is cancelled, **Then** the detail shows an "Abgesagt" chip/status and no action.
 - [ ] **Given** the event is unknown or not visible (404/403), **Then** a "Veranstaltung nicht gefunden" state with a way back to the list is shown; other errors offer a retry.
 
@@ -84,8 +88,9 @@ Staff events feed: browse upcoming events across teamspaces, see who has registe
 
 **Flutter-specific:**
 
-- Cached event list visible offline.
-- RSVP actions require online; queue optional.
+- **Not cached (deliberate, WP3).** List and detail load online only; offline the list/detail show the error state with a retry, and a failed pull-to-refresh keeps the already shown data and says so (snack bar). No app module caches server lists yet (news, feed and calendar are online-only too) and the web build has no offline storage; an event cache would follow a shared caching pattern (encrypted per-tenant storage, `tagea_storage`) once one exists.
+- Angular has no event cache either: only the web service worker's generic `/api/**` freshness cache (1 h, not active in the native apps).
+- RSVP actions require online; no queue.
 
 ## References
 

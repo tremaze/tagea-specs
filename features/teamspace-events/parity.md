@@ -27,7 +27,9 @@
 | Filtering        | Client-side on loaded pages (search, teamspace, free places) | Server-side (`search`, `teamspace_ids`, `available_spots_only`, `upcoming_only`) so paging stays correct; "Meine Anmeldungen" stays client-side |
 | Detail registration | Mobile peek bottom sheet with status          | Inline "Anmeldung" card + pinned "Abmelden" bar |
 | Cancel prompt    | `SimplePromptDialog` (optional reason)              | Bottom sheet with optional reason (UX §3) |
-| Refresh          | —                                                   | Pull-to-refresh on list and detail        |
+| Refresh          | —                                                   | Pull-to-refresh on list and detail, also in the loading / not-found / error states of the detail |
+| Cancel after deadline | "Abmelden" offered until the start; non-organizers get a `403` | Hidden after the deadline with a hint; organizer exemption open (Asana "Entscheidungen offen") |
+| Offline          | Web service worker `/api/**` freshness cache only   | Not cached; error state + retry, failed refresh keeps shown data |
 | RSVP state       | UI updates via service method response              | Same — backend-authoritative              |
 
 ## Port Log
@@ -36,3 +38,4 @@
 | ---------- | -------- | ------------ |
 | 2026-04-20 | ltoenjes | Spec created |
 | 2026-09-23 | Claude (WP3) | Endpoints/query/cancel body verified against backend; Flutter list, detail, cancel |
+| 2026-09-23 | Claude (WP3 QA) | Deadline rule + organizer exemption corrected against backend; offline documented as not cached |
