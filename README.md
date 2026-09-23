@@ -88,6 +88,7 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 | Teamspace LMS         | ✅      | ⏳      | [teamspace-lms/](./features/teamspace-lms/spec.md)                 |
 | Teamspace Events      | ✅      | ⏳      | [teamspace-events/](./features/teamspace-events/spec.md)           |
 | Teamspace Calendar    | ✅      | ⏳      | [teamspace-calendar/](./features/teamspace-calendar/spec.md)       |
+| Teamspace Employee Directory | ✅ | 🚧 | [teamspace-employee-directory/](./features/teamspace-employee-directory/spec.md) |
 | Teamspace Appointment RSVP Notifications | ⏳      | ⏳      | [teamspace-appointment-rsvp-notifications/](./features/teamspace-appointment-rsvp-notifications/spec.md) |
 | Gehaltsnachweise      | ✅      | ⏳      | [gehaltsnachweise/](./features/gehaltsnachweise/spec.md)           |
 
