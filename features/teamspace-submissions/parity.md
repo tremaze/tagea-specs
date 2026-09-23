@@ -9,13 +9,13 @@
 
 ## Flutter
 
-- **Status:** 🟡 List + read-only detail (WP6); create flow pending
+- **Status:** 🟡 List + read-only detail (WP6, tagea-next-flutter #62 + QA follow-ups); create flow pending
 - **Path:** `apps/tagea_frontend/lib/features/teamspace/submissions/` (UI), `packages/teamspace_core` (`SubmissionsApi`, `SubmissionsListCubit`, `SubmissionDetailCubit`)
-- **Sub-routes:**
-  - `submissions_list_page.dart`
-  - `submissions_new_page.dart` (deep-link-friendly, takes teamspaceId + categoryId)
-  - `submission_detail_page.dart`
-- **Integration tests:** `integration_test/teamspace_submissions_test.dart`
+- **Files:**
+  - `submissions_page.dart` (tabs „Neue Meldung“ / „Meine Meldungen“ / „Mitarbeiter“)
+  - `detail/submission_detail_page.dart`
+  - `submissions_new_page.dart` — ⏳ create flow (deep-link-friendly, takes teamspaceId + categoryId)
+- **Tests:** widget tests under `apps/tagea_frontend/test/features/teamspace/submissions/`; `integration_test/teamspace_submissions_test.dart` ⏳
 
 ## Known Divergences
 
@@ -29,7 +29,10 @@
 | Detail field grid     | 200 px label column, tables for repeating groups | label above value; repeating rows as numbered blocks (phone width)   |
 | Rich-text values      | rendered HTML                        | plain text (untrusted API content)                                              |
 | Attachments           | preview dialog + download            | presigned URL opened by the platform                                            |
-| Pull-to-refresh       | —                                    | lists and detail                                                                |
+| Pull-to-refresh       | —                                    | lists and detail, including the detail's not-found and error states            |
+| Mobile tabs           | `mat-tab-group` (header paginates)   | segmented tabs; labels wrap between words so all three fit at 360 dp, else the bar scrolls with the selected tab in view |
+| Admin sub-routes      | `/teamspace/submissions/verwaltung`, `/konfiguration` | not ported; deep links land on the list                                |
+| Back from detail      | page re-initialises                  | list refreshes in place, keeping items and scroll offset                       |
 
 ## Port Log
 
@@ -37,3 +40,4 @@
 | ---------- | -------- | ------------ |
 | 2026-04-20 | ltoenjes | Spec created |
 | 2026-09-23 | Claude (WP6) | List tabs, answer vs. history, detail endpoints clarified from Angular + backend |
+| 2026-09-23 | Claude (WP6 QA) | Flutter status and divergences after the QA follow-ups |

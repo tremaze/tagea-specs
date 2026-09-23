@@ -77,7 +77,8 @@ Loaded via the global routes `GET /submissions/:id` (with `_permissions`, `_visi
 - [ ] **Status history** („Status-Verlauf“, `status_history[]`) is shown to editors (`submissions.edit`, admin view) only — not to the submitter.
 - [ ] **Files:** attachments open via `GET /submissions/:id/attachments/:aid/download?presigned=true` → `{url}` (15-minute presigned URL; without `presigned` the endpoint streams the file). The PDF receipt via `GET /teamspaces/:tsId/submissions/:id/filled-pdf/signed-url?expiresIn=900` → `{url, expiresIn}`; shown when `generated_receipt_filename` is set or the category has a PDF template. Flutter accepts only http(s) URLs and opens them with the platform (url_launcher).
 - [ ] Opening the detail marks it read (`content-read-status`, type `submission`).
-- [ ] 404/403 → „Meldung nicht gefunden“ with „Zurück zur Übersicht“; other errors → error state with retry. **Flutter:** pull-to-refresh.
+- [ ] 404/403 → „Meldung nicht gefunden“ with „Zurück zur Übersicht“; other errors → error state with retry. **Flutter:** pull-to-refresh, also on these two states.
+- [ ] A 404/403 on `GET /submissions/:id/category` (category deleted or not visible) does not hide the submission: header, files and answer show, the fields section is omitted.
 
 ### Permission enforcement (backend)
 
