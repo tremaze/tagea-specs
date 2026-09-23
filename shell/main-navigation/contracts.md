@@ -84,6 +84,8 @@ Ordered as declared in `staticNavigationItems`. Columns: **id** / **labelKey** /
 
 `canInAnyTeamspace('files.view')` is true with `tenant.teamspaces.access_all`, with any teamspace membership granting `files.view`, or with the tenant bridge `tenant.teamspaces.all.files.view` (`auth-session/file-storage-access.ts`).
 
+Both Dateien entries use one rule for menu entry **and** route guard (`requireFileStorageAccess`, #4464): teamspace mode checks `canOpenTeamspaceFileStorage`, einrichtung mode `canOpenInstitutionFileStorage` (`institution.files.view` in exactly that institution). The former menu switch `file_storage.access` / `institution.file_storage.access` is removed and gates nothing.
+
 > **Meine Arbeitszeit** is declared three times on purpose (#3085): `meine-arbeitszeit` (`mode: 'teamspace'`), `meine-arbeitszeit-einrichtung` (`mode: 'einrichtung'`) and `lms-meine-arbeitszeit` (LMS bar). They share the route but each sits second in its own list, which a single `mode: 'both'` entry cannot do. The route is personal and never prefixed with `/einrichtung/:id`. `employeeOnly` (#3084) keeps it out of the client portal; `tenantScopedFeature` skips the institution-feature check because `timeTracking` has no institution switch.
 >
 > The former `teamspace-lms` and teamspace-mode `einstellungen` rows no longer exist in `navigation-items.ts`: LMS has its own bar, and `einstellungen` is einrichtung-only.
@@ -96,7 +98,7 @@ Ordered as declared in `staticNavigationItems`. Columns: **id** / **labelKey** /
 | `meine-arbeitszeit-einrichtung` | `nav.myWorkingTime`  | `/meine-arbeitszeit` | feature `timeTracking` (`tenantScopedFeature`); `employeeOnly`; route not prefixed | —      |
 | `calendar`                    | `nav.calendar`         | `/calendar`          | perm `appointments.view`                                                 | —              |
 | `tasks`                       | `nav.tasks`            | `/tasks`             | perm `institution.access`; feature `tasks`                               | —              |
-| `institution-dateien`         | `nav.files`            | `/dateien`           | tenantPerm `file_storage.access`; feature `fileStorage`                  | —              |
+| `institution-dateien`         | `nav.files`            | `/dateien`           | feature `fileStorage`; `canInInstitution(id, 'institution.files.view')`  | —              |
 | `clients`                     | `nav.clients`          | `/clients`           | perm `clients.view`                                                      | —              |
 | `cases`                       | `nav.cases`            | `/cases`             | perm `cases.view`; feature `caseManagement`                              | —              |
 | `bulk-messaging`              | `nav.bulkMessaging`    | `/bulk-messaging`    | perm `clients.view`; feature `clientMessages`                            | —              |
