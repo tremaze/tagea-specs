@@ -8,22 +8,29 @@
 
 ## Flutter
 
-- **Status:** ⏳ Planned
-- **Suggested path:** `lib/features/auth/blocked_access_page.dart`
-- **Mode enum:** `BlockedAccessMode { emailNotVerified, noInstitution }`
-- **Integration tests:** `integration_test/blocked_access_test.dart`
+- **Status:** 🚧 In progress — 403 reasons ported
+- **Path:** `apps/tagea_frontend/lib/home/blocked_access_view.dart` (rendered by
+  the home shell while `SessionAccessCubit` is `denied`), copy in
+  `blocked_access_copy.dart`, page layout `TageaNoticePage` (`packages/ui`)
+- **Reason model:** `AccountBlockReason` (`packages/teamspace_core`)
+- **Tests:** `apps/tagea_frontend/test/home/blocked_access_view_test.dart`,
+  `packages/teamspace_core/test/src/access/`
 
 ## Known Divergences
 
-| Topic               | Angular                                   | Flutter                         |
-| ------------------- | ----------------------------------------- | ------------------------------- |
-| Mode discrimination | Query param `?reason=email-not-verified`  | Route parameter + enum          |
-| Localization        | Hardcoded German strings                  | Proper `intl` keys              |
-| Background          | CSS gradient                              | `LinearGradient` in `Container` |
-| Teamspace route     | Angular `Router.navigate(['/teamspace'])` | `GoRouter.go('/teamspace')`     |
+| Topic               | Angular                                         | Flutter                                                    |
+| ------------------- | ----------------------------------------------- | ---------------------------------------------------------- |
+| Surface             | Route `/blocked-access?reason=…`                | Home shell body while access is `denied`                   |
+| 401 (`not-provisioned`) | Blocked page                                | Transient error for now (decision 2026-09-24)              |
+| Reasons in scope    | All (incl. no-institution, rejected, …)         | 403 `ACCOUNT_BLOCKED` reasons, Vivendi, `unknown`          |
+| Refresh             | One refresh on open, redirect if usable         | "Erneut versuchen" + pull-to-refresh reload `/session/v2`  |
+| Pending client      | `/join` awaiting flow                           | Pending-approval page                                      |
+| Rate-limit message  | Server `message`                                | Localised text                                             |
+| Layout              | Card on a gradient background                   | Plain page in the app theme, brand-coloured icon badge     |
 
 ## Port Log
 
-| Date       | Who      | What         |
-| ---------- | -------- | ------------ |
-| 2026-04-20 | ltoenjes | Spec created |
+| Date       | Who      | What                                        |
+| ---------- | -------- | ------------------------------------------- |
+| 2026-04-20 | ltoenjes | Spec created                                |
+| 2026-09-24 | Claude   | Spec updated to current Angular; 403 reasons ported to Flutter |
