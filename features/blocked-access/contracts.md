@@ -1,36 +1,53 @@
 # Contracts: Blocked Access
 
-## No direct endpoints
+## How users get here
 
-This page makes no backend calls. It is a destination reached via redirect from:
+`SessionBootstrap.fetchSession()` maps a failed `GET /session/v2` to
+`/blocked-access?reason=…` (see [spec.md](./spec.md#reason-resolution)).
 
-- `/auth/callback` with `?reason=email-not-verified` on `EMAIL_NOT_VERIFIED` error (see [auth-callback/contracts.md](../auth-callback/contracts.md))
-- Route guards that redirect authenticated users with no institution assignment:
-  - `permissionGuard` (`apps/tagea-frontend/src/app/guards/permission.guard.ts`)
-  - `defaultModeRedirectGuard` (`apps/tagea-frontend/src/app/guards/default-mode-redirect.guard.ts`)
-  - `teamspaceFeatureGuard` (`apps/tagea-frontend/src/app/guards/teamspace-feature.guard.ts`)
-  - `tenantPermissionGuard` (`apps/tagea-frontend/src/app/guards/tenant-permission.guard.ts`)
-  - `institutionUrlGuard` (`apps/tagea-frontend/src/app/guards/institution-url.guard.ts`)
+### 403 body of `GET /session/v2` (account blocked)
 
-## Actions
+Built by `blocked()` in
+`apps/tagea-backend/src/auth/account-usability/account-usability.ts` and
+flattened onto the top level by `GlobalExceptionFilter`:
 
-### "Zu Teamspace wechseln" (blocked-access variant only)
-
-- `Router.navigate(['/teamspace'])` — reaches the teamspace home (which has its own feature-guard handling).
-
-### "Abmelden" (both variants)
-
-- `UnifiedAuthService.logout()` — mirrors the auth-error logout flow.
-
-## Mode resolution
+> Documentation-only shape.
 
 ```ts
-// Component logic
-readonly isEmailNotVerified = signal(false);
-ngOnInit() {
-  const reason = this.route.snapshot.queryParamMap.get('reason');
-  this.isEmailNotVerified.set(reason === 'email-not-verified');
+{
+  statusCode: 403,
+  code: 'ACCOUNT_BLOCKED',
+  reason: AccountBlockReason, // account-deleted | account-suspended |
+                              // account-pending-approval |
+                              // account-pending-activation |
+                              // email-not-verified | email-domain-not-allowed
+  message: string,
+  principalType?: 'employee' | 'client',
+  enrollment: { state: 'blocked' | 'needs_approval' | …, detail?: { code?, reason? } },
+  timestamp: string, path: string, method: string,
 }
 ```
 
-> **Flutter port note:** pass the `reason` as a route parameter (GoRouter query param) and branch the widget tree on a local `BlockedAccessMode` enum.
+Other structured 403 codes: `NO_TENANT_CONTEXT` (→ `/join`), `VIVENDI_*`
+(→ `vivendi-provisioning`).
+
+## Endpoints
+
+### `POST /auth/resend-email-change-verification`
+
+- Auth: `@Auth({ scope: 'authenticated', allowEmailUnverified: true })`.
+- Body: `{}`.
+- 200: `{ retryAfterSeconds: number }` (cooldown, 5 minutes).
+- 400: `{ message, retryAfterSeconds }` while rate limited.
+- 404: no pending e-mail change.
+
+## Actions
+
+- **Bestätigungs-E-Mail erneut senden** — the endpoint above.
+- **Zu Teamspace wechseln** — `Router.navigate(['/teamspace'])`.
+- **Neu registrieren** — clears the rejection marker, then logs out.
+- **Abmelden** — `SessionLogout.logout()`.
+
+> **Flutter port note:** `AccountBlockReason.fromDenialBody` (teamspace_core)
+> parses the 403 body; `EmailVerificationApi` / `EmailVerificationResendCubit`
+> implement the resend with its cooldown.
