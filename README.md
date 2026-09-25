@@ -92,7 +92,7 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 | Teamspace Appointment RSVP Notifications | ⏳      | ⏳      | [teamspace-appointment-rsvp-notifications/](./features/teamspace-appointment-rsvp-notifications/spec.md) |
 | Gehaltsnachweise      | ✅      | 🚧      | [gehaltsnachweise/](./features/gehaltsnachweise/spec.md)           |
 | Teamspace Quick Posts | ✅      | ⏳      | [teamspace-quick-posts/](./features/teamspace-quick-posts/spec.md) |
-| Employee Profile (Own) | ✅     | ⏳      | [employee-profile/](./features/employee-profile/spec.md)           |
+| Employee Profile (Own, incl. Outlook & Datenauskunft) | ✅ | ⏳ | [employee-profile/](./features/employee-profile/spec.md)           |
 | Meine Arbeitszeit     | ✅      | ⏳      | [my-working-time/](./features/my-working-time/spec.md)             |
 | Global Search (Globale Suche) | 🚧 | ⏳ | [global-search/](./features/global-search/spec.md) |
 

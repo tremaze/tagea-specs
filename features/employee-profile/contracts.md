@@ -1,6 +1,6 @@
 # Contracts: Employee Profile
 
-> Verified against `apps/tagea-backend/src/users/controllers/employee-self-service.controller.ts`, `users/employee-profile.service.ts`, `auth/auth.controller.ts`, `auth/dto/change-password.dto.ts`, `common/global-exception.filter.ts` + `main.ts` (error envelope, `ValidationPipe`), `personal-availability/personal-availability.controller.ts` + `dto/personal-availability.dto.ts`, `outlook-sync/outlook-auth.controller.ts`, `outlook-sync/outlook-sync.controller.ts` + `dto/outlook-sync-config.dto.ts`, and the Angular services `employee-self.service.ts`, `personal-availability.service.ts`, `outlook-sync.service.ts`, `language.service.ts` (2026-09-25).
+> Verified against `apps/tagea-backend/src/users/controllers/employee-self-service.controller.ts`, `users/employee-profile.service.ts`, `auth/auth.controller.ts`, `auth/dto/change-password.dto.ts`, `common/global-exception.filter.ts` + `main.ts` (error envelope, `ValidationPipe`), `personal-availability/personal-availability.controller.ts` + `dto/personal-availability.dto.ts`, `outlook-sync/outlook-auth.controller.ts`, `outlook-sync/outlook-sync.controller.ts` + `dto/outlook-sync-config.dto.ts`, and the Angular services `employee-self.service.ts`, `personal-availability.service.ts`, `outlook-sync.service.ts`, `language.service.ts` (2026-09-25). Datenauskunft verified against `data-export/controllers/employee-data-export.controller.ts`, `data-export.types.ts`, `data-export-orchestrator.service.ts`, `services/data-export-delivery.service.ts`, `services/data-export-archive.service.ts`, `collectors/employee/*`, `common/guards/rate-limit.guard.ts`, `tenants/guards/feature.guard.ts` and the Angular `pages/data-export/*` (2026-09-25, WP13b).
 
 ## Services
 
@@ -12,6 +12,8 @@ Exact signatures live in the injected services. Verify during any port.
 - `NotificationSuppressionService` — `load()` re-invoked after notification settings save
 - `PersonalAvailabilityService` (`services/personal-availability.service.ts`) — Erreichbarkeit: `getMeineErreichbarkeit`, `create`, `update`, `remove` (used by `ErreichbarkeitSectionComponent`, which also calls `NotificationSuppressionService.invalidate()` after each reload)
 - `OutlookSyncService` (`services/outlook-sync.service.ts`) — used by `OutlookSyncSettingsComponent`: `getConnectionStatus`, `getConfig`, `getCalendars`, `getAuthorizationUrl`, `disconnect`, `updateConfig`, `setSyncEnabled`, `triggerSync`
+- `DataExportService` (`pages/data-export/data-export.service.ts`) — Datenauskunft: `load`, `downloadPdf`, `downloadArchive`; persona-aware base path (`employees/me/data-export` vs. `client-portal/me/data-export`); exposes `document`, `loading`, `error` signals
+- `NativeFileDownloadService` — `downloadBlob` (web: anchor download; native: Filesystem cache + Share sheet)
 - `ConfirmationService` (`@tagea/ui`) — `confirm$` for the Outlook disconnect confirmation
 - `EmployeeAvailabilityService` — booking-plan read/write (`getByEmployee`, `delete`, `update`), institution-scoped; the owning tab is hard-disabled (`@if (false)`) in the component
 - `AppointmentTemplatesService` — `getActiveTemplates` (only loaded when an institution context is active)
@@ -63,6 +65,16 @@ Erreichbarkeit — `PersonalAvailabilityController` (`@Controller('employees/me/
 | `POST /employees/me/availability-windows` | `CreatePersonalAvailabilityDto` | 201 `PersonalAvailabilityWindow` | 400 invalid / start ≥ end / overlap |
 | `PATCH /employees/me/availability-windows/:id` | `UpdatePersonalAvailabilityDto` | 200 `PersonalAvailabilityWindow` | 404 when not own; `:id` must be a UUID (400) |
 | `DELETE /employees/me/availability-windows/:id` | — | 204 | 404 when not own |
+
+Datenauskunft — `EmployeeDataExportController` (`@Controller('employees/me/data-export')`, `@Auth({ scope: 'authenticated', allowedUserTypes: [UserType.EMPLOYEE] })`, `@RequireFeature('dataSelfDisclosure')`, `RateLimitGuard`):
+
+| Method + path | Request | Response | Notes |
+|---|---|---|---|
+| `GET /employees/me/data-export` | — | 200 `DataExportDocument` (JSON) | Art. 15 overview |
+| `GET /employees/me/data-export/pdf` | — | 200 `application/pdf`, `Content-Disposition: attachment; filename="datenauskunft-employee-self-<YYYY-MM-DD>.pdf"` | Art. 15, printable |
+| `GET /employees/me/data-export/archive` | — | 200 `application/zip`, filename `datenauskunft-employee-self-<YYYY-MM-DD>.zip` | Art. 20: `daten.json` + provider files (none for employees) |
+
+Errors: 401 unauthenticated; 403 `This feature (dataSelfDisclosure) is not enabled for your tenant` or non-employee principal; 429 rate limit (see below); 503 `Rate-limit service temporarily unavailable` (limiter store down, fails closed).
 
 (`GET /employees/me/availability/check` on `EmployeeAvailabilitySelfServiceController` is the scheduling conflict check of [employee-availability](../employee-availability/contracts.md) — not used by this page.)
 
@@ -128,7 +140,7 @@ The Angular page also sends `date_of_birth` (ISO date) and `gender`; the backend
 
 ### `DELETE /employees/me`
 
-Runs the same path as an admin deletion (`EmployeesService.removeFromTenant`, change source `SELF_DELETE`, no caller context → the Träger-Admin protection does not apply): the employee is soft-deleted (`status = deleted`), in-app notifications for the recipient are removed, a Träger-Admin assignment is stripped, and the tenant mapping is removed. The Keycloak user is deleted when the person belongs to no other Träger (the e-mail can register again); otherwise only this tenant's mapping goes and the Keycloak sessions are invalidated. Not touched by the deletion: the Outlook connection (tokens, Graph subscription, exported events — `removeFromTenant` has no Outlook cleanup), own Erreichbarkeit windows, push-gateway registrations. The client is responsible for unregistering push before its local logout; the Outlook leftover is an open backend question.
+Runs the same path as an admin deletion (`EmployeesService.removeFromTenant`, change source `SELF_DELETE`, no caller context → the Träger-Admin protection does not apply): the employee is soft-deleted (`status = deleted`), in-app notifications for the recipient are removed, a Träger-Admin assignment is stripped, and the tenant mapping is removed. The Keycloak user is deleted when the person belongs to no other Träger (the e-mail can register again); otherwise only this tenant's mapping goes and the Keycloak sessions are invalidated. Not touched by the deletion: the Outlook connection (tokens, Graph subscription, exported events — `removeFromTenant` has no Outlook cleanup), own Erreichbarkeit windows, push-gateway registrations. The client is responsible for unregistering push before its local logout. The Outlook leftover is a known backend gap (Asana [1218853627782544](https://app.asana.com/0/0/1218853627782544)); the client does not call disconnect itself.
 
 ### Notification settings
 
@@ -317,9 +329,58 @@ Backend DTOs (`outlook-sync/dto/outlook-sync-config.dto.ts`): `UpdateOutlookSync
 2. Microsoft → `GET /outlook-auth/callback` on the backend (`redirect_uri` = env `MICROSOFT_REDIRECT_URI`, one value per deployment). The backend verifies `state`, exchanges the code, stores the encrypted tokens.
 3. Backend → **302** to `${FRONTEND_URL}/settings/outlook-sync` with `?success=true`, or `?error=<code>&message=<url-encoded English text>` where `code` ∈ Microsoft's `error` value, `invalid_request` (missing code/state), `invalid_state` (forged/expired state), `cleanup_in_progress` (disconnect still running), `token_exchange_failed`.
 
-`FRONTEND_URL` is a single global env var (required in production); the path is hard-coded. There is **no** client-supplied return URL, no tenant-specific host and no custom-scheme / app-link variant — a native client can only (a) register app links for the `FRONTEND_URL` host, or (b) re-read `GET /outlook-sync/config` when the auth session closes. Angular defines **no** `/settings/outlook-sync` route, so on web the redirect falls through to the `**` landing redirect and the query parameters are ignored.
+`FRONTEND_URL` is a single global env var (required in production); the path is hard-coded. There is **no** client-supplied return URL, no tenant-specific host and no custom-scheme variant. **Owner decision 2026-09-25:** native clients claim `https://<FRONTEND_URL host>/settings/outlook-sync` as a universal link / Android App Link (path-scoped; `apple-app-site-association` and `assetlinks.json` served from that host) and additionally re-read `GET /outlook-sync/config` when the auth session closes. Angular defines **no** `/settings/outlook-sync` route, so on web the redirect falls through to the `**` landing redirect and the query parameters are ignored (gap, Asana 1218853627782544).
 
 Disconnect (`POST /outlook-auth/disconnect`) message: `Microsoft-Konto getrennt. Exportierte Termine werden im Hintergrund aus Outlook entfernt.` when exported events are queued for removal, else `Microsoft-Konto erfolgreich getrennt`. Until that background cleanup ends (`sync_status: 'disconnecting'`), `authorize` and the callback answer 409 / `cleanup_in_progress`.
+
+<a id="datenauskunft-employeesmedata-export"></a>
+### Datenauskunft (`/employees/me/data-export`)
+
+```ts
+// apps/tagea-frontend/src/app/pages/data-export/data-export.model.ts
+type DataExportAudience = 'client-self' | 'employee-self' | 'dpo-full';
+type DataExportValue = string | number | boolean | null | DataExportValue[] | { [key: string]: DataExportValue };
+type DataExportRecord = { [key: string]: DataExportValue };
+interface DataExportCategory {
+  readonly category: string;   // stable key, e.g. 'employee-profile'
+  readonly labelKey: string;   // i18n key, e.g. 'dataExport.category.employeeProfile'
+  readonly records: DataExportRecord[];
+  readonly notices?: DataExportNotice[];
+}
+interface DataExportNotice {
+  readonly category: string;
+  readonly messageKey: string; // e.g. 'dataExport.notice.categoryUnavailable'
+}
+interface DataExportDocument {
+  readonly audience: DataExportAudience; // always 'employee-self' on this endpoint
+  readonly subjectId: string;            // Employee.id
+  readonly generatedAt: string;          // ISO timestamp
+  readonly categories: DataExportCategory[];
+  readonly notices: DataExportNotice[];  // category notices + one per failed collector
+}
+```
+
+Backend source: `apps/tagea-backend/src/data-export/data-export.types.ts` (`DataExportCategoryResult` = the Angular `DataExportCategory`). Record keys are **camelCase** (unlike the rest of `/employees/me`) and values are JSON-safe presentations — dates are ISO strings, nested structures are arrays/objects.
+
+**Server behaviour.**
+
+- Subject = the authenticated principal (`subjectId = principal.id`); no parameters, no body.
+- `DataExportOrchestratorService.collect` runs every collector registered for `employee-self` in parallel. A throwing collector is logged and replaced by a **document-level** notice `{ category, messageKey: 'dataExport.notice.categoryUnavailable' }`; its category is omitted from `categories`.
+- Employee collectors (category → record keys): `employee-profile` (single record: `id`, `email`, `firstName`, `lastName`, `phoneMobile`, `phoneLandline`, `dateOfBirth`, `gender`, `personnelNumber`, `externalReference`, `matrixId`, `identityProvider`, `status`, `emailVerified`, `emailVisible`, `phoneMobileVisible`, `phoneLandlineVisible`, `emailNotifications`, `appointmentReminders`, `suppressOnAbsence`, `suppressOutsideWorkingHours`, `chatNotifications`, `notificationChannelPreferences`, `notificationRoleOverrides`, `inAppHiddenCategories`, `preferences`, `createdAt`), `employee-assignments` (`type` ∈ institution/teamspace/department/activity + the matching id, `role`, `source`, `assignedAt`), `employee-availability` (booking plans: `title`, `kind`, `validFrom`, `validUntil`, `isActive`, `blocks[]` with `weekday`, `timeStart`, `timeEnd`), `employee-working-hours` (`type` ∈ working-hours/absence; `weekday`, `startTime`, `endTime` / `absenceType`, `startDate`, `endDate`, `description`), `employee-workforce` (`type` ∈ employment-contract/shift-assignment/time-account-entry), `employee-time-tracking` (`start`, `end`, `breakDurationMinutes`, `comment`, `entries[]`), `employee-custom-fields` (`fieldDefinitionId`, `fieldType`, `valueText` … `valueJson`), `employee-devices` (`provider`, `deviceName`, `isActive`, `lastUsedAt`, `createdAt`), `employee-login-history` (newest 1000: `loginType`, `status`, `outcomeReason`, `tenantName`, `userAgent`, `authTime`, `totalDurationMs`, `createdAt`).
+- Every call (any format) writes an auth-audit event `data_export_downloaded` with `audience`, `format` (`json` | `pdf` | `archive`) and `categoryCount`.
+- ZIP (`DataExportArchiveService`): `daten.json` = the document, pretty-printed; then files of file providers whose `audiences` include the subject's audience — only `ClientDocumentsFileProvider` exists, so the employee ZIP contains `daten.json` only. A single unreadable file is skipped, not fatal.
+
+**Rate limit** (`RateLimitGuard`, all three routes share bucket `employee-data-export`): 20 per user per hour and 40 per IP per hour. Exceeded → 429, body after the `GlobalExceptionFilter`:
+
+```json
+{ "statusCode": 429, "message": "Rate limit exceeded. Max 20 requests per 3600s.", "retryAfter": 1234, "timestamp": "…", "path": "/api/employees/me/data-export", "method": "GET" }
+```
+
+(`retryAfter` = seconds until the window resets; spread top-level as a non-reserved key.)
+
+**Presentation config (client side).** `DATA_EXPORT_CATEGORY_CONFIG` in `data-export.presentation-config.ts` maps each category to `mode` (`detail` | `list`), an icon and ordered candidate lists `primaryField` / `secondaryField` / `dateField`; unknown categories use `DEFAULT_CATEGORY_CONFIG`. Detail labels: `dataExport.field.<key>` translation, else `DETAIL_FIELD_LABELS_DE`, else humanised key.
+
+> **Flutter port note:** model the document with typed Dart classes but keep `records` as `Map<String, Object?>` (JSON values) — categories and keys are open-ended. Port the presentation config as data, not per-category widgets. Read the file name from `Content-Disposition`; read `retryAfter` from the top level of a 429 body.
 
 ### UI language
 
