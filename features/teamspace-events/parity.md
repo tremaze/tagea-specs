@@ -5,7 +5,8 @@
 - **Status:** ✅ Implemented (user-facing); verwaltung has missing guard (TODO)
 - **Path:** [`apps/tagea-frontend/src/app/pages/teamspace/events-page.component.ts`](../../../apps/tagea-frontend/src/app/pages/teamspace/events-page.component.ts)
 - **Detail / editor / verwaltung:** `events-detail.component.ts`, `events-editor.component.ts`, `events-verwaltung.component.ts`
-- **E2E:** _(to be identified)_
+- **Registration page:** `pages/teamspace/events-register.component.ts` (route `teamspace/events/:id/anmelden`), wizard `shared/events/registration/**`, eligibility dialog `shared/events/event-eligibility-dialog/`
+- **E2E:** `apps/tagea-frontend-e2e/src/tests/teamspaces/events/event-registration-page-ui.spec.ts`, `mobil-mitarbeitende-veranstaltung-anmeldung.spec.ts`
 
 ## Flutter
 
@@ -31,6 +32,10 @@
 | Cancel after deadline | "Abmelden" offered until the start; non-organizers get a `403` | Hidden after the deadline with a hint; organizer exemption open (Asana "Entscheidungen offen") |
 | Offline          | Web service worker `/api/**` freshness cache only   | Not cached; error state + retry, failed refresh keeps shown data |
 | RSVP state       | UI updates via service method response              | Same — backend-authoritative              |
+| Registration page | Two-column page, sticky event card right           | Single column; event summary card above the step (mobile first) |
+| Success button   | Label "Von vorne", but navigates back to the detail | "Zur Veranstaltung" (same navigation)     |
+| Eligibility dialog (teamspace) | Opens on `event_participation_rule_violation`; the fixable variant saves via the client-portal endpoint | Explain-only variant (reasons + "Schließen"); code never sent to staff today |
+| `series_already_registered` | Generic "Anmeldung fehlgeschlagen." | "Du bist bereits für diese Reihe angemeldet." |
 
 ## Port Log
 
@@ -39,3 +44,4 @@
 | 2026-04-20 | ltoenjes | Spec created |
 | 2026-09-23 | Claude (WP3) | Endpoints/query/cancel body verified against backend; Flutter list, detail, cancel |
 | 2026-09-23 | Claude (WP3 QA) | Deadline rule + organizer exemption corrected against backend; offline documented as not cached |
+| 2026-09-25 | Claude (M2-Specs) | Registration flow (`/anmelden`, teamspace one-step wizard, custom fields, CTA/result mapping, eligibility dialog, series mode) specified against backend; Flutter register (WP4) ⏳ |
