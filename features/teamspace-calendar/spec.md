@@ -28,7 +28,7 @@ Personal calendar for staff appointments — Outlook-style. Appointments are cro
 - [ ] **Given** the user clicks an event (desktop) **and** is not the organizer (any other participant, or not a participant at all), **When** the handler fires, **Then** the user is navigated to `/teamspace/kalender/:id` (the detail page) — the dialog does **not** open.
 - [ ] **Given** the user clicks an event (mobile), **When** the handler fires, **Then** navigate to `/teamspace/kalender/:id` — for invited participants **and** for organizers (read-only detail on mobile; editing stays a desktop/dialog concern). Decision 2026-09-23. Virtual series occurrences navigate to `/teamspace/kalender/:anchorId?occurrence=<ISO start>`.
 - [ ] **Given** the appointment has `booking_category_id` and the user is not a provider, **When** the click handler fires, **Then** navigate to `/teamspace/buchung/:id` (booker read-only view) — overrides the organizer rule above.
-- [ ] **Given** the user presses "Neuer Termin", **When** action fires, **Then** navigate to `/teamspace/kalender/neu` (`TermineNeuComponent`).
+- [ ] **Given** the user picks "Angebot buchen" (toolbar menu "Termin erstellen" on desktop, button on mobile), **When** the action fires, **Then** navigate to `/teamspace/kalender/neu` (`TermineNeuComponent`, see [teamspace-offer-booking](../teamspace-offer-booking/spec.md)).
 
 ### Mobile day list (Angular `app-mobile-calendar`, Flutter port)
 
@@ -87,7 +87,7 @@ The teamspace calendar is a personal surface — it must load for any authentica
 
 ### New booking (`/teamspace/kalender/neu`)
 
-- [ ] **Given** the user enters the new-appointment flow, **When** the page loads, **Then** `TermineNeuComponent` renders the multi-step booking form (category → slot → details).
+- [ ] **Given** the user picks "Angebot buchen", **When** the page loads, **Then** `TermineNeuComponent` renders the self-booking flow (teamspace → category → slot → setting → confirmation). Full behaviour and contracts: [teamspace-offer-booking](../teamspace-offer-booking/spec.md).
 
 ## UI States
 
