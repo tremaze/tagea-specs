@@ -5,11 +5,11 @@
 - **Status:** ✅ Implemented
 - **List:** [`apps/tagea-frontend/src/app/pages/teamspace/teamspace-submissions-page.component.ts`](../../../apps/tagea-frontend/src/app/pages/teamspace/teamspace-submissions-page.component.ts)
 - **Detail:** [`submission-detail-page.component.ts`](../../../apps/tagea-frontend/src/app/pages/teamspace/submission-detail-page.component.ts)
-- **E2E:** _(to be identified)_
+- **E2E:** [`apps/tagea-frontend-e2e/src/tests/teamspaces/submissions/`](../../../apps/tagea-frontend-e2e/src/tests/teamspaces/submissions/) (UI submit: `submissions-consumer-submit-ui.spec.ts`)
 
 ## Flutter
 
-- **Status:** 🟡 List + read-only detail (WP6, tagea-next-flutter #62 + QA follow-ups); create flow pending
+- **Status:** 🚧 List + read-only detail (WP6, tagea-next-flutter #62 + QA follow-ups); create flow pending
 - **Path:** `apps/tagea_frontend/lib/features/teamspace/submissions/` (UI), `packages/teamspace_core` (`SubmissionsApi`, `SubmissionsListCubit`, `SubmissionDetailCubit`)
 - **Files:**
   - `submissions_page.dart` (tabs „Neue Meldung“ / „Meine Meldungen“ / „Mitarbeiter“)
@@ -41,3 +41,5 @@
 | 2026-04-20 | ltoenjes | Spec created |
 | 2026-09-23 | Claude (WP6) | List tabs, answer vs. history, detail endpoints clarified from Angular + backend |
 | 2026-09-23 | Claude (WP6 QA) | Flutter status and divergences after the QA follow-ups |
+| 2026-09-25 | Claude (M2-Specs) | Permission map corrected to `tenant.submissions.submit` / `tenant.submissions.view_own` / `submissions.process`; create multipart contract (parts, 5 files × 10 MB, MIME list, errors); deep-link behaviour for both `new/` routes |
+| 2026-09-25 | Claude (M2-Specs QA) | Owner decision: all custom-field types rendered in Flutter; status marker 🟡 → 🚧 |

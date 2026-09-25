@@ -84,12 +84,17 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 | --------------------- | ------- | ------- | ------------------------------------------------------------------ |
 | Teamspace Home        | ✅      | ⏳      | [teamspace-home/](./features/teamspace-home/spec.md)               |
 | Teamspace News        | ✅      | ⏳      | [teamspace-news/](./features/teamspace-news/spec.md)               |
-| Teamspace Submissions | ✅      | ⏳      | [teamspace-submissions/](./features/teamspace-submissions/spec.md) |
+| Teamspace Submissions | ✅      | 🚧      | [teamspace-submissions/](./features/teamspace-submissions/spec.md) |
 | Teamspace LMS         | ✅      | ⏳      | [teamspace-lms/](./features/teamspace-lms/spec.md)                 |
 | Teamspace Events      | ✅      | ⏳      | [teamspace-events/](./features/teamspace-events/spec.md)           |
 | Teamspace Calendar    | ✅      | ⏳      | [teamspace-calendar/](./features/teamspace-calendar/spec.md)       |
+| Teamspace Offer Booking (Angebot buchen) | ✅ | ⏳ | [teamspace-offer-booking/](./features/teamspace-offer-booking/spec.md) |
 | Teamspace Appointment RSVP Notifications | ⏳      | ⏳      | [teamspace-appointment-rsvp-notifications/](./features/teamspace-appointment-rsvp-notifications/spec.md) |
 | Gehaltsnachweise      | ✅      | 🚧      | [gehaltsnachweise/](./features/gehaltsnachweise/spec.md)           |
+| Teamspace Quick Posts | ✅      | ⏳      | [teamspace-quick-posts/](./features/teamspace-quick-posts/spec.md) |
+| Employee Profile (Own) | ✅     | ⏳      | [employee-profile/](./features/employee-profile/spec.md)           |
+| Meine Arbeitszeit     | ✅      | ⏳      | [my-working-time/](./features/my-working-time/spec.md)             |
+| Global Search (Globale Suche) | 🚧 | ⏳ | [global-search/](./features/global-search/spec.md) |
 
 ### Institution Staff (P2 — documentation only, Flutter non-goal)
 
@@ -110,7 +115,6 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 | Reports                  | ✅      | ❌      | [reports/](./features/reports/spec.md)                     |
 | Files (Institution)      | ✅      | ❌      | [files-institution/](./features/files-institution/spec.md) |
 | Files (Global)           | ✅      | ❌      | [files-global/](./features/files-global/spec.md)           |
-| Employee Profile (Own)   | ✅      | ❌      | [employee-profile/](./features/employee-profile/spec.md)   |
 | Admin: Submission Cats.  | 🚧      | ❌      | [admin-submission-categories/](./features/admin-submission-categories/spec.md) |
 | Submission Templates     | ⏳      | ❌      | [submission-templates/](./features/submission-templates/spec.md)               |
 | Admin: Institution Features | ✅   | ❌      | [institution-features/](./features/institution-features/spec.md)               |

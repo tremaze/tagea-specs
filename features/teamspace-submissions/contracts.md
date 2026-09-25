@@ -4,8 +4,8 @@
 
 | Service                       | Methods used (indicative)                                                                                                                            | Purpose                                       |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
-| `SubmissionsService`          | `getSubmissions(teamspaceId, filter?)`, `getSubmissionById(teamspaceId, id)`, `createSubmission(teamspaceId, categoryId, customFieldValues, files?)` | Submission CRUD                               |
-| `SubmissionCategoriesService` | `getCategories(teamspaceId)`, `getCategoryById(teamspaceId, id)`                                                                                     | Fetch active categories + their field configs |
+| `SubmissionsService`          | `getOwnSubmissions()`, `getSupervisedSubmissions(opts?)`, `getSubmissionByIdGlobal(id)`, `getSubmissions(teamspaceId, filter?)`, `getSubmissionById(teamspaceId, id)`, `createSubmission(teamspaceId, categoryId, customFieldValues, files?, repeatingChanges?)` | Submission CRUD                               |
+| `SubmissionCategoriesService` | `getCategories(teamspaceId)`, `getCategoryById(teamspaceId, id)`, `getCategoryForSubmission(submissionId)`                                            | Fetch active categories + their field configs |
 | `TeamspaceService`            | `getAccessibleTeamspaces()`, `loadUserRolesSummary()`                                                                                                | Chip data + picker options                    |
 
 > Exact signatures in each service file under `apps/tagea-frontend/src/app/services/`. Flutter port reads there.
@@ -22,6 +22,36 @@
 | `GET /teamspaces/:tsId/submissions/:id/filled-pdf/signed-url?expiresIn=900` | `{ url, expiresIn }` | PDF receipt |
 
 > **Flutter port note:** `custom_fields_summary` values per field type — select: `{selected_id, selected_key, selected_label}` or id/key string; multiselect: `{selected: [{id, key, label}]}` or id list; employee/institution select: `{id, name}` (or list); file: `{filename}`; enriched values: `{display}`; repeating group: `summary[group.key] = {rows: [{row_id, <field_key>: …}], row_count}`.
+
+## Create submission
+
+`POST /teamspaces/:teamspaceId/submissions` — `multipart/form-data`. Backend: `SubmissionsController.create` (`apps/tagea-backend/src/submissions/submissions.controller.ts`).
+
+**Guards:** class-level `FeatureGuard` (`submissions` feature), `TeamspaceAccessGuard` (`@RequireTeamspaceAccess()`), `TeamspaceModuleGuard`; method-level `@Auth({ scope: 'tenant', permissions: ['tenant.submissions.submit'] })` + `@RequireTeamspaceModule('submissions')`.
+
+| Part | Type | Required | Notes |
+|---|---|---|---|
+| `category_id` | string (UUID) | yes | Template id (a legacy group id is still resolved to its template). Unknown → 400 `Unknown submission category`. |
+| `custom_field_values` | string (JSON object) | no (default `{}`) | Flat values keyed by `field_key`, resolved against this category's definitions only. Invalid JSON → 400 `Invalid JSON in custom_field_values`. Keys of repeating-section fields here → 400 (`Fields of repeating sections must be sent via custom_field_repeating …`). Unknown keys / values of deactivated fields are dropped silently. Rule violations → 400 `{ message: 'Custom field validation failed', failed_fields }` and nothing is persisted. |
+| `custom_field_repeating` | string (JSON object) | no | `Record<groupId, { created: [{ tempId, fields }], updated: [], deleted: [] }>` — only `created` rows allowed at create time (non-empty `updated`/`deleted` → 400). The Angular client always sends it (`{}` when empty) as capability marker. Unknown/non-repeating group → 400. Rejected with 400 when the server kill switch `FEATURE_SUBMISSION_REPEATING_SECTIONS=false` is set and rows are present. |
+| `files` | binary, repeated | no | `FilesInterceptor('files', 5)`: max **5** files (a 6th → 400 from multer), max **10 MB** each (`SubmissionAttachmentsService.MAX_FILE_SIZE`; larger → 413 from multer's limit), MIME allow-list: `application/pdf`, `application/msword`, `…wordprocessingml.document`, `application/vnd.ms-excel`, `…spreadsheetml.sheet`, `image/jpeg`, `image/png`, `image/gif`, `text/plain`, `text/csv` (aliases `image/jpg`, `image/pjpeg`, `application/x-pdf`, `text/x-csv` accepted). Other types → 400 `Invalid file type …`. Filenames are UTF-8-repaired and sanitized. Required when the category has `require_attachment` (else 400 `This category requires a file attachment`). |
+
+The Angular client (`createSubmissionFormData` in `models/submission-mappers.ts`) also appends `teamspace_id`; the backend ignores it (the teamspace comes from the path). The body parameter is typed as an intersection (`CreateSubmissionDto & {…}`), so the global `ValidationPipe` does not run the DTO's class-validator rules — validation happens in the controller/service as listed above.
+
+**Response 201:** the created submission reloaded with relations (same snake_case shape as `GET /teamspaces/:tsId/submissions/:id`), initial `status` `pending` or `awaiting_approval` (category needs supervisor approval, is visible to institution supervisors, and the submitter has a supervisor). A PDF receipt is generated best-effort (a failure does not fail the request).
+
+**Errors:** 400 (see table), 403 (missing `tenant.submissions.submit`, no teamspace access, feature or teamspace module disabled), 413 (file too large).
+
+> **Flutter port note:** send exactly these part names; encode `custom_field_values` and `custom_field_repeating` as JSON strings; pre-validate count/size/type client-side with the same limits.
+
+## Endpoints used by the create wizard
+
+| Method + path | Permission | Response | Used for |
+| --- | --- | --- | --- |
+| `GET /teamspaces/accessible` (via `TeamspaceService.getAccessibleTeamspaces()`) | — | teamspaces incl. `active_modules` | teamspace step (only active teamspaces with `active_modules.submissions`) |
+| `GET /teamspaces/:tsId/submission-categories` | `tenant.submissions.submit` | `SubmissionCategory[]` | category step |
+| `GET /teamspaces/:tsId/submission-categories/:id` | `tenant.submissions.submit` | `SubmissionCategory` with `field_definitions` | form step / deep link |
+| `POST /teamspaces/:tsId/submissions` | `tenant.submissions.submit` | see above | submit |
 
 ## Data Models
 

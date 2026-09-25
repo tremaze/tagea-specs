@@ -1,21 +1,47 @@
 # Contracts: Notification Center
 
 > Endpoints and data shapes between the Angular frontend and the NestJS
-> `in-app-notifications` module. All endpoints require an authenticated
-> **employee** (`UserType.EMPLOYEE`).
+> `in-app-notifications` module. Verified against
+> `apps/tagea-backend/src/in-app-notifications/in-app-notifications.controller.ts`,
+> `services/in-app-notification.service.ts`, `dto/notification-query.dto.ts`
+> and `entities/in-app-notification.entity.ts` (2026-09-25).
 
 ## Endpoints
 
-All notification endpoints are mounted under `@Controller('notifications')`,
-i.e. the API prefix is `/notifications` (no tenant/institution path
-parameter — the server resolves the tenant from the auth context).
+All endpoints live on `InAppNotificationsController`, `@Controller('notifications')`
+(API path `/notifications`, no tenant/institution path parameter — the tenant
+comes from the auth context). Class-level guard:
+`@Auth({ scope: 'authenticated', allowedUserTypes: [UserType.EMPLOYEE, UserType.CLIENT] })`
+— **employees and clients** (#3879). No `allowPendingApproval`: an account that
+is pending approval/activation or suspended gets **403** on every endpoint.
+
+The recipient is derived from the request principal as a typed pair
+(`recipient_type` = `employee` | `client`, `recipient_id` = own id); every query
+filters on both columns. For **client** recipients the service additionally
+restricts every read and mutation to client-visible types
+(`CLIENT_VISIBLE_NOTIFICATION_TYPES`, `notifications/constants/notification-audience.map.ts`).
+For **employee** recipients, list and unread count exclude the types of the
+categories in `employees.in_app_hidden_categories` (set on the employee
+profile's notification tab); clients have no hidden-category filter.
+
+| Method + path | Request | Response |
+|---|---|---|
+| `GET /notifications` | query `NotificationQueryDto` | `{ notifications, total }` |
+| `GET /notifications/unread-count` | — | `{ count }` |
+| `PATCH /notifications/read-all` | — (Angular sends `{}`) | `{ updated }` |
+| `PATCH /notifications/:id/read` | — (Angular sends `{}`) | `{ success }` |
+| `PATCH /notifications/:id/dismiss` | — (Angular sends `{}`) | `{ success }` |
+| `POST /notifications/dismiss-by-content` | `{ contentType, contentId }` | `{ dismissed }` |
+
+All responses are 200 (`POST` → 201). Common errors: 401 (no session), 403
+(principal is neither employee nor client, or account not usable).
 
 ### `GET /notifications`
 
-List the current employee's notifications (excludes dismissed rows),
-ordered by `created_at DESC`.
+The recipient's notifications, **excluding dismissed rows**, ordered by
+`created_at DESC`, paged with `skip = (page - 1) * limit`.
 
-**Query parameters** (`NotificationQueryDto` — backend DTO, not imported by the Angular client):
+**Query parameters** (`NotificationQueryDto` — backend DTO):
 
 > Documentation-only shape. The frontend sends these as raw query string
 > params; the interface is a reproduction of
@@ -23,9 +49,9 @@ ordered by `created_at DESC`.
 
 ```ts
 interface UiNotificationQueryParams {
-  is_read?: boolean; // filter by read status
-  page?: number; // default 1, min 1
-  limit?: number; // default 20, min 1, max 100
+  is_read?: boolean; // 'true' / 'false' strings are coerced; anything else → 400
+  page?: number;     // integer ≥ 1, default 1
+  limit?: number;    // integer 1–100, default 20
 }
 ```
 
@@ -34,20 +60,21 @@ interface UiNotificationQueryParams {
 ```ts
 interface NotificationListResponse {
   notifications: InAppNotification[];
-  total: number;
+  total: number; // count of all matching rows (same filters, without paging)
 }
 ```
 
-The frontend always calls this with `page=1, limit=20` (no pagination UI).
+The Angular client requests `page=1&limit=20` when the menu opens and the
+next pages (`page=2, 3, …`, `limit=20`) via "Mehr laden" / infinite scroll;
+it never sends `is_read`.
 
-**Error codes:** 401 (no session), 403 (non-employee caller).
+**Errors:** 400 (invalid `is_read`, `page`, `limit`), 401, 403.
 
 ### `GET /notifications/unread-count`
 
-Return the count of notifications with `is_read = false` and
-`is_dismissed = false` for the current employee.
-
-**Response:**
+Count of rows with `is_read = false` and `is_dismissed = false` for the
+recipient (hidden categories excluded for employees, client allowlist for
+clients).
 
 ```ts
 interface UnreadCountResponse {
@@ -55,51 +82,46 @@ interface UnreadCountResponse {
 }
 ```
 
-**Error codes:** 401, 403. Silently handled in the frontend.
-
-### `PATCH /notifications/:id/read`
-
-Mark a single notification as read. Idempotent; the server filter `is_read = false`
-means re-reads affect 0 rows but still return `{ success: true | false }`.
-
-**Path params:** `id` — UUID of the notification (validated via `ParseUUIDPipe`).
-
-**Response:**
-
-> Documentation-only shape. Response is not modelled as a named TS interface
-> on the client — the HTTP result is read inline.
-
-```ts
-interface UiMarkAsReadResponse {
-  success: boolean;
-}
-```
-
-**Error codes:** 400 (invalid UUID), 401, 403, 404 (not owned by caller).
+**Errors:** 401, 403. The Angular client swallows errors (badge keeps its value) and marks 403 as an expected status for Sentry.
 
 ### `PATCH /notifications/read-all`
 
-Mark every unread notification for the current employee as read.
-
-**Response:**
+Sets `is_read = true`, `read_at = now()` on every unread row of the recipient
+(client allowlist applies). **Hidden categories are not excluded** — rows the
+employee cannot see are marked read too. Dismissed-but-unread rows are also
+marked.
 
 > Documentation-only shape.
 
 ```ts
 interface UiMarkAllAsReadResponse {
-  updated: number;
+  updated: number; // rows changed
 }
 ```
 
-**Error codes:** 401, 403.
+### `PATCH /notifications/:id/read`
+
+Marks one row read. `id` is validated by `ParseUUIDPipe` (400 on a non-UUID).
+There is **no 404**: an unknown id, a row of another recipient, a row outside
+the client allowlist or an already-read row all return `{ success: false }`
+with 200.
+
+> Documentation-only shape. Response is not modelled as a named TS interface
+> on the client — the HTTP result is not read.
+
+```ts
+interface UiMarkAsReadResponse {
+  success: boolean; // true when a row was changed
+}
+```
 
 ### `PATCH /notifications/:id/dismiss`
 
-Hide a single notification from the list (`is_dismissed = true`). Used
-internally by the invitation response flow (accept/decline hides the row
-regardless of the participant-patch outcome).
-
-**Response:**
+Sets `is_dismissed = true`, `dismissed_at = now()`; the row disappears from the
+list and the count. Same semantics as `read`: 400 on a non-UUID, otherwise 200
+`{ success: false }` for unknown / foreign / already-dismissed rows. The bell
+itself no longer calls it (no inline invitation actions); it remains available
+via `NotificationCenterService.dismiss(id)`.
 
 > Documentation-only shape.
 
@@ -109,15 +131,16 @@ interface UiDismissResponse {
 }
 ```
 
-**Error codes:** 400, 401, 403, 404.
-
 ### `POST /notifications/dismiss-by-content`
 
-Hide every notification that references a given content entity, for the
-current employee. Invoked by feature pages when the user opens the
-entity's detail view (so a stale invitation no longer shouts from the bell).
+Dismisses every not-yet-dismissed row of the recipient whose top-level
+`content_type` **and** `content_id` columns match (the `data` JSON is not
+consulted). Called by detail pages when the user opens the entity:
+`termine-detail` (`'appointment'`) and `support-ticket-detail`
+(`'support_ticket'`).
 
-**Request body:**
+**Request body:** inline type `{ contentType: string; contentId: string }` —
+no DTO class, so the global `ValidationPipe` does not validate it.
 
 > Documentation-only shape.
 
@@ -134,137 +157,120 @@ interface UiDismissByContentRequest {
 
 ```ts
 interface UiDismissByContentResponse {
-  dismissed: number;
+  dismissed: number; // rows changed
 }
 ```
 
-**Error codes:** 401, 403.
+**Errors:** 401, 403. The Angular client ignores errors.
 
-### `PATCH /institutions/:institutionId/appointment-participants/:id`
+### Removed from this contract
 
-Used by the inline Accept / Decline buttons on `appointment_invitation`
-rows. Only the `response_status` field is sent; the full DTO lives on the
-appointment-participants feature.
-
-> Documentation-only shape. Subset of `UpdateAppointmentParticipantDto`; see
-> the appointments feature for the authoritative wire contract.
-
-```ts
-interface InvitationResponsePatch {
-  response_status: 'confirmed' | 'no_show_with_notice';
-}
-```
-
-Mapping from UI action:
-
-- "Zusagen" → `response_status: 'confirmed'`
-- "Absagen" → `response_status: 'no_show_with_notice'`
-  (the client cannot tell whether a closer-to-start "no_show_short_notice" /
-  "no_show_no_notice" value is more appropriate — the detail page handles
-  those nuances.)
-
-**Error codes:** 400 (invalid body / UUID), 401, 403, 404. On any error the
-frontend calls `loadNotifications()` to resync.
+`PATCH /institutions/:institutionId/appointment-participants/:id` is **no
+longer called by the notification center** — the inline „Zusagen“ / „Absagen“
+buttons were removed; invitations are answered on the appointment detail page
+(see [teamspace-appointment-rsvp-notifications](../../features/teamspace-appointment-rsvp-notifications/spec.md)).
 
 ## Events (WebSocket / Push)
 
-No WebSocket channel today. New notifications arrive in one of two ways:
+No WebSocket channel today. New notifications reach the bell by:
 
-1. The next navigation or app-resume triggers `loadUnreadCount` / `loadNotifications`.
-2. A parallel **push** notification is delivered to the device via
-   `cross-cutting/bootstrap-and-push`. The push payload mirrors the in-app
-   `data.route` so tapping the push deep-links correctly.
+1. Unread-count reloads on session ready, on navigation, on app resume / tab
+   focus (`SilentRefreshTriggerService.refresh$`) and whenever the menu opens.
+2. A parallel **push** notification delivered via
+   `cross-cutting/bootstrap-and-push`. The push payload carries the same
+   `data.route`, so tapping the push deep-links identically.
 
 ## Data Models
 
 ### In-App Notification (wire shape)
 
-Matches the TypeORM `in_app_notifications` table. Field names are
-**snake_case** to match the Postgres columns; nullability mirrors the entity.
+Matches the TypeORM `in_app_notifications` table; field names are
+**snake_case**. The row is returned as the full entity.
 
 > Documentation-only shape. The authoritative declaration lives in the
-> backend entity below; the Angular client exposes a trimmed subset of these
-> fields in `notification-center.service.ts`.
+> backend entity below; the Angular `InAppNotification` interface in
+> `notification-center.service.ts` declares a subset (it omits
+> `content_type`, `content_id`, `is_dismissed`, `dismissed_at`).
 
 ```ts
 // Source: apps/tagea-backend/src/in-app-notifications/entities/in-app-notification.entity.ts
 interface InAppNotification {
   id: string; // uuid
   tenant_id: string; // uuid
-  employee_id: string; // uuid
-  type: string; // one of NotificationType below
+  recipient_type: 'employee' | 'client'; // VARCHAR(16), polymorphic recipient (#3879)
+  recipient_id: string; // uuid — employees.id or clients.id (no FK)
+  type: string; // VARCHAR(50), one of NotificationType below
   title: string; // VARCHAR(255)
   body: string; // TEXT
   data: Record<string, string> | null; // jsonb, see "data payload shapes"
-  content_type: string | null; // e.g. 'appointment', 'article'
+  content_type: string | null; // VARCHAR(50), e.g. 'appointment', 'support_ticket'
   content_id: string | null; // uuid of the referenced entity
   is_read: boolean; // default false
-  read_at: string | null; // ISO timestamp
+  read_at: string | null; // ISO timestamp (timestamptz)
   is_dismissed: boolean; // default false
   dismissed_at: string | null;
   created_at: string; // ISO timestamp
 }
 ```
 
-The frontend model in
-`apps/tagea-frontend/src/app/services/notification-center.service.ts`
-currently omits `content_type`, `content_id`, `is_dismissed`, `dismissed_at`
-from its exported `InAppNotification` interface — those are present on the
-wire but ignored in the overlay UI.
+There is no `employee_id` column any more (replaced by
+`recipient_type` + `recipient_id`, migration
+`20260908130000-MakeInAppNotificationsRecipientPolymorphic`).
 
-### Notification type enum (backend source of truth)
+### Notification type values (backend source of truth)
 
 > Documentation-only shape. The Angular client treats `type` as an opaque
-> string and only switches on a subset; the full enum lives in the backend.
+> string and only switches on a subset for icons; the enum lives in
+> `apps/tagea-backend/src/notifications/interfaces/notification.interface.ts`.
 
 ```ts
-// Source: apps/tagea-backend/src/notifications/interfaces/notification.interface.ts
-enum NotificationType {
-  NEW_ARTICLE = 'new_article',
-  ARTICLE_UPDATE = 'article_update',
-  ARTICLE_COMMENT = 'article_comment',
-  ARTICLE_LIKE = 'article_like',
-  APPOINTMENT_REMINDER = 'appointment_reminder',
-  APPOINTMENT_CREATED = 'appointment_created',
-  APPOINTMENT_CANCELLED = 'appointment_cancelled',
-  APPOINTMENT_UPDATED = 'appointment_updated',
-  APPOINTMENT_INVITATION = 'appointment_invitation',
-  NEW_MESSAGE = 'new_message',
-  NEW_CLIENT_INQUIRY = 'new_client_inquiry',
-  TASK_ASSIGNED = 'task_assigned',
-  TASK_DUE = 'task_due',
-  TASK_COMPLETED = 'task_completed',
-  NEW_SUBMISSION = 'new_submission',
-  SUBMISSION_ASSIGNED = 'submission_assigned',
-  APPROVAL_REQUEST = 'approval_request',
-  APPROVAL_GRANTED = 'approval_granted',
-  APPROVAL_DENIED = 'approval_denied',
-  NEW_EVENT = 'new_event',
-  EVENT_UPDATED = 'event_updated',
-  EVENT_REMINDER = 'event_reminder',
-  SYSTEM_ANNOUNCEMENT = 'system_announcement',
-}
+// documentation-only — NotificationType values (2026-09-25)
+type NotificationTypeValue =
+  // articles
+  | 'new_article' | 'article_update' | 'article_comment' | 'article_like' | 'comment_reported'
+  // appointments
+  | 'appointment_reminder' | 'appointment_created' | 'appointment_cancelled' | 'appointment_updated'
+  | 'appointment_invitation' | 'appointment_rsvp_accepted' | 'appointment_rsvp_declined'
+  // messages / inquiries / tasks
+  | 'new_message' | 'new_client_inquiry' | 'task_assigned' | 'task_due' | 'task_completed'
+  // reminders (Wiedervorlagen / checklists)
+  | 'reminder_assigned_to_client' | 'reminder_overdue_nudge' | 'reminder_checklist_completed'
+  // submissions / signatures / approvals
+  | 'new_submission' | 'submission_assigned' | 'submission_responded' | 'submission_status_changed'
+  | 'signature_requested' | 'document_signed'
+  | 'approval_request' | 'approval_granted' | 'approval_denied'
+  // events
+  | 'new_event' | 'event_updated' | 'event_reminder'
+  | 'event_registration_pending' | 'event_registration_approved' | 'event_registration_rejected'
+  | 'event_registration_waitlisted' | 'event_registration_promoted'
+  | 'event_registration_cancelled_by_organizer' | 'event_registration_new_pending'
+  | 'event_registration_new_confirmed' | 'event_registration_user_cancelled'
+  | 'event_guardian_consent_requested' | 'event_guardian_consent_confirmed' | 'event_guardian_consent_rejected'
+  // support tickets
+  | 'support_ticket_created' | 'support_ticket_assigned' | 'support_ticket_resolved'
+  | 'support_ticket_comment' | 'support_ticket_mention' | 'support_ticket_deleted'
+  // system / account
+  | 'system_announcement'
+  | 'join_request_pending' | 'join_request_approved' | 'join_request_rejected'
+  | 'managed_person_request_pending' | 'managed_person_approved' | 'managed_person_rejected';
 ```
 
-Only the subset listed in the icon-mapping table of `spec.md` has a
-dedicated icon; other values fall back to the generic `notifications`
-icon. All values are valid in the list — the bell is agnostic of which
-types actually get produced.
+Only the values in the icon table of `spec.md` have a dedicated icon; the
+rest fall back to `notifications`.
 
 ### `data` payload shapes (observed)
 
-The `data` column is free-form JSONB. The values read by the notification
-center are:
+The `data` column is free-form JSONB. Keys read by the notification center:
 
 > Documentation-only shape. Keys are consumed by
 > `NotificationCenterComponent`, not statically typed on the wire.
 
 ```ts
 interface UiNotificationData {
-  route?: string; // Angular router path to navigate on click
-  participantId?: string; // uuid; present on appointment_invitation rows
-  contentType?: string; // mirrors the top-level column, sometimes duplicated
-  contentId?: string; // mirrors the top-level column, sometimes duplicated
+  route?: string; // SPA path to navigate on click (normalised client-side, see spec)
+  institutionId?: string; // used by the join-request fallback route
+  contentType?: string; // sometimes duplicated from the column (optimistic dismiss-by-content)
+  contentId?: string; // sometimes duplicated from the column
 }
 ```
 
@@ -282,9 +288,13 @@ interface UiNotificationCenterService {
   notifications: Signal<InAppNotification[]>;
   unreadCount: Signal<number>;
   loading: Signal<boolean>;
+  loadingMore: Signal<boolean>;
+  total: Signal<number>;
   hasUnread: Signal<boolean>;
+  hasMore: Signal<boolean>; // notifications().length < total()
   loadUnreadCount(): Promise<void>;
-  loadNotifications(page?: number, limit?: number): Promise<void>;
+  loadNotifications(): Promise<void>; // page 1, replaces the list
+  loadMore(): Promise<void>; // next page, appended, de-duplicated by id
   markAsRead(id: string): Promise<void>;
   markAllAsRead(): Promise<void>;
   dismiss(id: string): Promise<void>;
@@ -292,7 +302,8 @@ interface UiNotificationCenterService {
 }
 ```
 
-> **Flutter port note:** Use `Riverpod` `StateNotifier`s (or a Bloc/Cubit
-> pair) for `notifications` and `unreadCount`. The optimistic-then-revert
-> pattern translates 1:1 — on HTTP failure, re-fetch both list and count
-> rather than attempting local rollback.
+> **Flutter port note:** Use a Cubit/Bloc (or `StateNotifier`) for
+> `notifications` + `unreadCount` + paging cursor. The optimistic-then-resync
+> pattern translates 1:1 — on HTTP failure, re-fetch list and count rather
+> than attempting local rollback. Do not treat `{ success: false }` as an
+> error.

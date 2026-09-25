@@ -9,6 +9,9 @@ All routes are tenant-scoped (`x-tenant-id`) and guarded by `TeamspaceAccessGuar
 | `GET /events` | teamspace access (consumer access control inside `findAll`) | Paginated list (`EventFiltersDto`) → `EventListResponseDto` |
 | `GET /events/:id` | `tenant.teamspace_events.view` | Single event (`EventResponseDto`) incl. `user_registration` |
 | `POST /events/:eventId/participants/:participantId/cancel` | `tenant.events.register` | Cancel a registration → `204 No Content` |
+| `POST /events/:eventId/register` | `tenant.events.register` (+ teamspace access + module of the event) | Register oneself for a single event / `per_occurrence` occurrence → `201 EventParticipantResponseDto` |
+| `POST /events/series/:seriesId/register` | `tenant.events.register` (+ teamspace access + module of the series) | Register oneself for a whole series (Modus B) → `201 EventSeriesRegistrationResponseDto` |
+| `GET /custom-fields/definitions/for-event/:eventId` | none beyond authentication ("if the user can see the event, they can see the registration form") | Active registration field definitions of the event (`CustomFieldDefinition[]`) |
 
 ### `GET /events` query (`EventFiltersDto extends PaginationDto`)
 
@@ -38,6 +41,126 @@ Response: `{ items: EventResponseDto[], total, page, limit, totalPages }`; more 
 
 `cancellation_reason` is **required** (`@IsString() @IsNotEmpty()`). The user-facing reason is optional: Angular (and Flutter) send the localised `defaultCancellationReason` ("Keine Angabe" / "Not specified") when the user leaves it empty. Series registrations ("Modus B", `series.registration_mode = 'series'`) are cancelled via `POST /events/series/:seriesId/registrations/:registrationId/cancel` instead.
 
+## Registration (verified against `events.controller.ts`, `event-participants.service.ts`, `event-series-registrations.service.ts`, `event-custom-field-definitions.controller.ts`, 2026-09-25)
+
+### `GET /custom-fields/definitions/for-event/:eventId`
+
+Returns the event's active definitions (`CustomFieldDefinition` entity, `entity_type = 'event'`), ordered by `display_order`. Relevant fields: `id`, `field_key`, `field_type`, `display_name`, `description`, `is_required`, `validation_rules`, `ui_config` (`group`, placeholder, options…), `display_order`. `field_type` is one of `text | email | phone | number | date | textarea | richtext | select | multiselect | radio | checkbox_group | boolean | file | url | pregnancy_due_date | label | iban | bic | employee_select | institution_select` (`label` is display-only).
+
+The frontend groups by `ui_config.group` (fallback group name `Anmeldeformular`) into `FieldGroup[]` (`EventsService.getRegistrationFields`). A failed request means no fields (the page stays usable).
+
+### `POST /events/:eventId/register` and `POST /events/series/:seriesId/register`
+
+> Documentation-only shape.
+
+```ts
+// Backend RegisterEventDto (apps/tagea-backend/src/events/dto/register-event.dto.ts)
+// The teamspace page sends only custom_field_values — and only when the event has fields.
+interface RegisterEventDto {
+  employee_id?: string;          // auto-filled from the caller; never sent by the teamspace page
+  participant_name?: string;     // external participants only (≤ 255)
+  participant_email?: string;    // external participants only
+  participant_phone?: string;    // ≤ 50
+  custom_field_values?: Record<string, unknown>; // keyed by field_key
+  notes?: string;
+}
+```
+
+Response for the single event (`EventParticipantResponseDto`, excerpt), which the page reads to pick the success status:
+
+> Documentation-only shape.
+
+```ts
+interface EventParticipantResponseDtoExcerpt {
+  id: string;
+  event_id: string;
+  employee_id: string | null;
+  registration_status: 'pending' | 'approved' | 'rejected' | 'cancelled' | 'waitlist';
+  is_waitlisted: boolean;
+  waitlist_position: number | null;
+  awaiting_guardian_consent: boolean; // always false for staff
+  custom_field_values: Record<string, unknown>;
+  registration_date: string;
+}
+```
+
+The series response (`EventSeriesRegistrationResponseDto`) carries the same status fields (`series_id` instead of `event_id`).
+
+**Status derivation (host, `registrationStatusOf`):** `is_waitlisted` → `waitlist`; `registration_status === 'pending'` → `pending`; otherwise `approved`.
+
+**Server-side allocation (single event):** not full + no approval → `approved`, and `current_participants_count` + 1; not full + `requires_approval` → `pending` (no seat counted until approval); full + `waitlist_enabled` → waitlisted with the next `waitlist_position`; full without waitlist → `403`. Series mode is identical, with the series' capacity/approval/waitlist.
+
+**Errors**
+
+| Status | When | Body `code` |
+| --- | --- | --- |
+| `400` | Already registered (live registration exists) — single event | — (`message`) |
+| `400` | Occurrence belongs to a Modus-B series (use the series endpoint) | `SERIES_REGISTRATION_REQUIRED` (+ `seriesId`) |
+| `400` | Series: live registration exists | `series_already_registered` |
+| `400` | Series: custom field values invalid (required missing, wrong type) | — |
+| `400` | Series: series is not in `series` mode | — |
+| `403` | Not accepting registrations (not published, started, deadline passed), or full without waitlist | — |
+| `403` | Series: no future occurrence, deadline passed, full without waitlist | — |
+| `403` | Participation rule violated — **client registrations only**; never on these staff endpoints today | `event_participation_rule_violation` + `failures[]` |
+| `404` | Event / series not found or not visible | — |
+
+The global exception filter lifts `code` / `failures` to `error.error.code` / `error.error.failures` on the HTTP error body.
+
+Custom field values on the single-event path are sanitised (richtext HTML) but **not** validated server-side; required-field enforcement there is client-side only. The series path validates them against the first future occurrence.
+
+**Re-registration:** a `cancelled` or `rejected` row for the same employee is revived (status, approval, waitlist and cancellation fields are reset; new `custom_field_values` replace the old ones) instead of creating a duplicate.
+
+### Wizard engine (Angular reference)
+
+```ts
+// apps/tagea-frontend/src/app/shared/events/registration/state/wizard-machine.ts
+const STEP_KEYS: Record<WizardMode, readonly string[]> = {
+  gast: ['participants', 'contact', 'summary'],
+  portal: ['participants', 'summary'],
+  teamspace: ['participation'],
+};
+
+// Same order in resultStatus() and ctaLabelKey(): waitlist wins over approval.
+type RegistrationResultStatus = 'approved' | 'pending' | 'waitlist';
+type CtaLabelKey =
+  | 'eventRegistration.cta.confirm'
+  | 'eventRegistration.cta.approval'
+  | 'eventRegistration.cta.waitlist';
+
+interface EventFlags {
+  requiresApproval: boolean;
+  isFull: boolean;
+  waitlistEnabled: boolean;
+  requiresBirthdate: boolean;
+  requiresGender: boolean;
+  availableSpots: number | null;
+  bookingBlocked: boolean;
+}
+
+// Series info on an occurrence (models/event.model.ts)
+interface EventSeriesInfo {
+  id: string;
+  registration_mode: EventSeriesRegistrationMode; // 'per_occurrence' | 'series'
+  sequence: number | null;
+  total_occurrences: number;
+  active_occurrences?: number;
+  max_participants?: number | null;
+  current_participants_count?: number;
+  requires_approval?: boolean;
+  waitlist_enabled?: boolean;
+}
+
+interface EligibilityFailure {
+  code: EligibilityFailureCode; // birthdate_missing | below_min_age | above_max_age | gender_missing | gender_not_allowed
+  minAge?: number;
+  maxAge?: number;
+  actualAge?: number;
+  allowedGenders?: string[];
+}
+```
+
+Teamspace flags (`eventFlags` in `events-register.component.ts`): single event → `requiresApproval = requires_approval`, `isFull`, `waitlistEnabled = waitlist_enabled`, `availableSpots = spotsAvailable`; series mode → the same from `event.series` (`isFull = max != null && current >= max`).
+
 ## Service: `EventsService`
 
 Methods relevant to this page (exact signatures in [`events.service.ts`](../../../apps/tagea-frontend/src/app/services/events.service.ts)):
@@ -48,6 +171,8 @@ Methods relevant to this page (exact signatures in [`events.service.ts`](../../.
 | `getEditorialEvents(filter?, sort?)`                                       | Events visible for REDAKTEUR+ roles — used by verwaltung                |
 | `getEventById(id)`                                                         | Single event for detail                                                 |
 | `registerForEvent(eventId, customFieldValues?)`                            | RSVP register (POST `events/:eventId/register`)                         |
+| `registerForSeries(seriesId, customFieldValues?)`                          | Series register, Modus B (POST `events/series/:seriesId/register`)      |
+| `getRegistrationFields(eventId)`                                           | Registration fields → `FieldGroup[]` (GET `custom-fields/definitions/for-event/:eventId`) |
 | `cancelRegistration(eventId, participantId, cancellationReason)`           | RSVP cancel (POST `events/:eventId/participants/:participantId/cancel`) |
 | `createEvent(event, customFieldDefinitions?, customFieldValues?)`          | Create (POST `events`)                                                  |
 | `updateEvent(id, updates)` / `deleteEvent(id)`                             | Update / delete (PATCH / DELETE `events/:id`)                           |

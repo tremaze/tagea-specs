@@ -1,8 +1,8 @@
 # Feature: Teamspace Submissions
 
-> **Status:** 🟡 Permission architecture complete; UI acceptance criteria still validating
+> **Status:** 🚧 Permission architecture complete; UI acceptance criteria still validating
 > **Owner:** ltoenjes (UI), svenarbeit (permission architecture)
-> **Last updated:** 2026-09-23 (list tabs, detail read-only view, endpoints — Flutter WP6)
+> **Last updated:** 2026-09-25 (M2-Specs: permission map corrected to the Scope-A/Scope-B model — `tenant.submissions.submit` / `tenant.submissions.view_own` / `submissions.process`; create endpoint contract; deep links)
 >
 > **Pattern reference:** This feature is the canonical permission-pattern example
 > for the teamspace scope. The institution scope already follows the pattern
@@ -12,19 +12,23 @@
 >
 > **Permission-architecture status:**
 > - ✅ Backend: every `/teamspaces/:tsId/submissions[-categories]/*` endpoint
->   carries explicit `@Auth({ scope: 'teamspace', permissions: [...] })` per the
->   table in this spec. Mutation endpoints, GET endpoints, and CSV/PDF/CF endpoints all gated.
+>   carries an explicit method-level `@Auth(...)` per the table in this spec —
+>   `scope: 'tenant'` for the consumer capabilities (Scope A: `tenant.submissions.submit`,
+>   `tenant.submissions.view_own`), `scope: 'teamspace'` for processing and
+>   configuration (Scope B: `submissions.process`, `submissions.view_all`, `settings.manage`).
+>   See [teamspace-consumer-access](../teamspace-consumer-access/spec.md) (migration
+>   `20260504170000-RestructureSubmissionsPermissions`).
 > - ✅ Service: `findAll` consolidated onto `applyAccessControl` — tier filter
 >   uses TS-permission-map (`view_all` / `view_scoped` / `view_own`) consistently.
 > - ✅ Frontend: `hasHRManagePermission` (legacy stub) replaced with
->   `hasTeamspacePermission(tsId, view_all|view_scoped)` + TA bypass.
+>   `canInAnyTeamspaceOf(['submissions.view_all','submissions.view_scoped'])` + super-admin bypass.
 > - ✅ E2E: 13 submission-relevant specs covering create/list/tier/categories;
 >   former `findAll` drift-pin (`drift-ts-admin-without-inst-hierarchy-…`)
 >   converted to a soll-test (`ts-admin-via-permission-tier-sees-all-submissions`).
 > - ⏳ Open: `AdminSubmissionCustomFieldsController` (`/institutions/:institutionId/submissions/custom-fields/*`)
 >   marked for removal; clients no longer call it but controller still exists.
-> - ⏳ Open: original UI Acceptance Criteria (Card-Click, Wizard, Deep-Link)
->   not yet covered by E2E tests — owned by UI team.
+> - ⏳ Open: UI Acceptance Criteria Card-Click and Deep-Link not yet covered by
+>   E2E tests (the wizard submit is covered by `submissions-consumer-submit-ui.spec.ts`) — owned by UI team.
 
 ## Vision (Elevator Pitch)
 
@@ -57,13 +61,35 @@ Desktop keeps the two-column layout (wizard left, history right).
 - [ ] **Given** a "New submission" CTA fires, **When** the user is on the list, **Then** they can pick a category and the creation form for that category renders (dynamic fields based on `FieldGroup[]`). *(Flutter: „Kommt bald“ until the create work package.)*
 - [ ] **Flutter:** every list supports pull-to-refresh; a failed refresh keeps the shown items and says so.
 
+### Create (submit)
+
+Wizard: teamspace (only active teamspaces with the submissions module) → category (`GET /teamspaces/:tsId/submission-categories`) → form (`GET /teamspaces/:tsId/submission-categories/:id`, dynamic fields) → „Senden“. Contract: `POST /teamspaces/:teamspaceId/submissions` (multipart, see [contracts.md](./contracts.md#create-submission)).
+
+- [ ] Submitting requires the tenant permission `tenant.submissions.submit` (floor permission of every standard tenant role) plus teamspace access (`@RequireTeamspaceAccess`: member, institution link or tenant-admin) and the teamspace module `submissions` being active; otherwise 403.
+- [ ] Parts: `category_id` (required), `custom_field_values` (JSON string of the flat values; only fields the form currently shows — conditionally hidden fields are left out), `custom_field_repeating` (JSON string `Record<groupId, {created: [{tempId, fields}], updated: [], deleted: []}>`; always sent, `{}` when there are no rows — capability marker), `files` (0–5).
+- [ ] **Custom field types (owner decision 2026-09-25):** Flutter renders every field type; only unknown types get a fallback; `label` is display-only.
+- [ ] **Files:** at most 5 per submission, at most 10 MB each; allowed types PDF, Word (`.doc`/`.docx`), Excel (`.xls`/`.xlsx`), JPEG, PNG, GIF, plain text, CSV. The client checks count, size, extension and MIME type before upload and shows „Maximale Anzahl von 5 Dateien erreicht“, „Datei ist zu groß. Maximum: 10 MB“ or „Ungültiger Dateityp. Erlaubt: PDF, Word, Excel, Bilder (JPG, PNG, GIF), Text“. Duplicate picks (same name + size) are ignored silently.
+- [ ] „Senden“ is disabled while the form is invalid, while submitting, or when the category has `require_attachment` and no file is selected (the backend rejects that case with 400 too).
+- [ ] Success → snackbar „Meldung erfolgreich gesendet“, success panel „Meldung erfolgreich gesendet!“ / „Deine Meldung wurde an {teamspace} gesendet.“, URL reset to `/teamspace/submissions`, own list reloaded. The new submission starts as `pending`, or `awaiting_approval` when the category has `requires_supervisor_approval` **and** `visible_to_institution_supervisors` and the submitter has at least one supervisor.
+- [ ] Any failure (400 validation, 403, network) → snackbar „Fehler beim Senden der Meldung“; the form keeps its input.
+
 ### Deep link new (`/teamspace/submissions/new/:teamspaceId/:categoryId`)
 
-- [ ] **Given** a deep link carries a teamspace + category, **When** the route loads with `data.mode === 'deepLink'`, **Then** the creation form prefills that teamspace + category and skips the picker step.
+Both params are UUIDs. `:teamspaceId` preselects the teamspace, `:categoryId` preselects the category; the wizard skips both picker steps and opens the form directly (loading state „Formular wird geladen...“).
 
-### Deep link new (`/teamspace/submissions/new/:categoryId`)
+- [ ] **Given** the teamspace exists, is active and has the submissions module, **and** the category exists in it and is active, **Then** the form for that category opens with the teamspace and category preselected.
+- [ ] **Given** the teamspace is unknown, inactive or has no submissions module, **Then** snackbar „Der angegebene Teamspace wurde nicht gefunden.“ and redirect to `/teamspace/submissions` (history replaced).
+- [ ] **Given** the category is unknown, **Then** „Die angegebene Meldungskategorie wurde nicht gefunden.“; **given** it is inactive, „Die angegebene Meldungskategorie ist nicht mehr aktiv.“ — both redirect to `/teamspace/submissions`.
+- [ ] Any other load error → „Der Link ist ungültig.“ + redirect.
+- [ ] After a successful submit or „Neue Meldung erstellen“ the URL is reset to `/teamspace/submissions`.
 
-- [ ] **Given** the deep link carries only a category, **When** the route loads, **Then** the user is prompted to pick a teamspace before the creation form proceeds.
+### Deep link new (`/teamspace/submissions/new/:categoryId?teamspaceId=…`)
+
+Same page and behaviour as above, with the teamspace taken from the **query parameter** `teamspaceId`. There is no teamspace picker for this form: without `teamspaceId` the link is invalid → snackbar „Der Link ist ungültig.“ + redirect to `/teamspace/submissions`.
+
+### List filter via query parameter
+
+- [ ] `/teamspace/submissions?category=<categoryId>` preselects that category in the list filter (not the wizard).
 
 ### Detail (`/teamspace/submissions/:id`)
 
@@ -74,7 +100,7 @@ Loaded via the global routes `GET /submissions/:id` (with `_permissions`, `_visi
 - [ ] Title: „Meine Anfrage“ when `_visibility === 'own'`, else „Anfrage einsehen“.
 - [ ] Fields: active groups by `display_order`; flat groups as label/value rows; repeating groups (with `key` and rows in `summary[key].rows`) per row, plus „Summe {Feld}“ for `aggregation_config.kind === 'sum'`. Conditional fields (`ui_config.visibility_condition`) without a value are skipped. Values resolve per field type (choice labels, names, file name, Ja/Nein, `dd.MM.yyyy`, `ui_config.number_format`); rich text is shown as plain text — API HTML is untrusted and never rendered as markup in Flutter.
 - [ ] **Answer:** there is **one** answer per submission (`response`, `responded_at`, `respondedByEmployee` columns on the submission — no reply thread). With an answer: „Beantwortet von {Name} am {Datum}“ + text. Without: „Deine Anfrage wird noch bearbeitet …“ (submitter) / „Diese Anfrage wird noch bearbeitet …“ (others).
-- [ ] **Status history** („Status-Verlauf“, `status_history[]`) is shown to editors (`submissions.edit`, admin view) only — not to the submitter.
+- [ ] **Status history** („Status-Verlauf“, `status_history[]`) is shown to processors (`submissions.process`, admin view) only — not to the submitter.
 - [ ] **Files:** attachments open via `GET /submissions/:id/attachments/:aid/download?presigned=true` → `{url}` (15-minute presigned URL; without `presigned` the endpoint streams the file). The PDF receipt via `GET /teamspaces/:tsId/submissions/:id/filled-pdf/signed-url?expiresIn=900` → `{url, expiresIn}`; shown when `generated_receipt_filename` is set or the category has a PDF template. Flutter accepts only http(s) URLs and opens them with the platform (url_launcher).
 - [ ] Opening the detail marks it read (`content-read-status`, type `submission`).
 - [ ] 404/403 → „Meldung nicht gefunden“ with „Zurück zur Übersicht“; other errors → error state with retry. **Flutter:** pull-to-refresh, also on these two states.
@@ -82,23 +108,24 @@ Loaded via the global routes `GET /submissions/:id` (with `_permissions`, `_visi
 
 ### Permission enforcement (backend)
 
-- [ ] Every mutation endpoint (POST/PATCH/PUT/DELETE) under `/teamspaces/:tsId/submissions[-categories]/...` is annotated with `@Auth({ scope: 'teamspace', permissions: [...] })` — no class-level-only `scope:'authenticated'` for mutations.
-- [ ] Every read endpoint that returns user-scoped data (submission lists, single submission, attachments, custom-field values) is annotated with at least `@Auth({ scope: 'teamspace', permissions: ['submissions.view_own'] })`. Service-side tier filter narrows further.
-- [ ] Picker/form data (`GET .../submission-categories`, `.../submission-categories/:id`) is annotated with `@Auth({ scope: 'teamspace', permissions: ['submissions.create'] })`.
-- [ ] `submissions.service.ts:findAll` filters via the teamspace-permission map (`view_all` / `view_scoped` / `view_own`), **not** via institution-hierarchy. Single source of truth: `applyAccessControl`.
+- [ ] Every endpoint under `/teamspaces/:tsId/submissions[-categories]/...` carries a method-level `@Auth(...)`; the class-level `@Auth({ scope: 'authenticated' })` alone never grants access. Both controllers also apply `FeatureGuard` (`@RequireFeature('submissions')`) and `TeamspaceAccessGuard` (`@RequireTeamspaceAccess()`).
+- [ ] Consumer reads (submission list, single submission, attachments, filled PDF, custom-field values/history/at-time, repeating rows) require the tenant permission `tenant.submissions.view_own`. The service tier filter (`applyAccessControl`) narrows further.
+- [ ] Picker/form data (`GET .../submission-categories`, `.../submission-categories/:id`) and `POST .../submissions` require `tenant.submissions.submit`; the POST additionally requires the teamspace module (`@RequireTeamspaceModule('submissions')`).
+- [ ] Processing (status, assignment, response, assignable employees, custom-field writes, repeating-row writes) requires the teamspace permission `submissions.process` (renamed from `submissions.edit`).
+- [ ] `submissions.service.ts:findAll` filters via the teamspace-permission map (`view_all` / `view_scoped` / own), **not** via institution-hierarchy. Single source of truth: `applyAccessControl`.
 - [ ] `AdminSubmissionCustomFieldsController` at `/institutions/:institutionId/submissions/custom-fields/...` is removed; clients use the per-TS category endpoints exclusively.
 - [ ] Tenant-admin bypass works on every endpoint above (verified: removing all submission permissions from a role still lets a TA do everything).
 
 ### Permission enforcement (frontend)
 
-- [ ] Every action button (Create, Edit, Delete, Status change, Assign, Configure, Verwaltung CTA) is gated with `*appHasPermission` or programmatic `hasTeamspacePermission(...)` — no `role === 'admin'` or `hasAdminRole()` checks on submission UI elements.
-- [ ] Every submission route in `app/routes/` carries `permissionGuard` with the `data.requiredPermission` listed in the route table above; no implicit "logged-in is enough" routes.
+- [ ] Every processing action (Edit, Status change, Assign, Configure, Verwaltung CTA) is gated with `*appHasPermission` or programmatic `sessionAuthz` checks — no `role === 'admin'` or `hasAdminRole()` checks on submission UI elements. Supervisor actions (approve, acknowledge) follow the server-authoritative `_permissions` of the detail response.
+- [ ] Submission routes are gated by `requireTenantPermission('tenant.teamspace_submissions.view')` + `requireFeature('teamspace')` (see Routes); the Verwaltung route by `requireAnyPermission(['submissions.view_all','submissions.view_scoped'])`.
 - [ ] When a tenant-admin removes `submissions.view_all` from a role and the affected user reloads `/auth/context`, the "Verwaltung" surface stops appearing in their UI.
 
 ### Custom-Fields integration
 
 - [ ] Categories are returned with `field_definitions` inline; consumers do not fetch a separate custom-fields endpoint.
-- [ ] When admin edits a category's `field_definitions` via `PUT /teamspaces/:tsId/submission-categories/:id`, subsequent `POST /submissions` calls validate against the new definitions (no stale cache).
+- [ ] When admin edits a category's `field_definitions` via `PUT /teamspaces/:tsId/submission-categories/:id`, subsequent `POST /teamspaces/:tsId/submissions` calls validate against the new definitions (no stale cache).
 - [ ] Historical submissions retain their original `custom_field_values` even when the category schema later changes (schema migration responsibility, not field-rendering responsibility).
 
 ## UI States
@@ -114,13 +141,13 @@ Loaded via the global routes `GET /submissions/:id` (with `_permissions`, `_visi
 
 ## Non-Goals
 
-- **Submission-categories configuration** — handled under `/teamspace/submissions/konfiguration` (teamspace-admin surface, marked ❌ for Flutter).
+- **Submission-categories configuration** — `/teamspace/submissions/konfiguration` redirects to `/administration/daten/einreichungs-kategorien` (admin surface, ❌ for Flutter).
 - **Global admin management** — handled under `/administration/daten/einreichungs-kategorien` (admin-only, ❌ for Flutter). See [`admin-submission-categories`](../admin-submission-categories/spec.md).
 - **Bulk actions** — not implemented.
 
 ## Edge Cases
 
-- **Deep link with unknown category/teamspace** — form falls back to picker or shows a friendly error.
+- **Deep link with unknown/inactive category or teamspace** — snackbar with the specific reason, then redirect to `/teamspace/submissions` (no picker fallback).
 - **Category custom fields change between list and open** — the form uses the current `FieldGroup[]`; historical submissions are displayed with their stored values regardless.
 - **Status transitions** — `SubmissionStatus` enum values live in the model; UI chips must mirror exactly (no implicit translations).
 
@@ -133,7 +160,8 @@ Two distinct surfaces, each with its own permission family:
 | Surface | What | Who | Permission |
 |---|---|---|---|
 | **Configuration** | Define categories, edit field definitions, upload PDF templates, configure CSV export | Teamspace-Admin (per-TS) and Tenant-Admin (cross-TS) | `settings.manage` (TS scope), `tenant.submission_categories.*` (Tenant scope) |
-| **Consumption** | List categories, fill in form, submit, view own/scoped/all submissions | Teamspace members with `submissions.create` for the form, `submissions.view_*` tier for viewing | `submissions.create`, `submissions.view_own` / `submissions.view_scoped` / `submissions.view_all` |
+| **Consumption (Scope A)** | List categories, fill in form, submit, view own submissions | Every employee with teamspace access (tenant floor permissions) | `tenant.submissions.submit`, `tenant.submissions.view_own` |
+| **Processing (Scope B)** | View scoped/all submissions, change status, assign, answer, edit field values | Teamspace roles (`admin`, `bearbeiter`) | `submissions.view_all` / `submissions.view_scoped`, `submissions.process` |
 
 The **same database table** (`custom_field_groups` with `entity_type='submission'`) is read by both surfaces — but through different endpoints with different permissions. Custom fields are inline-bundled with the category response (`field_definitions`), so consumers only need read access to the category, never to a separate custom-field endpoint.
 
@@ -141,42 +169,47 @@ The **same database table** (`custom_field_groups` with `entity_type='submission
 
 URL convention: `/teamspaces/:teamspaceId/...` for everything in the teamspace scope.
 
+Scope column: **T** = `@Auth({ scope: 'tenant', … })` (tenant permission), **TS** = `@Auth({ scope: 'teamspace', … })` (permission in that teamspace).
+
 | Method + Path | Permission | Notes |
 |---|---|---|
-| `GET    /teamspaces/:tsId/submission-categories` | `submissions.create` | Picker data — anyone allowed to submit must be able to list categories |
-| `GET    /teamspaces/:tsId/submission-categories/:id` | `submissions.create` | Form data — load the chosen category with its `field_definitions` |
-| `GET    /teamspaces/:tsId/submission-categories/:id/csv-config` | `settings.manage` | Admin-only |
-| `POST   /teamspaces/:tsId/submission-categories` | `settings.manage` | Create category |
-| `PUT    /teamspaces/:tsId/submission-categories/:id` | `settings.manage` | Update category (incl. `field_definitions`) |
-| `PUT    /teamspaces/:tsId/submission-categories/:id/csv-config` | `settings.manage` | CSV export config |
-| `DELETE /teamspaces/:tsId/submission-categories/:id` | `settings.manage` | Delete category |
-| `GET    /teamspaces/:tsId/submissions` | `submissions.view_own` (service-tier filter further limits) | List, tier-filtered server-side |
-| `GET    /teamspaces/:tsId/submissions/stats` | `submissions.view_all` | Admin dashboard data |
-| `GET    /teamspaces/:tsId/submissions/export/csv` | `submissions.view_all` | Admin export |
-| `GET    /teamspaces/:tsId/submissions/:id` | `submissions.view_own` (+ tier check in service) | Detail |
-| `GET    /teamspaces/:tsId/submissions/:id/assignable-employees` | `submissions.edit` | Picker for assignment dialog |
-| `GET    /teamspaces/:tsId/submissions/:id/attachments/:aid/download` | `submissions.view_own` (+ tier) | File download |
-| `GET    /teamspaces/:tsId/submissions/:id/filled-pdf` | `submissions.view_own` (+ tier) | PDF receipt |
-| `GET    /teamspaces/:tsId/submissions/:id/filled-pdf/signed-url` | `submissions.view_own` (+ tier) | Signed URL |
-| `GET    /teamspaces/:tsId/submissions/:id/custom-fields/v2` | `submissions.view_own` (+ tier) | Read custom-field values |
-| `GET    /teamspaces/:tsId/submissions/:id/custom-fields/history/:k` | `submissions.view_own` (+ tier) | DSGVO-trail |
-| `GET    /teamspaces/:tsId/submissions/:id/custom-fields/at-time` | `submissions.view_own` (+ tier) | Forensic snapshot |
-| `GET    /teamspaces/:tsId/submissions/:id/custom-fields/v2/groups/:gid/rows` | `submissions.view_own` (+ tier) | Repeating-group read |
-| `POST   /teamspaces/:tsId/submissions` | `submissions.create` | Submit a new entry |
-| `PATCH  /teamspaces/:tsId/submissions/:id/status` | `submissions.edit` | Status change (admin) |
-| `PATCH  /teamspaces/:tsId/submissions/:id/assignment` | `submissions.edit` | Reassign |
-| `POST   /teamspaces/:tsId/submissions/:id/response` | `submissions.edit` | Add response |
-| `PUT    /teamspaces/:tsId/submissions/:id/custom-fields/v2/bulk` | `submissions.edit` | Bulk-update CF values |
-| `PATCH  /teamspaces/:tsId/submissions/:id/custom-fields/v2/:k` | `submissions.edit` | Single-field update |
-| `POST   /teamspaces/:tsId/submissions/:id/custom-fields/v2/groups/:gid/rows` | `submissions.edit` | Repeating-group create |
-| `PUT    /teamspaces/:tsId/submissions/:id/custom-fields/v2/groups/:gid/rows/:rowId` | `submissions.edit` | Repeating-group update |
-| `DELETE /teamspaces/:tsId/submissions/:id/custom-fields/v2/groups/:gid/rows/:rowId` | `submissions.edit` | Repeating-group delete |
+| `GET    /teamspaces/:tsId/submission-categories` | T `tenant.submissions.submit` | Picker data |
+| `GET    /teamspaces/:tsId/submission-categories/:id` | T `tenant.submissions.submit` | Form data — the chosen category with its `field_definitions` |
+| `GET    /teamspaces/:tsId/submission-categories/:id/csv-config` | TS `settings.manage` | Admin-only |
+| `POST   /teamspaces/:tsId/submission-categories` | TS `settings.manage` | Create category |
+| `PUT    /teamspaces/:tsId/submission-categories/:id` | TS `settings.manage` | Update category (incl. `field_definitions`) |
+| `PUT    /teamspaces/:tsId/submission-categories/:id/csv-config` | TS `settings.manage` | CSV export config |
+| `DELETE /teamspaces/:tsId/submission-categories/:id` | TS `settings.manage` | Delete category |
+| `POST   /teamspaces/:tsId/submissions` | T `tenant.submissions.submit` + module `submissions` | Submit a new entry (multipart) |
+| `GET    /teamspaces/:tsId/submissions` | T `tenant.submissions.view_own` (service tier filter limits further) | List |
+| `GET    /teamspaces/:tsId/submissions/stats` | TS `submissions.view_all` | Admin dashboard data |
+| `GET    /teamspaces/:tsId/submissions/export/csv` | TS `submissions.view_all` | Admin export |
+| `GET    /teamspaces/:tsId/submissions/:id` | T `tenant.submissions.view_own` (+ tier check in service) | Detail |
+| `GET    /teamspaces/:tsId/submissions/:id/assignable-employees` | TS `submissions.process` | Picker for assignment dialog |
+| `GET    /teamspaces/:tsId/submissions/:id/attachments/:aid/download` | T `tenant.submissions.view_own` (+ tier) | File download |
+| `GET    /teamspaces/:tsId/submissions/:id/filled-pdf` | T `tenant.submissions.view_own` (+ tier) | PDF receipt |
+| `GET    /teamspaces/:tsId/submissions/:id/filled-pdf/signed-url` | T `tenant.submissions.view_own` (+ tier) | Signed URL |
+| `GET    /teamspaces/:tsId/submissions/:id/custom-fields/v2` | T `tenant.submissions.view_own` (+ tier) | Read custom-field values |
+| `GET    /teamspaces/:tsId/submissions/:id/custom-fields/history/:k` | T `tenant.submissions.view_own` (+ tier) | DSGVO-trail |
+| `GET    /teamspaces/:tsId/submissions/:id/custom-fields/at-time` | T `tenant.submissions.view_own` (+ tier) | Forensic snapshot |
+| `GET    /teamspaces/:tsId/submissions/:id/custom-fields/v2/groups/:gid/rows` | T `tenant.submissions.view_own` (+ tier) | Repeating-group read |
+| `PATCH  /teamspaces/:tsId/submissions/:id/status` | TS `submissions.process` | Status change |
+| `PATCH  /teamspaces/:tsId/submissions/:id/assignment` | TS `submissions.process` | Reassign |
+| `POST   /teamspaces/:tsId/submissions/:id/response` | TS `submissions.process` | Add response |
+| `PUT    /teamspaces/:tsId/submissions/:id/custom-fields/v2/bulk` | TS `submissions.process` | Bulk-update CF values |
+| `PUT    /teamspaces/:tsId/submissions/:id/custom-fields/v2/save-all` | TS `submissions.process` | Save flat + repeating values in one call |
+| `PATCH  /teamspaces/:tsId/submissions/:id/custom-fields/v2/:k` | TS `submissions.process` | Single-field update |
+| `POST   /teamspaces/:tsId/submissions/:id/custom-fields/v2/groups/:gid/rows` | TS `submissions.process` | Repeating-group create |
+| `PUT    /teamspaces/:tsId/submissions/:id/custom-fields/v2/groups/:gid/rows/:rowId` | TS `submissions.process` | Repeating-group update |
+| `DELETE /teamspaces/:tsId/submissions/:id/custom-fields/v2/groups/:gid/rows/:rowId` | TS `submissions.process` | Repeating-group delete |
+
+The global routes under `/submissions/*` (`own`, `supervised`, `managed`, `:id`, `:id/category`, `:id/attachments/:aid/download`, acknowledge/approve/reject) are class-level `@Auth({ scope: 'authenticated', allowedUserTypes: [EMPLOYEE] })` + `@RequireFeature('submissions')`; visibility is decided per item by the scope queries and `SubmissionAbility`.
 
 **Service-side tier filter** for `submissions.view_*`:
 - `view_all`: sees every submission in the teamspace
 - `view_scoped` + `institution_ids[]`: sees own + submissions whose submitter belongs to one of the scoped institutions
 - `view_scoped` without scope: sees all in the teamspace
-- `view_own`: sees only own submissions (+ institution-supervisor visibility for categories with `visible_to_institution_supervisors=true`)
+- none of the above (only `tenant.submissions.view_own`): sees only own submissions (+ institution-supervisor visibility for categories with `visible_to_institution_supervisors=true`)
 
 ### Cross-TS Tenant-Admin path
 
@@ -200,27 +233,27 @@ Tenant-admin path complements the per-TS path; both write to the same DB table. 
 
 | UI Surface | Action / Element | Permission gate |
 |---|---|---|
-| `teamspace-submissions-page` | "Neue Meldung" CTA | `hasAnyTeamspacePermission('submissions.create')` |
-| `teamspace-submissions-page` | "Verwaltung" link/FAB | `hasAnyTeamspacePermissionOf(['submissions.view_all','submissions.view_scoped'])` |
+| `teamspace-submissions-page` | „Neue Meldung“ wizard | not gated in the UI beyond the route guard; the backend enforces `tenant.submissions.submit` (category list and POST return 403 without it) |
+| `teamspace-submissions-page` | "Verwaltung" link/FAB | `sessionAuthz.isSuperAdmin() ∨ canInAnyTeamspaceOf(['submissions.view_all','submissions.view_scoped'])` |
 | `teamspace-submissions-page` | „Mitarbeiter“ tab (mobile) / card (desktop) | `canInAnyInstitution('institution.submissions.view_institution_members')` |
-| `submissions-page` (slug route) | "Meldung absenden" | `hasTeamspacePermission(tsId, 'submissions.create')` |
-| `submissions-page` | "Verwaltung" button | `hasTeamspacePermission(tsId, 'submissions.view_all') ∨ ...view_scoped` |
-| `submissions-verwaltung-page` | Status filter, search, sort | (page is gated already; controls visible) |
-| `submissions-verwaltung-page` | "Konfiguration" button | `hasTeamspacePermission(tsId, 'settings.manage')` |
-| `submission-categories-page` | Create/Edit/Delete category | `hasTeamspacePermission(tsId, 'settings.manage')` |
-| `submission-detail-page` | "Antworten" / "Status ändern" / "Zuweisen" | `hasTeamspacePermission(tsId, 'submissions.edit')` |
-| `global-submissions-verwaltung-page` | All admin actions | `isTenantAdmin ∨ specific tenant.submission_categories.*` |
+| `global-submissions-verwaltung-page` | Status filter, search, sort, Kanban | (page is gated already; controls visible) |
+| `submission-detail-page` | "Antworten" / "Status ändern" / "Zuweisen" / field edit | admin view mode (processor, `submissions.process` in the submission's teamspace) |
+| `submission-detail-page` | „Genehmigen“ / „Ablehnen“ / acknowledge | server-authoritative `_permissions.approve` / `_permissions.acknowledge` |
+| `admin-submission-categories` | Create/Edit/Delete category | `tenant.submission_categories.*` |
+
+> `pages/teamspace/submissions-page.component.ts` (old slug route) is no longer routed.
 
 ### Routes
 
-| Route | Guard(s) | `data.requiredPermission` |
+| Route | Guard(s) | Permission |
 |---|---|---|
-| `/teamspace/submissions` | `permissionGuard` + `teamspaceFeatureGuard` | (any TS member with `submissions.create` OR a `view_*` permission) |
-| `/teamspace/submissions/new/:tsId/:catId` | `permissionGuard` + `teamspaceFeatureGuard` | `submissions.create` (in the named TS) |
-| `/teamspace/submissions/:id` | `permissionGuard` + `teamspaceFeatureGuard` | `submissions.view_own` (service tier filters further) |
-| `/teamspace/submissions/verwaltung` | `permissionGuard` + `teamspaceFeatureGuard` | `submissions.view_all ∨ submissions.view_scoped` |
-| `/teamspace/submissions/konfiguration` | `permissionGuard` + `teamspaceFeatureGuard` | `settings.manage` |
-| `/administration/daten/einreichungs-kategorien` | `permissionGuard` (tenant scope) | `tenant.submission_categories.view` |
+| `/teamspace/submissions` (incl. children below) | `requireTenantPermission` + `requireFeature('teamspace')` | `tenant.teamspace_submissions.view` |
+| `/teamspace/submissions/new/:teamspaceId/:categoryId` | inherited | inherited (`data.mode = 'deepLink'`) |
+| `/teamspace/submissions/new/:categoryId` (+ `?teamspaceId=`) | inherited | inherited (`data.mode = 'deepLink'`) |
+| `/teamspace/submissions/:id` | inherited | inherited (`data.mode = 'global'`); backend decides visibility |
+| `/teamspace/submissions/verwaltung` | `requireAnyPermission` + `requireFeature('teamspace')` | `submissions.view_all ∨ submissions.view_scoped` |
+| `/teamspace/submissions/konfiguration` | — | redirect to `/administration/daten/einreichungs-kategorien` |
+| `/administration/daten/einreichungs-kategorien` | `requireFeature('teamspace')` + `requireTenantPermission` | `tenant.submission_categories.view` |
 
 ### Custom-Fields recycling (architectural note)
 
@@ -234,9 +267,11 @@ Specifically for submissions:
 
 | Role | Permissions in `default-teamspace-role-permissions.ts` |
 |---|---|
-| `admin` | `submissions.{create,edit,delete,view_all,view_own,view_scoped}`, `settings.manage` |
-| `bearbeiter` | `submissions.{create,edit,view_own,view_scoped}` |
-| `redakteur` | `submissions.{create,view_own}` |
+| `admin` | `submissions.{delete,process,view_all,view_scoped}`, `settings.manage` |
+| `bearbeiter` | `submissions.{process,view_scoped}` |
+| `redakteur` | — (no submission permissions) |
+
+`tenant.submissions.submit` and `tenant.submissions.view_own` are **not** teamspace-role permissions: they are mapped to the standard tenant roles (`mitarbeiter`, `personalverwalter`, `traeger_manager`) by the migration and can be revoked per tenant role in the role matrix.
 
 These are seed defaults; tenants can override via the permission editor at `/einstellungen/teamspaces/rollen-rechte`.
 
@@ -256,15 +291,15 @@ These are seed defaults; tenants can override via the permission editor at `/ein
 - List view cached offline. *(Flutter WP6: not yet — lists and detail show the error state with retry when offline and keep already loaded data on a failed refresh; an offline cache follows with the app-wide caching work.)*
 - Creating a submission requires online; large attachments queue on reconnect (or block — decide during port).
 
-## Open drifts (tracked in E2E specs as drift-pins)
+## Resolved drifts (former E2E drift-pins)
 
-These are deliberate "current IS" pins that flip from green to red once the matching backend fix lands; they are then rewritten to standard expected-pass tests.
+All three former drift-pins are fixed; their spec files were replaced by regular tests.
 
-| Drift | Spec file | Will flip when |
-|---|---|---|
-| `events.create` permission removal does not affect `POST /events` (no permission check at endpoint) | `apps/tagea-frontend-e2e/src/tests/teamspaces/drift-events-create-not-permission-checked.spec.ts` | Events controller gets `@Auth({ scope: 'teamspace', permissions: [...] })` (requires AuthGuard body-resolver) |
-| `news.create` permission removal does not affect `POST /articles` | `apps/tagea-frontend-e2e/src/tests/teamspaces/drift-articles-create-not-permission-checked.spec.ts` | Articles controller gets `@Auth(...)` with article-type-resolver |
-| TS-admin without inst-hierarchy ≥ 3 only sees own submissions in `findAll` (service uses inst-hierarchy not TS-permission-map) | `apps/tagea-frontend-e2e/src/tests/teamspaces/drift-ts-admin-without-inst-hierarchy-sees-only-own-submissions.spec.ts` | `submissions.service.ts:findAll` uses `applyAccessControl` consistently |
+| Former drift | Now covered by |
+|---|---|
+| `events.create` permission removal did not affect `POST /events` | `apps/tagea-frontend-e2e/src/tests/teamspaces/events/events-permission-matrix.spec.ts` |
+| `news.create` permission removal did not affect `POST /articles` | `apps/tagea-frontend-e2e/src/tests/teamspaces/articles/articles-permission-matrix.spec.ts` |
+| TS-admin without inst-hierarchy ≥ 3 only saw own submissions in `findAll` | `apps/tagea-frontend-e2e/src/tests/teamspaces/submissions/ts-admin-via-permission-tier-sees-all-submissions.spec.ts` |
 
 ## References
 
@@ -275,13 +310,14 @@ These are deliberate "current IS" pins that flip from green to red once the matc
 - **Models:** `Submission`, `SubmissionStatus`, `SubmissionCategory`, `FieldGroup`
 - **Card:** `TageaSubmissionCardComponent`
 - **Field renderer:** `TageaCustomFieldsComponent`
-- **E2E tests:** `apps/tagea-frontend-e2e/src/tests/teamspaces/`
-  - `traegermanager-removes-submissions-create-from-redakteur.spec.ts` — permission-editor wirkt durch
-  - `bearbeiter-sees-only-own-submissions.spec.ts` — view_own tier
-  - `admin-sees-all-submissions-via-view-all-tier.spec.ts` — TA bypass list
-  - `non-member-cannot-create-submissions-in-teamspace.spec.ts` — 403 path
-  - `traegeradmin-bypass-creates-submissions-without-membership.spec.ts` — TA bypass mutation
-  - `submissions-disabled-blocks-create-403.spec.ts` — module-guard
-  - `submissions-disabled-blocks-category-create-403.spec.ts` — module-guard categories
-  - `drift-ts-admin-without-inst-hierarchy-sees-only-own-submissions.spec.ts` — drift pin (open)
+- **E2E tests:** `apps/tagea-frontend-e2e/src/tests/teamspaces/submissions/`
+  - `submissions-consumer-submit-ui.spec.ts` — submit via the real UI and persist
+  - `submissions-create-eav.spec.ts` — create contract (values → EAV)
+  - `bearbeiter-sees-only-own-submissions.spec.ts` — own-only floor via `tenant.submissions.view_own`
+  - `admin-sees-all-submissions-via-view-all-tier.spec.ts` — `view_all` tier
+  - `ts-admin-via-permission-tier-sees-all-submissions.spec.ts` — tier via TS permission map
+  - `non-member-cannot-create-submissions-in-teamspace.spec.ts` — teamspace-access 403 path
+  - `outsider-cannot-list-submission-categories.spec.ts` — picker 403 path
+  - `submissions-disabled-blocks-create-403.spec.ts` — module guard
+  - `submissions-disabled-blocks-category-create-403.spec.ts` — module guard categories
 - **Backend endpoints:** see [contracts.md](./contracts.md)
