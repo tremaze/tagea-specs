@@ -45,3 +45,4 @@
 | 2026-09-23 | Claude (WP3) | Endpoints/query/cancel body verified against backend; Flutter list, detail, cancel |
 | 2026-09-23 | Claude (WP3 QA) | Deadline rule + organizer exemption corrected against backend; offline documented as not cached |
 | 2026-09-25 | Claude (M2-Specs) | Registration flow (`/anmelden`, teamspace one-step wizard, custom fields, CTA/result mapping, eligibility dialog, series mode) specified against backend; Flutter register (WP4) ⏳ |
+| 2026-09-25 | Claude (M2-Specs QA) | Owner decision: all custom-field types rendered in Flutter (unknown → fallback, `label` display-only) |

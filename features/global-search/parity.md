@@ -2,7 +2,7 @@
 
 ## Angular
 
-- **Status:** ✅ Implemented for Einrichtung mode; in teamspace mode intentionally hidden (entry points), with a Ctrl/⌘+K gap that still opens the dialog
+- **Status:** 🚧 Implemented for Einrichtung mode only; in teamspace mode intentionally hidden (entry points), with a Ctrl/⌘+K gap that still opens the dialog
 - **Path:**
   - [`apps/tagea-frontend/src/app/components/global-search-dialog/global-search-dialog.component.ts`](../../../apps/tagea-frontend/src/app/components/global-search-dialog/global-search-dialog.component.ts) (+ `.html`, `.scss`)
   - [`apps/tagea-frontend/src/app/services/global-search.service.ts`](../../../apps/tagea-frontend/src/app/services/global-search.service.ts)

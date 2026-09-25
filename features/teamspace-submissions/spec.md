@@ -1,6 +1,6 @@
 # Feature: Teamspace Submissions
 
-> **Status:** 🟡 Permission architecture complete; UI acceptance criteria still validating
+> **Status:** 🚧 Permission architecture complete; UI acceptance criteria still validating
 > **Owner:** ltoenjes (UI), svenarbeit (permission architecture)
 > **Last updated:** 2026-09-25 (M2-Specs: permission map corrected to the Scope-A/Scope-B model — `tenant.submissions.submit` / `tenant.submissions.view_own` / `submissions.process`; create endpoint contract; deep links)
 >
@@ -67,6 +67,7 @@ Wizard: teamspace (only active teamspaces with the submissions module) → categ
 
 - [ ] Submitting requires the tenant permission `tenant.submissions.submit` (floor permission of every standard tenant role) plus teamspace access (`@RequireTeamspaceAccess`: member, institution link or tenant-admin) and the teamspace module `submissions` being active; otherwise 403.
 - [ ] Parts: `category_id` (required), `custom_field_values` (JSON string of the flat values; only fields the form currently shows — conditionally hidden fields are left out), `custom_field_repeating` (JSON string `Record<groupId, {created: [{tempId, fields}], updated: [], deleted: []}>`; always sent, `{}` when there are no rows — capability marker), `files` (0–5).
+- [ ] **Custom field types (owner decision 2026-09-25):** Flutter renders every field type; only unknown types get a fallback; `label` is display-only.
 - [ ] **Files:** at most 5 per submission, at most 10 MB each; allowed types PDF, Word (`.doc`/`.docx`), Excel (`.xls`/`.xlsx`), JPEG, PNG, GIF, plain text, CSV. The client checks count, size, extension and MIME type before upload and shows „Maximale Anzahl von 5 Dateien erreicht“, „Datei ist zu groß. Maximum: 10 MB“ or „Ungültiger Dateityp. Erlaubt: PDF, Word, Excel, Bilder (JPG, PNG, GIF), Text“. Duplicate picks (same name + size) are ignored silently.
 - [ ] „Senden“ is disabled while the form is invalid, while submitting, or when the category has `require_attachment` and no file is selected (the backend rejects that case with 400 too).
 - [ ] Success → snackbar „Meldung erfolgreich gesendet“, success panel „Meldung erfolgreich gesendet!“ / „Deine Meldung wurde an {teamspace} gesendet.“, URL reset to `/teamspace/submissions`, own list reloaded. The new submission starts as `pending`, or `awaiting_approval` when the category has `requires_supervisor_approval` **and** `visible_to_institution_supervisors` and the submitter has at least one supervisor.

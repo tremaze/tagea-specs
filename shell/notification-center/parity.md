@@ -27,8 +27,10 @@
 - **Native app-icon badge.** On iOS/Android the app-icon badge reflects the
   sum of unread in-app notifications + unread chat rooms. The Angular
   implementation delegates to `AppBadgeService` via Capacitor; the Flutter
-  port should use `flutter_app_badger` (or equivalent) and call it from the
+  port should use a maintained badge plugin (subject to dependency review)
+  and call it from the
   same points in the optimistic-update flow.
+- **Targets the app cannot open.** Angular (web) navigates to every target. Flutter marks the notification read and shows „Dieser Inhalt ist nur im Web verfügbar“ when no mobile screen exists for the route (owner decision 2026-09-25).
 - **No inline RSVP.** The bell no longer offers „Zusagen“ / „Absagen“ (removed in Angular); Flutter must not add them — invitations are answered on the appointment detail page.
 - **Clients too.** The bell is shown for clients (client portal) as well as employees; the route normaliser maps targets into `/client-portal/...` for clients.
 - **`getRelativeTime` is inlined and German-only.** Flutter port should use
@@ -40,3 +42,4 @@
 | ---------- | -------- | ----------------------------------------------------- |
 | 2026-04-21 | ltoenjes | Spec + contracts + parity written from Angular source |
 | 2026-09-25 | Claude (M2-Specs) | Contracts re-verified against `in-app-notifications.controller.ts`: employees + clients, `recipient_type`/`recipient_id` (no `employee_id`), hidden-category filter, 200 `{success:false}` instead of 404, query validation, dismiss-by-content semantics; removed the appointment-participants PATCH (inline RSVP gone); pagination („Mehr laden“) and full type list documented |
+| 2026-09-25 | Claude (M2-Specs QA) | Web-only targets: mark read + snackbar (owner decision); offline wording aligned with WP3; badge plugin wording |

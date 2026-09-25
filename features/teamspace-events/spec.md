@@ -63,6 +63,7 @@ A routed page of its own (not a dialog or sheet). On wide screens it has two col
 - [ ] **Given** the step, **Then** it shows the heading "Deine Teilnahme", the hint "Du meldest dich für diese Veranstaltung an.", and a person card for the logged-in staff member: display name, initials avatar, relation label "angemeldet als Fachkraft". There is no person picker; staff can only register themselves.
 - [ ] **Given** the event is full with a waitlist, **Then** a banner reads "Diese Veranstaltung ist ausgebucht. Du kannst dich auf die Warteliste setzen — wird ein Platz frei, benachrichtigen wir dich.". **Otherwise, given** approval is required, the banner reads "Diese Veranstaltung erfordert eine Freigabe durch das Team. Nach dem Absenden ist der Status „In Prüfung“.". Waitlist wins over approval.
 - [ ] **Given** the event has registration fields, **Then** they render inside the person card under the heading "Für diese Veranstaltung", grouped by `ui_config.group` (default group "Anmeldeformular") in `display_order`.
+- [ ] **Custom field types (owner decision 2026-09-25):** Flutter renders every field type; only unknown types get a fallback; `label` is display-only.
 - [ ] **Given** a required field (`is_required`) is empty or invalid, **Then** the CTA is disabled. It becomes enabled once all required fields are valid. An event without fields can be submitted right away.
 
 **CTA label (bind CTA) — same order as the result**

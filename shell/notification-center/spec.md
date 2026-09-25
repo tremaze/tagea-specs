@@ -87,6 +87,12 @@ Out of scope (covered elsewhere):
       native (iOS/Android), **Then** `AppBadgeService.updateBadge()` is called
       so the app-icon badge tracks the combined unread count (notifications +
       chat).
+- [ ] **Given** a notification whose (normalised) target route the Flutter app
+      cannot open (a web-only surface, e.g. institution-mode pages, verwaltung,
+      join-request administration), **When** the user taps it, **Then** it is
+      marked as read (same optimistic update as any tap) and a snackbar says
+      „Dieser Inhalt ist nur im Web verfügbar“; no navigation happens
+      (owner decision 2026-09-25). Angular opens every target, since it is the web.
 - [ ] **Employees** do not see (list or count) notifications of categories
       they hid in their profile (`in_app_hidden_categories`); **clients** only
       ever see client-visible types.
@@ -151,6 +157,14 @@ teamspace news links are mapped into the client portal. Rows without
 `data.route` get a fallback for join-request types (pending →
 `/einstellungen/einrichtung/{data.institutionId}/beitrittsantraege`, approved →
 `/`, rejected → `/join`).
+
+**Flutter: targets the app cannot open.** After normalisation, Flutter
+matches the route against its own route table. If no mobile screen exists
+for it (web-only surfaces such as `/einrichtung/...`, `/einstellungen/...`,
+verwaltung/admin routes, join-request administration), the tap still marks the
+notification read, but instead of navigating it shows the snackbar „Dieser
+Inhalt ist nur im Web verfügbar“ (owner decision 2026-09-25). Rows without any
+route behave as today: marked read, menu stays.
 
 ## Non-Goals
 
@@ -259,8 +273,10 @@ Inline and **not** translated today (hard-coded German):
 
 Flutter-specific guidance:
 
-- On no network: show last-cached list; do not fake mark-read state the
-  server cannot confirm.
+- No local cache (same rule as WP3: no module caches server data). On no
+  network, a failed load shows the error state with a retry; a failed refresh
+  keeps the list already shown. Do not fake mark-read state the server cannot
+  confirm.
 - Unread count must not drop to 0 just because a request failed — prefer
   last-known value until the next successful fetch.
 - `dismissByContent` can be enqueued and retried when connectivity returns;
