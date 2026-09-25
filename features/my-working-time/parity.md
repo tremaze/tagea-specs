@@ -21,24 +21,33 @@
 
 ## Flutter
 
-- **Status:** ⏳ Not started
-- **Path:** _(tbd in tagea-flutter repo, e.g. `lib/features/teamspace/my_working_time/`)_
+- **Status:** 🚧 Implemented (WP15, [tremaze/tagea-next-flutter#97](https://github.com/tremaze/tagea-next-flutter/pull/97)); widget tests only, E2E + smoke pending; open questions: app-wide punch FAB (Asana 1218864110278199), month-closing hint (Asana 1218864424932801)
+- **Paths:**
+  - `apps/tagea_frontend/lib/features/my_working_time/` (tabs Heute / Meine Zeiten / Mein Dienstplan / Abwesenheiten / Zeitkonto; forms „Zeit abschließen“, „Zeit nachtragen“, absence form), routes `apps/tagea_frontend/lib/routing/routes/my_working_time_routes.dart` (existing `myWorkingTime` shell branch); `PunchClockSync` in `MaterialApp.builder`
+  - `packages/teamspace_core/lib/src/working_time/`: `TimeTrackingApi`, `MyWorkingTimeApi`, `PunchClockCubit`, `MyWorkingTimeCubit`, `AbsenceEditorCubit`, calculators (`TodaySummary`, `WeekSummary`, `TimeAccount`, `AbsenceOverview`, `WorkingTimeOverlap`, `AbsenceApprovalPolicy`)
+  - `packages/ui`: `TageaTimeField`, `TageaWeekToolbar`, `TageaDayTimeline`, `TageaStatTile`, `TageaQuotaBar`
 - **Integration tests:** _(tbd — mirror the E2E cases above that are in scope)_
 
 ## Known Divergences
 
-| Topic | Angular | Flutter (target) |
+| Topic | Angular | Flutter |
 | --- | --- | --- |
-| Punch entry on mobile | Header buttons hidden ≤ 700 px; global FAB carries punching | Same idea: one app-wide punch control; page buttons may stay visible |
-| Offline | No offline handling | Punching disabled offline (server-time stamps); stale read cache optional; no write queue |
-| Notification deep link | `?tab=abwesenheiten&antrag=` ignored, opens "Heute" | Should open "Abwesenheiten" (pending product decision) |
-| Failed absence withdraw/delete | No feedback | Show server message |
-| Closing form end ≤ start | Silently ignored | Show validation message |
-| Zeitkonto | Client-side computation, no closed months | Same contract; follow product decision (see spec Open Questions) |
-| Open shifts in roster | Legend + dead "Eintragen" button, never populated | Omit until defined |
+| Punch entry on mobile | Header buttons hidden ≤ 700 px; global FAB carries punching | Punching on the „Heute“ tab only (clock card on every width); no global FAB yet (open question, Asana 1218864110278199); desktop header buttons not ported |
+| Offline | No offline handling | Punching, back-filling and absence writes disabled with a hint (server-time stamps); no read cache, no „Stand von“ marker, no write queue |
+| Notification deep link | `?tab=abwesenheiten&antrag=` ignored, opens "Heute" | Opens „Abwesenheiten“ and shows the request in a sheet; unknown id → snack bar (owner decision 2026-09-25) |
+| Failed absence withdraw/delete | No feedback | Server message + „Die Liste wurde neu geladen“, list reloaded (owner decision) |
+| Closing form end ≤ start / break > span | Silently ignored | Validation message |
+| Overlaps | No check for tracked times; absence overlap → server snackbar | Tracked times checked against loaded bookings, absences against effective absences; server overlap message shown |
+| Absence type picker | „Art der Abwesenheit“ select (default „Urlaub“) | Radio list stating per type whether it goes to approval or is effective at once; dialog title „beantragen“ / „eintragen“ by entry point |
+| Zeitkonto | Client-side computation, no closed months; table | Same computation (owner decision; every month „Offen“); one card per month instead of a table (mobile width); month-closing hint open (Asana 1218864424932801) |
+| Open shifts in roster | Legend + dead "Eintragen" button, never populated | Omitted (owner decision) |
+| Open-session polling | — | Every 10 s while the page is visible and the app is in the foreground; re-sync on resume |
+| Provider explicitly `DISABLED` | Nav entry and route stay; page renders with „Kommen“ disabled | Nav entry appears only once the probe says the person punches; page shows an empty state |
+| Pull-to-refresh | — | Every tab and state |
 
 ## Port Log
 
 | Date       | Who | What         |
 | ---------- | --- | ------------ |
 | 2026-09-25 | Claude (M2-Specs) | Spec created |
+| 2026-09-25 | Claude (M2 parity) | Flutter ⏳ → 🚧 (widget tests only, E2E + smoke pending) after tagea-next-flutter#97 (WP15); owner decisions and deviations recorded |
