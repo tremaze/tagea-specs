@@ -91,6 +91,7 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 | Teamspace Offer Booking (Angebot buchen) | ✅ | ⏳ | [teamspace-offer-booking/](./features/teamspace-offer-booking/spec.md) |
 | Teamspace Appointment RSVP Notifications | ⏳      | ⏳      | [teamspace-appointment-rsvp-notifications/](./features/teamspace-appointment-rsvp-notifications/spec.md) |
 | Gehaltsnachweise      | ✅      | 🚧      | [gehaltsnachweise/](./features/gehaltsnachweise/spec.md)           |
+| Meine Arbeitszeit     | ✅      | ⏳      | [my-working-time/](./features/my-working-time/spec.md)             |
 | Global Search (Globale Suche) | 🚧 | ⏳ | [global-search/](./features/global-search/spec.md) |
 
 ### Institution Staff (P2 — documentation only, Flutter non-goal)
