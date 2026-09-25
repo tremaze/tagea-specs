@@ -1,6 +1,6 @@
 # Feature: Employee Profile (Own)
 
-> **Status:** 🟢 Implemented in Angular; Flutter port planned (M2)
+> **Status:** 🟢 Implemented in Angular; Flutter port 🚧 in progress (part 1: tremaze/tagea-next-flutter#95; part 2 = WP13b)
 > **Owner:** ltoenjes
 > **Last updated:** 2026-09-25 (WP13b „Mein Profil – Teil 2“: Datenauskunft tab (`dataSelfDisclosure`) specified; Outlook native return via app links on the `FRONTEND_URL` host (owner decision); account-deletion flow re-verified; backend gaps linked to Asana 1218853627782544. Earlier the same day, M2-Specs QA: owner decision „full scope in M2“ — Erreichbarkeit, Outlook calendar connection, runtime UI-language switch and account-deletion cleanup specified; password-change error shape corrected to the flat `GlobalExceptionFilter` envelope, Angular 2FA divergence documented)
 
@@ -33,9 +33,10 @@ Self-service profile page at `/employee-profile` for staff to manage their own p
 
 ### Personal data
 
-- [ ] Form: `first_name`, `last_name` (required), `email` (read-only), `phone_mobile`, `phone_landline`, `date_of_birth`, `gender`, visibility toggles `email_visible`, `phone_mobile_visible`, `phone_landline_visible`.
+- [ ] Form: `first_name`, `last_name` (required), `email` (read-only), `phone_mobile`, `phone_landline`, visibility toggles `email_visible`, `phone_mobile_visible`, `phone_landline_visible`. **Flutter leaves out `date_of_birth` and `gender`** (owner decision 2026-09-25, see below); Angular shows both.
 - [ ] Save → `PATCH /employees/me`; success „Deine Daten wurden erfolgreich gespeichert“, failure „Die Änderungen konnten nicht gespeichert werden. Bitte versuche es später erneut.“
-- [ ] The backend persists only `first_name`, `last_name`, `phone_mobile`, `phone_landline` and the three visibility toggles; other keys are dropped silently. **Current behaviour:** `date_of_birth` and `gender` are editable in the form and sent, but not saved *(open product question — a Flutter port should not offer them as editable until resolved)*.
+- [ ] The backend persists only `first_name`, `last_name`, `phone_mobile`, `phone_landline` and the three visibility toggles; other keys are dropped silently. Angular shows `date_of_birth` and `gender` as editable and sends them, but they are not saved.
+- [ ] **Decision (owner, 2026-09-25):** Flutter does **not** show `date_of_birth` or `gender` in the form, not even read-only, and never sends them, until the backend accepts them on `PATCH /employees/me`. Backend gap tracked in Asana [1218853627782544](https://app.asana.com/0/0/1218853627782544); when it is closed, the fields come back via a spec update.
 
 ### Profile picture
 
@@ -95,7 +96,7 @@ Lives in the notifications tab directly under the „Nicht stören außerhalb de
 - [ ] Server rules the UI must expect: `start_time < end_time` on the same day (400 „Startzeit muss vor der Endzeit liegen“); no overlap with another own window on the same weekday (400 „Das Zeitfenster überschneidet sich mit einem bereits hinterlegten“); a foreign or unknown id → 404. `geplant` windows are never editable through this API.
 - [ ] Erreichbarkeit windows are independent of the notifications form: they save immediately and do **not** mark the notifications form dirty.
 
-> **Scope note — booking availability plans („Verfügbarkeit & Buchung“):** the profile also contains a booking-plan tab (`availabilityBooking`, `AvailabilityDialogComponent`, institution-scoped `/institutions/:institutionId/employee-availability`), but it is hard-disabled in Angular (`@if (false)`); booking plans are managed from the institution calendar (`ManageAvailabilityDialogComponent` in `calendar-page`), gated by the `clientPortal` feature and `appointments.*` permissions, and are not self-service endpoints. `GET /employees/me/availability/check` (see [employee-availability](../employee-availability/spec.md)) is a scheduling conflict check, not a profile surface. This spec therefore reads the owner's „Verfügbarkeiten“ as **Erreichbarkeit**; whether booking plans should additionally appear in the Flutter profile is an open product question (see parity.md).
+> **Scope note — booking availability plans („Verfügbarkeit & Buchung“):** the profile also contains a booking-plan tab (`availabilityBooking`, `AvailabilityDialogComponent`, institution-scoped `/institutions/:institutionId/employee-availability`), but it is hard-disabled in Angular (`@if (false)`); booking plans are managed from the institution calendar (`ManageAvailabilityDialogComponent` in `calendar-page`), gated by the `clientPortal` feature and `appointments.*` permissions, and are not self-service endpoints. `GET /employees/me/availability/check` (see [employee-availability](../employee-availability/spec.md)) is a scheduling conflict check, not a profile surface. **Decision (owner, 2026-09-25):** „Verfügbarkeiten“ in the profile scope means the **Erreichbarkeit windows** (`/employees/me/availability-windows`), **not** the booking availability plans. The Flutter profile has no booking-plan tab.
 
 ### Calendar connections (Outlook)
 
@@ -190,7 +191,7 @@ Tab „Datenauskunft“ (`employeeProfile.tabs.dataExport`), rendered only when 
 
 ### Source-based field locking
 
-- [ ] **Given** the loaded employee has `source === 'vivendi-sync'`, **Then** stammdaten fields on the personal-data tab (`first_name`, `last_name`, `email`, `phone_mobile`, `phone_landline`, `date_of_birth`, `gender`) render as **disabled** with the Vivendi-managed hint (i18n key `employeeDialog.vivendiManagedHint`) — same convention as `EmployeeDialogComponent`.
+- [ ] **Given** the loaded employee has `source === 'vivendi-sync'`, **Then** stammdaten fields on the personal-data tab (`first_name`, `last_name`, `email`, `phone_mobile`, `phone_landline`, `date_of_birth`, `gender` — the last two only where shown, i.e. Angular) render as **disabled** with the Vivendi-managed hint (i18n key `employeeDialog.vivendiManagedHint`) — same convention as `EmployeeDialogComponent`.
 - [ ] **Given** the employee has `source === 'manual'` (or undefined), **Then** all stammdaten fields remain editable; `email` stays read-only because the address is owned by Keycloak, not the source-lock.
 - [ ] **Given** the locks apply, **Then** the visibility toggles (`email_visible`, `phone_mobile_visible`, `phone_landline_visible`), profile picture upload, notification settings, Erreichbarkeit, personal preferences, calendar connections, password change and account deletion remain available — they are personal preferences, not stammdaten.
 
@@ -253,9 +254,10 @@ Product questions for WP13b (also filed in Asana, project „Tagea Flutter“, s
 2. **Banner text for employees:** the shared banner promises the ZIP contains „deine hochgeladenen Dokumente“, but the employee archive only holds `daten.json` (file providers exist only for clients). *Default:* show the shared text unchanged (parity). Options: an employee-specific text without the document promise, or employee file providers (e.g. profile picture, Gehaltsnachweise).
 3. **Raw ids in the overview:** list cards for „Zuordnungen & Rollen“, „Personaleinsatz“ and „Individuelle Felder“ show UUIDs (`institutionId`, `teamspaceId`, `fieldDefinitionId`) as their primary line, because the backend exports ids, not names. *Default:* show them as delivered. Should the backend resolve names (institution, teamspace, field label)?
 4. **Coverage gaps:** own Erreichbarkeit windows, the Outlook connection (account, settings, cached Outlook events) and notifications are not part of the employee export. Should collectors be added (backend)?
-5. *(carried over)* „Verfügbarkeiten“ = Erreichbarkeit, and `date_of_birth` / `gender` editable but not persisted — see parity.md.
 
-Backend gaps with an existing ticket (Asana [1218853627782544](https://app.asana.com/0/0/1218853627782544)), not open questions: account deletion leaves the Outlook connection behind (see *Delete own account*); Angular has no `/settings/outlook-sync` route (see *OAuth return*).
+**Decided (owner, 2026-09-25), no longer open:** „Verfügbarkeiten“ = Erreichbarkeit windows, not booking plans (see *Erreichbarkeit*); Flutter leaves out `date_of_birth` / `gender` until the backend accepts them (see *Personal data*).
+
+Backend gaps with an existing ticket (Asana [1218853627782544](https://app.asana.com/0/0/1218853627782544)), not open questions: account deletion leaves the Outlook connection behind (see *Delete own account*); Angular has no `/settings/outlook-sync` route (see *OAuth return*); `PATCH /employees/me` drops `date_of_birth` / `gender`.
 
 ## References
 

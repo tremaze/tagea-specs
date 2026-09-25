@@ -8,7 +8,7 @@
 
 ## Flutter
 
-- **Status:** ⏳ Planned (M2 — full scope per owner decision 2026-09-25: Stammdaten, Bild, Passwort, Benachrichtigungen incl. Erreichbarkeit, UI-Sprache, Konto löschen, Verfügbarkeiten, Outlook; WP13b adds the Datenauskunft tab — owner decision 2026-09-25: full profile scope in the Flutter app)
+- **Status:** 🚧 In progress — part 1 (rest of the profile) in [tremaze/tagea-next-flutter#95](https://github.com/tremaze/tagea-next-flutter/pull/95); part 2 (WP13b: Datenauskunft, Outlook, account deletion) specified here. Scope per owner decision 2026-09-25: full profile — Stammdaten, Bild, Passwort, Benachrichtigungen incl. Erreichbarkeit, UI-Sprache, Konto löschen, Verfügbarkeiten (= Erreichbarkeit), Outlook, Datenauskunft.
 
 ## Known divergences (spec = target)
 
@@ -23,20 +23,25 @@
 | Datenauskunft: print | No „Drucken“ button; print via PDF (open question 1) | „Drucken“ → `window.print()` | `DataExportPageComponent.print` |
 | Datenauskunft: file name | From `Content-Disposition` (`datenauskunft-employee-self-<date>.pdf`) | Fixed `datenauskunft.pdf` / `datenauskunft.zip` | `DataExportService` |
 | Outlook OAuth return on native | App link / universal link on the `FRONTEND_URL` host, path `/settings/outlook-sync`, plus foreground re-fetch | n/a (Capacitor app: no handling, user returns manually) | owner decision 2026-09-25 |
+| Personal data: `date_of_birth` / `gender` | Not shown, not sent (until the backend accepts them) | Editable and sent, silently dropped by the backend | `employee-profile.component.html` personal-data form |
 | Account deletion navigation | Local wipe + OIDC logout; no competing in-app navigation on web | Calls `router.navigate(['/'])` right after `SessionLogout.logout()`, which may race the Keycloak `end_session` redirect (#995 pattern) | `deleteAccount` |
 
 ## Open product / backend questions
 
-- **„Verfügbarkeiten“ = Erreichbarkeit?** The spec maps the owner's item to the Erreichbarkeit windows (`/employees/me/availability-windows`). Booking availability plans (institution-scoped, `clientPortal` + `appointments.*`, hard-disabled tab in the Angular profile, managed from the calendar) are *not* specified for the profile — confirm, or decide to add them.
 - **Datenauskunft** (WP13b, Asana task in „Entscheidungen offen“): print button in Flutter; employee banner text vs. ZIP without documents; raw UUIDs in list cards; missing collectors (Erreichbarkeit, Outlook, notifications) — details and defaults in [spec.md → Open Questions](./spec.md#open-questions).
-- `date_of_birth` / `gender` editable in Angular but dropped by the backend (unchanged, see spec).
 
-**Resolved:** Datenauskunft tab is in scope (owner decision 2026-09-25, WP13b). Outlook native return uses app links on the `FRONTEND_URL` host (owner decision 2026-09-25) — no backend return-URL change.
+**Resolved (owner decisions 2026-09-25):**
+
+- „Verfügbarkeiten“ = Erreichbarkeit windows (`/employees/me/availability-windows`), not the booking availability plans; no booking-plan tab in Flutter.
+- `date_of_birth` / `gender`: Flutter leaves both fields out until the backend accepts them (backend gap, Asana 1218853627782544).
+- Datenauskunft tab is in scope (WP13b).
+- Outlook native return uses app links on the `FRONTEND_URL` host (owner decision 2026-09-25) — no backend return-URL change.
 
 **Known backend / Angular gaps (Asana [1218853627782544](https://app.asana.com/0/0/1218853627782544)):**
 
 - Account deletion (`DELETE /employees/me` → `removeFromTenant`) leaves the Outlook connection (tokens, Graph subscription, exported events) in place — should run the disconnect cleanup.
 - Angular has no `/settings/outlook-sync` route; the OAuth return lands on the landing redirect and the result is lost.
+- `PATCH /employees/me` drops `date_of_birth` / `gender` (Angular offers them anyway; Flutter leaves them out).
 
 ## Port Log
 
@@ -47,3 +52,4 @@
 | 2026-09-25 | Claude (M2-Specs) | Flutter status ❌ non-goal → ⏳; contracts verified against backend (`/employees/me*`, `POST /auth/me/change-password`, `GET /auth/password-policy`): fixed wrong paths (`/employees/me/change-password`, `/employees/me/password-policy`, `/notification-settings`, `/personal-preferences`), documented PATCH whitelist (date_of_birth/gender dropped), DTOs, errors, delete-own-account and password-change flows |
 | 2026-09-25 | Claude (M2-Specs QA) | PR #19 review fixes: error envelope verified in `GlobalExceptionFilter` (flat `message` string + top-level `code`), password-change contract corrected, Angular `extractErrorBody` 2FA bug documented, spec rewritten to target behaviour; owner decision „full scope in M2“: removed availability non-goal, added Erreichbarkeit (`/employees/me/availability-windows`), Outlook calendar connection (`/outlook-auth`, `/outlook-sync`, OAuth return for web/iOS/Android + backend gap), runtime UI-language switch (16 languages), account-deletion local wipe; fixed stale service names (`SessionAuthz`, `InstitutionContext`); divergence table + open questions added |
 | 2026-09-25 | Claude (WP13b) | „Mein Profil – Teil 2“: Datenauskunft tab specified (`/employees/me/data-export`, `/pdf`, `/archive`; `DataExportDocument`; employee collectors; rate limit, feature gate, audit; states/errors; platform downloads); Outlook native return via app links on the `FRONTEND_URL` host (owner decision) + result messages; account deletion re-verified (error codes, lost response); Outlook-on-deletion and missing Angular route recorded as gaps (Asana 1218853627782544); new divergences + open questions |
+| 2026-09-25 | Claude (WP13b) | Owner decisions recorded: „Verfügbarkeiten“ = Erreichbarkeit (no booking plans); `date_of_birth` / `gender` left out in Flutter until backend support (Asana 1218853627782544). Flutter status ⏳ → 🚧 (part 1: tagea-next-flutter#95) |

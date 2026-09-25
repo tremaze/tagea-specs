@@ -136,7 +136,7 @@ The controller keeps only these keys and silently drops everything else (no 400 
 | `phone_mobile_visible` | boolean |
 | `phone_landline_visible` | boolean |
 
-The Angular page also sends `date_of_birth` (ISO date) and `gender`; the backend **drops** both, so they are not persisted through this endpoint. `email` cannot be changed here. There is no server-side `source === 'vivendi-sync'` lock — the lock exists in the UI only.
+The Angular page also sends `date_of_birth` (ISO date) and `gender`; the backend **drops** both, so they are not persisted through this endpoint. Flutter does not send them (owner decision 2026-09-25; backend gap Asana 1218853627782544). `email` cannot be changed here. There is no server-side `source === 'vivendi-sync'` lock — the lock exists in the UI only.
 
 ### `DELETE /employees/me`
 
