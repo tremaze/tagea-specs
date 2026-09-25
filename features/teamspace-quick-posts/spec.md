@@ -57,7 +57,7 @@ Hosted by `teamspace-v2-page` above the feed: inline on desktop; on mobile a com
 
 - [ ] **Given** the author views their own `QUICK_POST` (feed card or detail, teamspace context), **When** the menu („Aktionen“) opens, **Then** „Bearbeiten“ and „Löschen“ are offered. „Löschen“ asks „Möchtest du den Beitrag „{title}“ wirklich löschen? …“ and then calls `DELETE /articles/:id`; success → „Der Beitrag wurde gelöscht.“, 403 → „Du hast keine Berechtigung, diesen Beitrag zu löschen.“, other errors → „Der Beitrag konnte nicht gelöscht werden.“
 - [ ] **Backend:** `DELETE /articles/:id` on a quick post is allowed for the author, `tenant.teamspaces.access_all`, `tenant.posts.moderate`, or `news.edit` in *any* of the post's teamspaces; the article is removed from all target teamspaces. Everyone else gets 403.
-- [ ] **Current UI gap:** the menu is shown to the author only — moderators (`tenant.posts.moderate`, `news.edit`) have no delete entry in the UI although the API allows it. *(Open product question.)*
+- [ ] **Current UI gap (Angular):** the menu is shown to the author only — moderators (`tenant.posts.moderate`, `news.edit`) have no delete entry in the UI although the API allows it. **PM default (Asana 1218851193676483):** the UI offers „Löschen“ to everyone the API allows (author, `tenant.posts.moderate`, `tenant.teamspaces.access_all`, `news.edit` in any of the post's teamspaces); Flutter implements this, Angular still lags (see [parity.md](./parity.md)).
 - [ ] **Given** any deletion happens, **When** the operation resolves, **Then** an `entity_changelog` entry is recorded with the actor's `employee_id` per existing audit pattern.
 
 ## UI States

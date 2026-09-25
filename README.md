@@ -86,14 +86,14 @@ See [INVENTORY.md](./INVENTORY.md) for the full list of features, derived from t
 | Teamspace News        | ✅      | ⏳      | [teamspace-news/](./features/teamspace-news/spec.md)               |
 | Teamspace Submissions | ✅      | 🚧      | [teamspace-submissions/](./features/teamspace-submissions/spec.md) |
 | Teamspace LMS         | ✅      | ⏳      | [teamspace-lms/](./features/teamspace-lms/spec.md)                 |
-| Teamspace Events      | ✅      | ⏳      | [teamspace-events/](./features/teamspace-events/spec.md)           |
+| Teamspace Events      | ✅      | 🚧      | [teamspace-events/](./features/teamspace-events/spec.md)           |
 | Teamspace Calendar    | ✅      | ⏳      | [teamspace-calendar/](./features/teamspace-calendar/spec.md)       |
-| Teamspace Offer Booking (Angebot buchen) | ✅ | ⏳ | [teamspace-offer-booking/](./features/teamspace-offer-booking/spec.md) |
+| Teamspace Offer Booking (Angebot buchen) | ✅ | ✅ | [teamspace-offer-booking/](./features/teamspace-offer-booking/spec.md) |
 | Teamspace Appointment RSVP Notifications | ⏳      | ⏳      | [teamspace-appointment-rsvp-notifications/](./features/teamspace-appointment-rsvp-notifications/spec.md) |
 | Gehaltsnachweise      | ✅      | 🚧      | [gehaltsnachweise/](./features/gehaltsnachweise/spec.md)           |
-| Teamspace Quick Posts | ✅      | ⏳      | [teamspace-quick-posts/](./features/teamspace-quick-posts/spec.md) |
+| Teamspace Quick Posts | ✅      | 🚧      | [teamspace-quick-posts/](./features/teamspace-quick-posts/spec.md) |
 | Employee Profile (Own, incl. Outlook & Datenauskunft) | ✅ | 🚧 | [employee-profile/](./features/employee-profile/spec.md)           |
-| Meine Arbeitszeit     | ✅      | ⏳      | [my-working-time/](./features/my-working-time/spec.md)             |
+| Meine Arbeitszeit     | ✅      | ✅      | [my-working-time/](./features/my-working-time/spec.md)             |
 | Global Search (Globale Suche) | 🚧 | ⏳ | [global-search/](./features/global-search/spec.md) |
 
 ### Institution Staff (P2 — documentation only, Flutter non-goal)
@@ -149,7 +149,7 @@ These bundles describe the app's chrome (layout, navigation, header, overlays) �
 | App Shell           | ✅      | ⏳      | [app-shell/](./shell/app-shell/spec.md)                     |
 | Main Navigation     | ✅      | ⏳      | [main-navigation/](./shell/main-navigation/spec.md)         |
 | Top Bar             | ✅      | ⏳      | [top-bar/](./shell/top-bar/spec.md)                         |
-| Notification Center | ✅      | ⏳      | [notification-center/](./shell/notification-center/spec.md) |
+| Notification Center | ✅      | 🚧      | [notification-center/](./shell/notification-center/spec.md) |
 | Mode Toggle         | ✅      | ⏳      | [mode-toggle/](./shell/mode-toggle/spec.md)                 |
 
 ### Cross-cutting platform
