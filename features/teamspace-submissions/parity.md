@@ -5,7 +5,7 @@
 - **Status:** ✅ Implemented
 - **List:** [`apps/tagea-frontend/src/app/pages/teamspace/teamspace-submissions-page.component.ts`](../../../apps/tagea-frontend/src/app/pages/teamspace/teamspace-submissions-page.component.ts)
 - **Detail:** [`submission-detail-page.component.ts`](../../../apps/tagea-frontend/src/app/pages/teamspace/submission-detail-page.component.ts)
-- **E2E:** _(to be identified)_
+- **E2E:** [`apps/tagea-frontend-e2e/src/tests/teamspaces/submissions/`](../../../apps/tagea-frontend-e2e/src/tests/teamspaces/submissions/) (UI submit: `submissions-consumer-submit-ui.spec.ts`)
 
 ## Flutter
 
@@ -41,3 +41,4 @@
 | 2026-04-20 | ltoenjes | Spec created |
 | 2026-09-23 | Claude (WP6) | List tabs, answer vs. history, detail endpoints clarified from Angular + backend |
 | 2026-09-23 | Claude (WP6 QA) | Flutter status and divergences after the QA follow-ups |
+| 2026-09-25 | Claude (M2-Specs) | Permission map corrected to `tenant.submissions.submit` / `tenant.submissions.view_own` / `submissions.process`; create multipart contract (parts, 5 files × 10 MB, MIME list, errors); deep-link behaviour for both `new/` routes |
