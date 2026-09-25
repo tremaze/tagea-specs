@@ -8,7 +8,7 @@
 
 ## Flutter
 
-- **Status:** ✅ Implemented (WP12, [tremaze/tagea-next-flutter#85](https://github.com/tremaze/tagea-next-flutter/pull/85)); widget-tested, manual smoke on iOS / Android / Web pending
+- **Status:** 🚧 Implemented (WP12, [tremaze/tagea-next-flutter#85](https://github.com/tremaze/tagea-next-flutter/pull/85)); widget tests only, E2E + smoke pending
 - **Paths:**
   - `apps/tagea_frontend/lib/features/teamspace/offer_booking/`, route `apps/tagea_frontend/lib/routing/routes/offer_booking_routes.dart` (`kalender/neu` above `kalender/:id`)
   - `packages/teamspace_core`: `OfferBookingApi`, `OfferBookingCubit`, models `BookingCategory`, `AvailableSlot`, `BookingSetting`, `BookingSlotDay`, `OfferBookingConfirmation`
@@ -39,4 +39,4 @@
 | Date       | Who | What         |
 | ---------- | --- | ------------ |
 | 2026-09-25 | Claude (M2-Specs) | Spec created from Angular + backend controller/service |
-| 2026-09-25 | Claude (M2 parity) | Flutter ⏳ → ✅ after tagea-next-flutter#85 (WP12); PR deviations recorded |
+| 2026-09-25 | Claude (M2 parity) | Flutter ⏳ → 🚧 (widget tests only, E2E + smoke pending) after tagea-next-flutter#85 (WP12); PR deviations recorded |

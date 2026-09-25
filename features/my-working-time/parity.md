@@ -21,7 +21,7 @@
 
 ## Flutter
 
-- **Status:** ✅ Implemented (WP15, [tremaze/tagea-next-flutter#97](https://github.com/tremaze/tagea-next-flutter/pull/97)); widget-tested, manual smoke on iOS / Android / Web pending; open questions: app-wide punch FAB (Asana 1218864110278199), month-closing hint (Asana 1218864424932801)
+- **Status:** 🚧 Implemented (WP15, [tremaze/tagea-next-flutter#97](https://github.com/tremaze/tagea-next-flutter/pull/97)); widget tests only, E2E + smoke pending; open questions: app-wide punch FAB (Asana 1218864110278199), month-closing hint (Asana 1218864424932801)
 - **Paths:**
   - `apps/tagea_frontend/lib/features/my_working_time/` (tabs Heute / Meine Zeiten / Mein Dienstplan / Abwesenheiten / Zeitkonto; forms „Zeit abschließen“, „Zeit nachtragen“, absence form), routes `apps/tagea_frontend/lib/routing/routes/my_working_time_routes.dart` (existing `myWorkingTime` shell branch); `PunchClockSync` in `MaterialApp.builder`
   - `packages/teamspace_core/lib/src/working_time/`: `TimeTrackingApi`, `MyWorkingTimeApi`, `PunchClockCubit`, `MyWorkingTimeCubit`, `AbsenceEditorCubit`, calculators (`TodaySummary`, `WeekSummary`, `TimeAccount`, `AbsenceOverview`, `WorkingTimeOverlap`, `AbsenceApprovalPolicy`)
@@ -50,4 +50,4 @@
 | Date       | Who | What         |
 | ---------- | --- | ------------ |
 | 2026-09-25 | Claude (M2-Specs) | Spec created |
-| 2026-09-25 | Claude (M2 parity) | Flutter ⏳ → ✅ after tagea-next-flutter#97 (WP15); owner decisions and deviations recorded |
+| 2026-09-25 | Claude (M2 parity) | Flutter ⏳ → 🚧 (widget tests only, E2E + smoke pending) after tagea-next-flutter#97 (WP15); owner decisions and deviations recorded |
